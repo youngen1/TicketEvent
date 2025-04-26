@@ -1,4 +1,6 @@
-import { users, type User, type InsertUser, type Event, type InsertEvent } from "@shared/schema";
+import { users, events, type User, type InsertUser, type Event, type InsertEvent } from "@shared/schema";
+import { db } from "./db";
+import { eq, asc } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -16,19 +18,79 @@ export interface IStorage {
   toggleFavorite(id: number): Promise<Event>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private events: Map<number, Event>;
-  currentUserId: number;
-  currentEventId: number;
+// Database implementation
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
 
-  constructor() {
-    this.users = new Map();
-    this.events = new Map();
-    this.currentUserId = 1;
-    this.currentEventId = 1;
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+  
+  async getAllEvents(category?: string): Promise<Event[]> {
+    if (category) {
+      return db
+        .select()
+        .from(events)
+        .where(eq(events.category, category))
+        .orderBy(asc(events.date));
+    }
     
-    // Add some sample events
+    return db.select().from(events).orderBy(asc(events.date));
+  }
+  
+  async getEvent(id: number): Promise<Event | undefined> {
+    const [event] = await db
+      .select()
+      .from(events)
+      .where(eq(events.id, id));
+    return event;
+  }
+  
+  async createEvent(eventData: InsertEvent): Promise<Event> {
+    const [event] = await db.insert(events).values(eventData).returning();
+    return event;
+  }
+  
+  async toggleFavorite(id: number): Promise<Event> {
+    const [event] = await db
+      .select()
+      .from(events)
+      .where(eq(events.id, id));
+    
+    if (!event) {
+      throw new Error(`Event with id ${id} not found`);
+    }
+    
+    const [updatedEvent] = await db
+      .update(events)
+      .set({ isFavorite: !event.isFavorite })
+      .where(eq(events.id, id))
+      .returning();
+    
+    return updatedEvent;
+  }
+
+  // Add sample event data for development
+  async seedEvents(): Promise<void> {
+    // Check if events already exist
+    const existingEvents = await db.select().from(events);
+    if (existingEvents.length > 0) {
+      return; // Skip seeding if events already exist
+    }
+    
+    // Sample events to insert
     const sampleEvents: InsertEvent[] = [
       {
         title: "Tech Conference 2023",
@@ -102,76 +164,15 @@ export class MemStorage implements IStorage {
       }
     ];
     
-    sampleEvents.forEach(eventData => {
-      const event: Event = {
+    // Insert all sample events
+    for (const eventData of sampleEvents) {
+      await db.insert(events).values({
         ...eventData,
-        id: this.currentEventId++,
         attendees: Math.floor(Math.random() * 100) + 50, // Random attendees between 50-150
         isFavorite: false
-      };
-      this.events.set(event.id, event);
-    });
-  }
-
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
-  }
-  
-  async getAllEvents(category?: string): Promise<Event[]> {
-    let events = Array.from(this.events.values());
-    
-    if (category) {
-      events = events.filter(event => event.category === category);
+      });
     }
-    
-    return events;
-  }
-  
-  async getEvent(id: number): Promise<Event | undefined> {
-    return this.events.get(id);
-  }
-  
-  async createEvent(eventData: InsertEvent): Promise<Event> {
-    const id = this.currentEventId++;
-    const event: Event = {
-      ...eventData,
-      id,
-      attendees: 0,
-      isFavorite: false
-    };
-    
-    this.events.set(id, event);
-    return event;
-  }
-  
-  async toggleFavorite(id: number): Promise<Event> {
-    const event = this.events.get(id);
-    
-    if (!event) {
-      throw new Error(`Event with id ${id} not found`);
-    }
-    
-    const updatedEvent: Event = {
-      ...event,
-      isFavorite: !event.isFavorite
-    };
-    
-    this.events.set(id, updatedEvent);
-    return updatedEvent;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

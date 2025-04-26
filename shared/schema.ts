@@ -26,6 +26,7 @@ export const events = pgTable("events", {
   createdById: integer("created_by_id").references(() => users.id),
   isFavorite: boolean("is_favorite").default(false),
   schedule: text("schedule"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertEventSchema = createInsertSchema(events).pick({
