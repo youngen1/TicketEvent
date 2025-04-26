@@ -7,6 +7,13 @@ import session from 'express-session';
 import { db } from "./db";
 import pgSession from 'connect-pg-simple';
 
+// Add userId to session
+declare module 'express-session' {
+  interface SessionData {
+    userId: number;
+  }
+}
+
 // Auth middleware
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.session.userId) {
@@ -22,7 +29,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.use(session({
     store: new PostgresStore({
-      pool: db.client, 
+      pool: db.$client, 
       tableName: 'session'
     }),
     secret: process.env.SESSION_SECRET || 'keyboard cat',
@@ -159,7 +166,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events", async (req, res) => {
+  app.post("/api/events", isAuthenticated, async (req, res) => {
+    // Add user ID from session to the event
+    req.body.createdById = req.session.userId;
     try {
       const validation = insertEventSchema.safeParse(req.body);
       
@@ -177,7 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/events/:id/favorite", async (req, res) => {
+  app.put("/api/events/:id/favorite", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const event = await storage.getEvent(id);
@@ -190,6 +199,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedEvent);
     } catch (error) {
       res.status(500).json({ message: "Error updating favorite status" });
+    }
+  });
+  
+  // Update event route
+  app.put("/api/events/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const event = await storage.getEvent(id);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // Only allow updates to events created by the current user
+      if (event.createdById && event.createdById !== req.session.userId) {
+        return res.status(403).json({ message: "Not authorized to update this event" });
+      }
+
+      const validation = insertEventSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid event data", 
+          errors: validation.error.format() 
+        });
+      }
+      
+      const updatedEvent = await storage.updateEvent(id, validation.data);
+      res.json(updatedEvent);
+    } catch (error) {
+      console.error('Update event error:', error);
+      res.status(500).json({ message: "Error updating event" });
+    }
+  });
+  
+  // Delete event route
+  app.delete("/api/events/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const event = await storage.getEvent(id);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // Only allow deletion of events created by the current user
+      if (event.createdById && event.createdById !== req.session.userId) {
+        return res.status(403).json({ message: "Not authorized to delete this event" });
+      }
+      
+      await storage.deleteEvent(id);
+      res.json({ message: "Event deleted successfully" });
+    } catch (error) {
+      console.error('Delete event error:', error);
+      res.status(500).json({ message: "Error deleting event" });
     }
   });
 

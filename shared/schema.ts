@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -46,3 +46,14 @@ export type User = typeof users.$inferSelect;
 
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Event = typeof events.$inferSelect;
+
+// Session table for express-session
+export const session = pgTable("session", {
+  sid: varchar("sid").notNull(),
+  sess: text("sess").notNull(),
+  expire: timestamp("expire", { mode: 'date' }).notNull(),
+}, (table) => {
+  return {
+    pk: primaryKey({ columns: [table.sid] }),
+  }
+});
