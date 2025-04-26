@@ -12,6 +12,9 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useState } from "react";
 import CreateEventModal from "@/components/CreateEventModal";
+import LoginModal from "@/components/LoginModal";
+import SignupModal from "@/components/SignupModal";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 function Router() {
   return (
@@ -27,23 +30,59 @@ function Router() {
 
 function App() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+
+  const handleLoginSuccess = () => {
+    // After successful login, close modal and update UI
+  };
+
+  const handleSignupSuccess = () => {
+    // After successful signup, show login modal
+    setIsSignupModalOpen(false);
+    setIsLoginModalOpen(true);
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <div className="flex flex-col min-h-screen">
-          <Navbar onNewEventClick={() => setIsCreateModalOpen(true)} />
-          <div className="flex-grow">
-            <Router />
+      <AuthProvider>
+        <TooltipProvider>
+          <div className="flex flex-col min-h-screen">
+            <Navbar 
+              onNewEventClick={() => setIsCreateModalOpen(true)} 
+              onLoginClick={() => setIsLoginModalOpen(true)}
+              onSignupClick={() => setIsSignupModalOpen(true)}
+            />
+            <div className="flex-grow">
+              <Router />
+            </div>
+            <Footer />
+            <CreateEventModal 
+              isOpen={isCreateModalOpen} 
+              onClose={() => setIsCreateModalOpen(false)} 
+            />
+            <LoginModal
+              isOpen={isLoginModalOpen}
+              onClose={() => setIsLoginModalOpen(false)}
+              onSignupClick={() => {
+                setIsLoginModalOpen(false);
+                setIsSignupModalOpen(true);
+              }}
+              onSuccess={handleLoginSuccess}
+            />
+            <SignupModal
+              isOpen={isSignupModalOpen}
+              onClose={() => setIsSignupModalOpen(false)}
+              onLoginClick={() => {
+                setIsSignupModalOpen(false);
+                setIsLoginModalOpen(true);
+              }}
+              onSuccess={handleSignupSuccess}
+            />
+            <Toaster />
           </div>
-          <Footer />
-          <CreateEventModal 
-            isOpen={isCreateModalOpen} 
-            onClose={() => setIsCreateModalOpen(false)} 
-          />
-          <Toaster />
-        </div>
-      </TooltipProvider>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

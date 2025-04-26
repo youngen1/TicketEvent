@@ -1,15 +1,27 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, User, Plus } from "lucide-react";
+import { Menu, X, User, Plus, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface NavbarProps {
   onNewEventClick: () => void;
+  onLoginClick: () => void;
+  onSignupClick: () => void;
 }
 
-export default function Navbar({ onNewEventClick }: NavbarProps) {
+export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }: NavbarProps) {
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -49,23 +61,59 @@ export default function Navbar({ onNewEventClick }: NavbarProps) {
               ))}
             </div>
           </div>
-          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+          <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-3">
             <Button 
               className="bg-primary hover:bg-blue-600 text-white" 
               onClick={onNewEventClick}
             >
               <Plus className="h-4 w-4 mr-1" /> New Event
             </Button>
-            <div className="ml-3 relative">
-              <div>
-                <button className="bg-white rounded-full flex text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                  <span className="sr-only">Open user menu</span>
-                  <div className="h-8 w-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-700">
-                    <User className="h-5 w-5" />
-                  </div>
-                </button>
+
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="bg-white rounded-full flex text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    <span className="sr-only">Open user menu</span>
+                    <div className="h-8 w-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-700">
+                      <User className="h-5 w-5" />
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    {user?.username || 'User'}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    My Events
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout} className="text-red-600">
+                    <LogOut className="h-4 w-4 mr-2" /> Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={onLoginClick}
+                >
+                  <LogIn className="h-4 w-4 mr-1" /> Log in
+                </Button>
+                <Button
+                  onClick={onSignupClick}
+                >
+                  Sign up
+                </Button>
               </div>
-            </div>
+            )}
           </div>
           <div className="-mr-2 flex items-center sm:hidden">
             <button 
@@ -104,30 +152,66 @@ export default function Navbar({ onNewEventClick }: NavbarProps) {
             </Link>
           ))}
         </div>
-        <div className="pt-4 pb-3 border-t border-neutral-200">
-          <div className="flex items-center px-4">
-            <div className="flex-shrink-0">
-              <div className="h-10 w-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-700">
-                <User className="h-6 w-6" />
+
+        {isAuthenticated ? (
+          <div className="pt-4 pb-3 border-t border-neutral-200">
+            <div className="flex items-center px-4">
+              <div className="flex-shrink-0">
+                <div className="h-10 w-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-700">
+                  <User className="h-6 w-6" />
+                </div>
+              </div>
+              <div className="ml-3">
+                <div className="text-base font-medium text-neutral-800">{user?.username || 'User'}</div>
               </div>
             </div>
-            <div className="ml-3">
-              <div className="text-base font-medium text-neutral-800">John Doe</div>
-              <div className="text-sm font-medium text-neutral-500">john@example.com</div>
+            <div className="mt-3 space-y-1">
+              <button 
+                className="block w-full text-left px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100"
+                onClick={onNewEventClick}
+              >
+                New Event
+              </button>
+              <a href="#" className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100">
+                Profile
+              </a>
+              <a href="#" className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100">
+                My Events
+              </a>
+              <a href="#" className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100">
+                Settings
+              </a>
+              <button 
+                className="block w-full text-left px-4 py-2 text-base font-medium text-red-600 hover:bg-neutral-100"
+                onClick={logout}
+              >
+                Log out
+              </button>
             </div>
           </div>
-          <div className="mt-3 space-y-1">
-            <a href="#" className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100">
-              Your Profile
-            </a>
-            <a href="#" className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100">
-              Settings
-            </a>
-            <a href="#" className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100">
-              Sign out
-            </a>
+        ) : (
+          <div className="pt-4 pb-3 border-t border-neutral-200 px-4 space-y-2">
+            <Button
+              className="w-full"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                onLoginClick();
+              }}
+            >
+              <LogIn className="h-4 w-4 mr-1" /> Log in
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                onSignupClick();
+              }}
+            >
+              Sign up
+            </Button>
           </div>
-        </div>
+        )}
       </div>
     </nav>
   );
