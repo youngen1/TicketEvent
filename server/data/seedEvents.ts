@@ -25,7 +25,7 @@ export function createSeedEvents(nextEventId: () => number): Event[] {
       featured: true,
       video: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
       tags: "tech,innovation,ai,blockchain",
-      price: 299.99,
+      price: "299.99",
       isFree: false,
       rating: 4.8,
       ratingCount: 45
@@ -52,7 +52,7 @@ export function createSeedEvents(nextEventId: () => number): Event[] {
       featured: true,
       video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
       tags: "music,festival,concert,live",
-      price: 149.99,
+      price: "149.99",
       isFree: false,
       rating: 4.9,
       ratingCount: 320
@@ -79,7 +79,7 @@ export function createSeedEvents(nextEventId: () => number): Event[] {
       featured: false,
       video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
       tags: "art,exhibition,contemporary,culture",
-      price: 25,
+      price: "25",
       isFree: false,
       rating: 4.2,
       ratingCount: 18
@@ -105,7 +105,7 @@ export function createSeedEvents(nextEventId: () => number): Event[] {
       featured: false,
       video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
       tags: "education,workshop,digital,skills",
-      price: 0,
+      price: "0",
       isFree: true,
       rating: 4.5,
       ratingCount: 12
@@ -132,7 +132,7 @@ export function createSeedEvents(nextEventId: () => number): Event[] {
       featured: true,
       video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
       tags: "startup,pitch,business,investment",
-      price: 15,
+      price: "15",
       isFree: false,
       rating: 4.7,
       ratingCount: 28
@@ -159,7 +159,7 @@ export function createSeedEvents(nextEventId: () => number): Event[] {
       featured: false,
       video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
       tags: "food,cooking,culinary,masterclass",
-      price: 85,
+      price: "85",
       isFree: false,
       rating: 4.9,
       ratingCount: 32
@@ -186,7 +186,7 @@ export function createSeedEvents(nextEventId: () => number): Event[] {
       featured: true,
       video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
       tags: "wellness,yoga,meditation,health",
-      price: 195,
+      price: "195",
       isFree: false,
       rating: 4.8,
       ratingCount: 42

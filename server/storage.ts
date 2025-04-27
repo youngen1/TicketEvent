@@ -203,15 +203,49 @@ export class MemStorage implements IStorage {
     console.log(`Seeded ${this.events.length} events in memory storage`);
   }
 
-  private seedEvents() {
+  private async seedEvents() {
     console.log("Running seedEvents function...");
     
-    // Import events from our seed data file
-    const { createSeedEvents } = require('./data/seedEvents');
-    const sampleEvents: Event[] = createSeedEvents(() => this.nextEventId++);
-    
-    // Add events to the in-memory storage
-    this.events = sampleEvents;
+    try {
+      // Import events from our seed data file using dynamic import
+      const seedEventsModule = await import('./data/seedEvents.js');
+      const sampleEvents: Event[] = seedEventsModule.createSeedEvents(() => this.nextEventId++);
+      
+      // Add events to the in-memory storage
+      this.events = sampleEvents;
+      console.log(`Successfully loaded ${sampleEvents.length} events with videos from seed data`);
+    } catch (error) {
+      console.error("Error loading seed events:", error);
+      
+      // Fallback to creating a single event with video
+      console.log("Using fallback event with video");
+      this.events = [{
+        id: this.nextEventId++,
+        title: "Demo Event with Video",
+        description: "A sample event with an embedded video from Google",
+        date: "2025-08-15",
+        time: "15:00",
+        location: "Virtual Event",
+        category: "Technology",
+        image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"
+        ]),
+        userId: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        views: 50,
+        attendees: 20,
+        maxAttendees: 100,
+        featured: true,
+        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        tags: "demo,video,technology",
+        price: 0,
+        isFree: true,
+        rating: 4.5,
+        ratingCount: 10
+      }];
+    }
   }
   
   // Original events definition for reference
