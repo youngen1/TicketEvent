@@ -32,13 +32,27 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     <Card className="bg-white overflow-hidden shadow-sm rounded-lg hover:shadow-md transition-shadow duration-300">
       <div className="h-40 bg-neutral-200 relative">
         {event.thumbnail && event.thumbnail.length > 0 ? (
-          <div className="relative w-full h-full">
+          <div className="relative w-full h-full cursor-pointer" onClick={() => onShowDetails(event)}>
             <img 
               src={event.thumbnail.startsWith('/uploads') ? `http://localhost:5000${event.thumbnail}` : event.thumbnail} 
               alt={event.title} 
               className="w-full h-full object-cover" 
+              onError={(e) => {
+                console.error('Error loading thumbnail:', event.thumbnail);
+                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/320x240?text=Video+Thumbnail';
+              }}
             />
             <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-black bg-opacity-50 rounded-full p-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        ) : event.video && event.video.length > 0 ? (
+          <div className="relative w-full h-full cursor-pointer" onClick={() => onShowDetails(event)}>
+            <div className="w-full h-full bg-neutral-300 flex items-center justify-center">
               <div className="bg-black bg-opacity-50 rounded-full p-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play">
                   <polygon points="5 3 19 12 5 21 5 3"/>

@@ -29,21 +29,29 @@ const upload = multer({
 
 export function registerUploadRoutes(app: Express) {
   // Serve static files from uploads directory
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  const uploadsPath = path.join(__dirname, '../uploads');
+  console.log('Setting up uploads directory at:', uploadsPath);
+  app.use('/uploads', express.static(uploadsPath));
   
   app.post('/api/upload/video', upload.single('video'), async (req: Request, res: Response) => {
     try {
+      console.log('Video upload received:', req.file?.originalname);
+      
       if (!req.file) {
+        console.log('No video file provided in request');
         return res.status(400).json({ message: 'No video file provided' });
       }
       
+      console.log('Processing video file with size:', req.file.size);
       const result = await processVideo(req.file);
+      console.log('Video processing result:', result);
       
       return res.status(200).json({
         message: 'Video uploaded and processed successfully',
         ...result
       });
     } catch (error: any) {
+      console.error('Error during video upload:', error.message);
       return res.status(400).json({ message: error.message });
     }
   });

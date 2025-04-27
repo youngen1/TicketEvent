@@ -34,26 +34,42 @@ export async function processVideo(
     const videoPath = path.join(videosDir, videoFileName);
     const thumbnailPath = path.join(thumbnailsDir, thumbnailFileName);
     
+    console.log('Processing video:', videoFile.originalname);
+    console.log('Video will be saved at:', videoPath);
+    console.log('Thumbnail will be saved at:', thumbnailPath);
+    
     // Save the uploaded video
-    fs.writeFileSync(videoPath, videoFile.buffer);
+    try {
+      fs.writeFileSync(videoPath, videoFile.buffer);
+      console.log('Video file saved successfully');
+    } catch (error: any) {
+      console.error('Error saving video file:', error);
+      reject(new Error(`Failed to save video file: ${error.message || 'Unknown error'}`));
+      return;
+    }
     
     // Get video information
     ffmpeg.ffprobe(videoPath, (err, metadata) => {
       if (err) {
+        console.error('Failed to probe video:', err.message);
         reject(new Error(`Failed to probe video: ${err.message}`));
         return;
       }
       
+      console.log('Video metadata:', metadata.format);
       const duration = metadata.format.duration || 0;
+      console.log('Video duration:', duration, 'seconds');
       
       // Check if video is under 1 minute and 30 seconds (90 seconds)
       if (duration > 90) {
+        console.log('Video too long:', duration, 'seconds (max: 90 seconds)');
         fs.unlinkSync(videoPath); // Delete the uploaded video
         reject(new Error('Video exceeds the maximum allowed duration of 1 minute and 30 seconds'));
         return;
       }
       
       // Generate thumbnail from the middle of the video
+      console.log('Generating thumbnail...');
       ffmpeg(videoPath)
         .screenshots({
           timestamps: ['50%'],
@@ -62,13 +78,21 @@ export async function processVideo(
           size: '320x240'
         })
         .on('end', () => {
+          console.log('Thumbnail generated successfully');
+          const videoUrl = `/uploads/videos/${videoFileName}`;
+          const thumbnailUrl = `/uploads/thumbnails/${thumbnailFileName}`;
+          
+          console.log('Final video URL:', videoUrl);
+          console.log('Final thumbnail URL:', thumbnailUrl);
+          
           resolve({
-            videoPath: `/uploads/videos/${videoFileName}`,
-            thumbnailPath: `/uploads/thumbnails/${thumbnailFileName}`,
+            videoPath: videoUrl,
+            thumbnailPath: thumbnailUrl,
             duration
           });
         })
         .on('error', (err) => {
+          console.error('Failed to generate thumbnail:', err.message);
           fs.unlinkSync(videoPath); // Delete the uploaded video on error
           reject(new Error(`Failed to generate thumbnail: ${err.message}`));
         });
