@@ -114,36 +114,11 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           </div>
         )}
         
-        {/* Creator avatar with profile photo */}
-        <div 
-          className="creator-avatar"
-          onClick={handleCreatorClick}
-          style={{
-            backgroundImage: `url(${getProfilePhotoUrl()})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        />
+
       </div>
       
       <div className="event-content">
         <div className="event-header">
-          {/* Creator badge with profile photo */}
-          <div 
-            className="creator-badge" 
-            onClick={handleCreatorClick}
-            style={{
-              backgroundImage: `url(${getProfilePhotoUrl()})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'transparent'
-            }}
-          >
-            {getCreatorInitials()}
-          </div>
           <div className="category-badge">
             {event.category || 'General'}
           </div>
