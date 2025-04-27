@@ -28,21 +28,23 @@ export default function FinancePage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Finance Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Track your event revenue and manage payouts
-        </p>
-      </div>
-
-      {user?.id ? (
-        <FinanceView userId={user.id} />
-      ) : (
-        <div className="text-center py-10">
-          <p className="text-muted-foreground">Unable to load financial data.</p>
+    <div className="h-[calc(100vh-4rem)] overflow-y-auto pb-20">
+      <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Finance Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Track your event revenue and manage payouts
+          </p>
         </div>
-      )}
+
+        {user?.id ? (
+          <FinanceView userId={user.id} />
+        ) : (
+          <div className="text-center py-10">
+            <p className="text-muted-foreground">Unable to load financial data.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

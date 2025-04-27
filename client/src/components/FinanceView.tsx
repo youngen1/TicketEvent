@@ -64,8 +64,8 @@ const withdrawalFormSchema = z.object({
     .refine(val => !isNaN(Number(val)), {
       message: "Amount must be a valid number",
     })
-    .refine(val => Number(val) > 0, {
-      message: "Amount must be greater than 0",
+    .refine(val => Number(val) >= 50, {
+      message: "Minimum withdrawal amount is R50",
     }),
   accountName: z.string().min(3, {
     message: "Account name must be at least 3 characters long",
@@ -206,26 +206,28 @@ export default function FinanceView({ userId }: FinanceViewProps) {
   // Mutation for submitting withdrawal requests
   const withdrawalMutation = useMutation({
     mutationFn: async (data: WithdrawalFormValues) => {
-      // In a real app, this would be an API call to process the withdrawal
-      // return apiRequest("POST", "/api/finance/withdraw", data);
+      // Make the API call to the backend
+      const response = await apiRequest("POST", "/api/finance/withdraw", data);
       
-      // For now, we'll just simulate a successful request
-      return new Promise(resolve => {
-        setTimeout(() => {
-          // Create a new withdrawal request
-          const newRequest: WithdrawalRequest = {
-            id: withdrawalHistory.length + 1,
-            amount: parseFloat(data.amount),
-            status: 'pending',
-            date: new Date(),
-          };
-          
-          // Add to history
-          setWithdrawalHistory(prev => [newRequest, ...prev]);
-          
-          resolve({ success: true, request: newRequest });
-        }, 1000);
-      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to submit withdrawal request");
+      }
+      
+      const result = await response.json();
+      
+      // Create a new withdrawal request for the UI display
+      const newRequest: WithdrawalRequest = {
+        id: withdrawalHistory.length + 1,
+        amount: parseFloat(data.amount),
+        status: 'pending',
+        date: new Date(),
+      };
+      
+      // Add to history 
+      setWithdrawalHistory(prev => [newRequest, ...prev]);
+      
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -235,10 +237,10 @@ export default function FinanceView({ userId }: FinanceViewProps) {
       form.reset();
       setIsWithdrawalDialogOpen(false);
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Withdrawal failed",
-        description: "There was an error processing your withdrawal request. Please try again.",
+        description: error.message || "There was an error processing your withdrawal request. Please try again.",
         variant: "destructive",
       });
     }
@@ -530,7 +532,7 @@ export default function FinanceView({ userId }: FinanceViewProps) {
                         {...field} 
                         type="number"
                         step="0.01"
-                        min="10"
+                        min="50"
                         max={(totalRevenue * 0.85).toString()}
                       />
                     </FormControl>

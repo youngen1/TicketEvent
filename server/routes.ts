@@ -924,6 +924,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Finance and withdrawal routes
+  app.post("/api/finance/withdraw", isAuthenticated, async (req, res) => {
+    try {
+      const { amount, accountName, accountNumber, bankName } = req.body;
+      
+      if (!amount || !accountName || !accountNumber || !bankName) {
+        return res.status(400).json({ 
+          message: "All fields are required: amount, accountName, accountNumber, bankName" 
+        });
+      }
+
+      const withdrawalAmount = parseFloat(amount);
+      if (isNaN(withdrawalAmount) || withdrawalAmount < 50) {
+        return res.status(400).json({ message: "Minimum withdrawal amount is R50" });
+      }
+
+      // Get the user's completed tickets to calculate available balance
+      const userId = req.session.userId;
+      const userTickets = await storage.getUserTickets(userId);
+      const completedTickets = userTickets.filter(ticket => ticket.paymentStatus === 'completed');
+      
+      const totalRevenue = completedTickets.reduce(
+        (sum, ticket) => sum + parseFloat(ticket.totalAmount.toString() || '0'), 
+        0
+      );
+      
+      const availableBalance = totalRevenue * 0.85; // After platform fee (15%)
+      
+      if (withdrawalAmount > availableBalance) {
+        return res.status(400).json({ 
+          message: `Insufficient funds. Available balance: ${availableBalance.toFixed(2)}` 
+        });
+      }
+      
+      // In a real app, this would integrate with Paystack's transfer API
+      // For now, we'll just simulate a successful withdrawal request
+      const withdrawalRequest = {
+        id: Date.now(),
+        userId,
+        amount: withdrawalAmount,
+        accountName,
+        accountNumber,
+        bankName,
+        status: 'pending',
+        createdAt: new Date()
+      };
+      
+      // TODO: In a production app, store this in a withdrawals table
+
+      res.status(201).json({
+        success: true,
+        message: "Withdrawal request submitted successfully",
+        data: withdrawalRequest
+      });
+    } catch (error: any) {
+      console.error('Error processing withdrawal request:', error);
+      res.status(500).json({ message: error.message || "Error processing withdrawal request" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
