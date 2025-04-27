@@ -347,11 +347,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       if (verification.status === "success") {
-        // Payment successful, you could update an order, ticket, or attendance record here
-        res.json({
-          success: true,
-          data: verification
-        });
+        // Check if ticket already exists for this reference
+        const existingTicket = await storage.getTicketByReference(reference);
+
+        if (!existingTicket) {
+          try {
+            // Get the userId from session
+            const userId = req.session.userId;
+            
+            // Extract eventId from reference (format: eventId-timestamp-userId)
+            let eventId: number;
+            const parts = reference.split('-');
+            if (parts.length > 0 && !isNaN(parseInt(parts[0]))) {
+              eventId = parseInt(parts[0]);
+            } else {
+              throw new Error("Could not determine event ID from payment reference");
+            }
+            
+            // Get the event to ensure it exists
+            const event = await storage.getEvent(eventId);
+            if (!event) {
+              throw new Error(`Event with ID ${eventId} not found`);
+            }
+            
+            // Create a ticket
+            const ticket = await storage.createTicket({
+              userId,
+              eventId,
+              quantity: 1, // Default to 1 ticket
+              totalAmount: verification.amount / 100, // Convert from smallest currency unit to decimal
+              paymentReference: reference,
+              paymentStatus: "completed"
+            } as InsertEventTicket);
+            
+            // Return success with ticket info
+            res.json({
+              success: true,
+              data: {
+                verification,
+                ticket
+              }
+            });
+          } catch (error: any) {
+            console.error('Error creating ticket:', error);
+            // Still return success for the payment, but note the ticket creation error
+            res.json({
+              success: true,
+              data: {
+                verification,
+                ticketError: error.message
+              }
+            });
+          }
+        } else {
+          // Ticket already exists, just return success
+          res.json({
+            success: true,
+            data: {
+              verification,
+              ticket: existingTicket
+            }
+          });
+        }
       } else {
         res.json({
           success: false,
@@ -418,6 +475,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error updating payment settings:', error);
       res.status(500).json({ message: error.message || "Error updating payment settings" });
+    }
+  });
+  
+  // Get user tickets
+  app.get("/api/users/tickets", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const tickets = await storage.getUserTickets(req.session.userId);
+      
+      // Fetch event details for each ticket
+      const ticketsWithEventDetails = await Promise.all(
+        tickets.map(async (ticket) => {
+          const event = await storage.getEvent(ticket.eventId);
+          return {
+            ...ticket,
+            event: event || null
+          };
+        })
+      );
+      
+      res.json(ticketsWithEventDetails);
+    } catch (error: any) {
+      console.error('Error fetching user tickets:', error);
+      res.status(500).json({ message: error.message || "Error fetching user tickets" });
     }
   });
   
