@@ -451,13 +451,19 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
               </Tabs>
             </div>
             <DialogFooter className="bg-neutral-50 px-4 py-3 flex flex-row justify-between">
-              <div className="flex items-center">
+              <div className="flex items-center space-x-2">
                 {event.price && parseFloat(event.price) > 0 && (
-                  <PaymentButton 
-                    eventId={event.id} 
-                    amount={parseFloat(event.price)} 
-                    buttonText={`Book for R${parseFloat(event.price).toFixed(2)}`}
-                  />
+                  <>
+                    <PaystackPaymentButton 
+                      eventId={event.id} 
+                      amount={parseFloat(event.price)} 
+                      buttonText={`Pay with Paystack`}
+                      className="flex items-center"
+                    />
+                    <div className="text-sm font-medium text-neutral-700">
+                      Price: R{parseFloat(event.price).toFixed(2)}
+                    </div>
+                  </>
                 )}
               </div>
               <Button type="button" variant="outline" onClick={onClose}>
