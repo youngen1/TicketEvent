@@ -453,7 +453,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                 {event.price && parseFloat(event.price) > 0 && (
                   <PaymentButton 
                     eventId={event.id} 
-                    amount={event.price} 
+                    amount={parseFloat(event.price)} 
                     buttonText={`Book for R${parseFloat(event.price).toFixed(2)}`}
                   />
                 )}
