@@ -208,8 +208,8 @@ export class MemStorage implements IStorage {
     
     try {
       // Import events from our seed data file using dynamic import
-      const seedEventsModule = await import('./data/seedEvents.js');
-      const sampleEvents: Event[] = seedEventsModule.createSeedEvents(() => this.nextEventId++);
+      const { createSeedEvents } = await import('./data/seedEvents');
+      const sampleEvents: Event[] = createSeedEvents(() => this.nextEventId++);
       
       // Add events to the in-memory storage
       this.events = sampleEvents;
@@ -240,7 +240,7 @@ export class MemStorage implements IStorage {
         featured: true,
         video: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
         tags: "demo,video,technology",
-        price: 0,
+        price: "0",
         isFree: true,
         rating: 4.5,
         ratingCount: 10

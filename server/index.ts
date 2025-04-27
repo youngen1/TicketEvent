@@ -53,10 +53,10 @@ const initDatabase = async () => {
       // Add mock events directly to memory storage for development
       log('Adding mock events to memory storage', 'database');
       
-      // Tech Conference
+      // Tech Conference with video
       await storage.createEvent({
-        title: "Tech Conference 2025",
-        description: "Join us for a day of tech talks and networking",
+        title: "Tech Innovation Summit 2025",
+        description: "Explore the latest in AI, blockchain, and emerging technologies at this premier tech event",
         date: "2025-10-15",
         time: "09:00",
         location: "San Francisco, CA",
@@ -71,20 +71,21 @@ const initDatabase = async () => {
         maxAttendees: 200,
         isFree: false,
         price: "299.99",
-        tags: "tech,conference,networking"
+        tags: "tech,innovation,ai,blockchain",
+        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
       });
       
-      // Music Festival
+      // Music Festival with video
       await storage.createEvent({
-        title: "Summer Music Festival",
-        description: "A weekend of music and fun under the sun with live performances from top artists",
-        date: "2025-06-22",
-        time: "12:00",
+        title: "Global Music Festival 2025",
+        description: "A three-day celebration of music featuring top artists from around the world performing live",
+        date: "2025-07-18",
+        time: "16:00",
         location: "Austin, TX",
         category: "Music",
-        image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80",
+        image: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=800&q=80",
         images: JSON.stringify([
-          "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=800&q=80",
           "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=800&q=80"
         ]),
         userId: 1,
@@ -92,14 +93,15 @@ const initDatabase = async () => {
         maxAttendees: 5000,
         isFree: false,
         price: "149.99",
-        tags: "music,festival,summer"
+        tags: "music,festival,concert,live",
+        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
       });
       
-      // Art Exhibition
+      // Art Exhibition with video
       await storage.createEvent({
-        title: "Art Exhibition Opening",
-        description: "Opening night of our latest art exhibition featuring contemporary artists",
-        date: "2025-04-30",
+        title: "Contemporary Art Exhibition",
+        description: "Experience thought-provoking works from emerging and established artists exploring modern themes",
+        date: "2025-05-22",
         time: "18:00",
         location: "New York, NY",
         category: "Art",
@@ -113,14 +115,15 @@ const initDatabase = async () => {
         maxAttendees: 100,
         isFree: false,
         price: "25",
-        tags: "art,exhibition,culture"
+        tags: "art,exhibition,contemporary,culture",
+        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
       });
       
-      // Free Workshop
+      // Digital Skills Workshop with video
       await storage.createEvent({
-        title: "Free Community Workshop",
-        description: "Learn new skills at our community workshop - open to all",
-        date: "2025-05-15",
+        title: "Digital Skills Workshop",
+        description: "Learn essential digital skills for the modern workplace in this hands-on community workshop",
+        date: "2025-06-10",
         time: "10:00",
         location: "Chicago, IL",
         category: "Education",
@@ -133,67 +136,74 @@ const initDatabase = async () => {
         maxAttendees: 50,
         isFree: true,
         price: "0",
-        tags: "education,workshop,community"
+        tags: "education,workshop,digital,skills",
+        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
       });
       
-      // R2 Testing Event
+      // Startup Pitch Competition with video
       await storage.createEvent({
-        title: "R2 Live Payment Test Event",
-        description: "A small test event that costs exactly R2 to test the live payment system",
-        date: "2025-05-01",
-        time: "18:00",
-        location: "Johannesburg",
-        category: "Testing",
-        image: "https://images.unsplash.com/photo-1556745753-b2904692b3cd?auto=format&fit=crop&w=800&q=80",
+        title: "Startup Pitch Competition",
+        description: "Watch innovative startups pitch their ideas to investors and compete for funding",
+        date: "2025-08-05",
+        time: "13:00",
+        location: "Boston, MA",
+        category: "Business",
+        image: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=800&q=80",
         images: JSON.stringify([
-          "https://images.unsplash.com/photo-1556745753-b2904692b3cd?auto=format&fit=crop&w=800&q=80"
+          "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80"
         ]),
         userId: 1,
         featured: true,
-        maxAttendees: 100,
+        maxAttendees: 200,
         isFree: false,
-        price: "2",
-        tags: "test,payment,R2,budget"
+        price: "15",
+        tags: "startup,pitch,business,investment",
+        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
       });
       
-      // R3 Live Payment Test Event
+      // Culinary Masterclass with video
       await storage.createEvent({
-        title: "R3 Live Payment Test Event",
-        description: "A test event that costs exactly R3 to test the live payment system",
-        date: "2025-05-10",
-        time: "18:00",
-        location: "Cape Town",
-        category: "Testing",
-        image: "https://images.unsplash.com/photo-1560439514-4e9645039924?auto=format&fit=crop&w=800&q=80",
+        title: "Culinary Masterclass",
+        description: "Learn gourmet cooking techniques from renowned chefs in this immersive masterclass",
+        date: "2025-05-25",
+        time: "17:00",
+        location: "Miami, FL",
+        category: "Food",
+        image: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80",
         images: JSON.stringify([
-          "https://images.unsplash.com/photo-1560439514-4e9645039924?auto=format&fit=crop&w=800&q=80"
+          "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1507048331197-7d4ac70811cf?auto=format&fit=crop&w=800&q=80"
         ]),
         userId: 1,
         featured: false,
-        maxAttendees: 100,
+        maxAttendees: 50,
         isFree: false,
-        price: "3",
-        tags: "test,payment,R3,live"
+        price: "85",
+        tags: "food,cooking,culinary,masterclass",
+        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4"
       });
       
-      // R4 Live Payment Test Event
+      // Wellness Retreat with video
       await storage.createEvent({
-        title: "R4 Live Payment Test Event",
-        description: "A test event that costs exactly R4 to test the live payment system",
-        date: "2025-05-20",
-        time: "19:00",
-        location: "Durban",
-        category: "Testing",
-        image: "https://images.unsplash.com/photo-1572521165329-b197f9ea3da6?auto=format&fit=crop&w=800&q=80",
+        title: "Wellness Retreat Weekend",
+        description: "Rejuvenate your mind and body with yoga, meditation, and wellness workshops",
+        date: "2025-09-05",
+        time: "08:00",
+        location: "Santa Barbara, CA",
+        category: "Health",
+        image: "https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&w=800&q=80",
         images: JSON.stringify([
-          "https://images.unsplash.com/photo-1572521165329-b197f9ea3da6?auto=format&fit=crop&w=800&q=80"
+          "https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80"
         ]),
         userId: 1,
-        featured: false,
-        maxAttendees: 100,
+        featured: true,
+        maxAttendees: 60,
         isFree: false,
-        price: "4",
-        tags: "test,payment,R4,live"
+        price: "195",
+        tags: "wellness,yoga,meditation,health",
+        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4"
       });
       
       log('Mock events added successfully', 'database');
