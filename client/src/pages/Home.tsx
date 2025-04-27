@@ -144,6 +144,13 @@ export default function Home() {
     }
     return name.substring(0, 2).toUpperCase();
   };
+  
+  // Get avatar URL for a user
+  const getUserAvatar = (userId?: number | null, fallbackName: string = 'User') => {
+    // In a real application, you would fetch the user's profile photo from the server
+    // For this demo, we'll use a placeholder service based on user ID
+    return `https://ui-avatars.com/api/?name=${fallbackName}&background=8B5CF6&color=fff`;
+  };
 
   // Skeleton loader for event cards
   const renderEventSkeletons = () => (
@@ -222,7 +229,7 @@ export default function Home() {
               <div className="absolute top-2 right-2">
                 <div className="w-8 h-8 bg-gray-300 rounded-full overflow-hidden border-2 border-white">
                   <img 
-                    src={`https://ui-avatars.com/api/?name=${event.organizer || "Admin"}&background=8B5CF6&color=fff`} 
+                    src={getUserAvatar(event.userId, event.category || "Event")} 
                     alt="Organizer" 
                     className="w-full h-full object-cover"
                   />
@@ -237,7 +244,7 @@ export default function Home() {
               {/* Event code badge in top left */}
               <div className="absolute top-4 left-4">
                 <Badge className="bg-purple-500 text-white hover:bg-purple-600">
-                  {event.code || `R${event.id}`}
+                  {`R${event.id}`}
                 </Badge>
               </div>
             </div>
@@ -257,7 +264,16 @@ export default function Home() {
                 {event.description}
               </p>
               
-              <div className="mt-4 flex items-center justify-between">
+              {/* Price display in right corner */}
+              {event.price && (
+                <div className="mt-3 text-right">
+                  <span className="text-purple-700 font-bold">
+                    {event.price}
+                  </span>
+                </div>
+              )}
+              
+              <div className="mt-2 flex items-center justify-between">
                 <div className="text-sm text-gray-500">
                   {event.attendees ? (
                     `${event.attendees} ${event.attendees === 1 ? 'person' : 'people'} joined`
@@ -291,14 +307,14 @@ export default function Home() {
         <div className="flex items-center">
           <div className="w-10 h-10 bg-gray-800 rounded-full overflow-hidden mr-3">
             <img 
-              src="https://ui-avatars.com/api/?name=Admin&background=1A202C&color=fff" 
-              alt="Admin" 
+              src={getUserAvatar(1, "Your Profile")} 
+              alt="Your Profile" 
               className="w-full h-full object-cover"
             />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Admin</h2>
-            <p className="text-sm text-gray-600">admin</p>
+            <h2 className="text-lg font-bold text-gray-900">Your Name</h2>
+            <p className="text-sm text-gray-600">username</p>
           </div>
         </div>
       </div>
