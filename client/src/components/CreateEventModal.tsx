@@ -449,6 +449,68 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
             )}
           />
           
+          {/* Gender Restriction Section */}
+          <FormField
+            control={form.control}
+            name="genderRestriction"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Gender Restriction</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender restriction" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={GENDER_RESTRICTION.NONE}>No Restriction</SelectItem>
+                    <SelectItem value={GENDER_RESTRICTION.MALE_ONLY}>Male Only</SelectItem>
+                    <SelectItem value={GENDER_RESTRICTION.FEMALE_ONLY}>Female Only</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Restrict attendance to a specific gender (optional)
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          {/* Age Restriction Section */}
+          <FormField
+            control={form.control}
+            name="ageRestriction"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Age Restriction</FormLabel>
+                <Select 
+                  onValueChange={(value) => field.onChange(value ? parseInt(value) : null)} 
+                  defaultValue={field.value ? field.value.toString() : ""}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select age restriction" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">No Age Restriction</SelectItem>
+                    <SelectItem value="13">13+</SelectItem>
+                    <SelectItem value="16">16+</SelectItem>
+                    <SelectItem value="18">18+</SelectItem>
+                    <SelectItem value="21">21+</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Set minimum age requirement for attendees (optional)
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
           {!isFreeEvent && (
             <FormField
               control={form.control}

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertEventSchema } from "@shared/schema";
+import { insertEventSchema, GENDER_RESTRICTION, genderRestrictionSchema } from "@shared/schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +48,8 @@ const formSchema = insertEventSchema.extend({
   date: z.string().min(1, { message: "Date is required" }),
   time: z.string().min(1, { message: "Time is required" }),
   location: z.string().min(1, { message: "Location is required" }),
+  genderRestriction: z.string().default(GENDER_RESTRICTION.NONE),
+  ageRestriction: z.number().nullable().default(null),
   id: z.number().optional(),
 });
 
@@ -74,7 +76,8 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
       location: "",
       image: "",
       video: "",
-      schedule: "",
+      genderRestriction: GENDER_RESTRICTION.NONE,
+      ageRestriction: null,
     },
   });
 
@@ -86,12 +89,13 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
         title: event.title,
         description: event.description,
         category: event.category,
-        date: event.date,
-        time: event.time,
-        location: event.location,
+        date: event.date || "",
+        time: event.time || "",
+        location: event.location || "",
         image: event.image || "",
         video: event.video || "",
-        schedule: event.schedule || "",
+        genderRestriction: event.genderRestriction || GENDER_RESTRICTION.NONE,
+        ageRestriction: event.ageRestriction || null,
       });
       
       if (event.image) {
@@ -412,6 +416,62 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
                   <FormControl>
                     <Input placeholder="Enter location" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Gender Restriction Section */}
+            <FormField
+              control={form.control}
+              name="genderRestriction"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender Restriction</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender restriction" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={GENDER_RESTRICTION.NONE}>No Restriction</SelectItem>
+                      <SelectItem value={GENDER_RESTRICTION.MALE_ONLY}>Male Only</SelectItem>
+                      <SelectItem value={GENDER_RESTRICTION.FEMALE_ONLY}>Female Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Age Restriction Section */}
+            <FormField
+              control={form.control}
+              name="ageRestriction"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Age Restriction</FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(value ? parseInt(value) : null)} 
+                    defaultValue={field.value ? field.value.toString() : ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select age restriction" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">No Age Restriction</SelectItem>
+                      <SelectItem value="13">13+</SelectItem>
+                      <SelectItem value="16">16+</SelectItem>
+                      <SelectItem value="18">18+</SelectItem>
+                      <SelectItem value="21">21+</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
