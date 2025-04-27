@@ -140,19 +140,38 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           </span>
         </div>
         
-        {/* Creator Row - SIMPLIFIED AND GUARANTEED TO SHOW */}
-        <div className="flex items-center mb-3">
+        {/* Creator Row - ABSOLUTELY GUARANTEED TO SHOW */}
+        <div className="flex items-center mb-3" style={{display: 'flex !important'}}>
           <div 
             onClick={handleCreatorClick} 
             className="flex items-center cursor-pointer"
+            style={{display: 'flex !important'}}
           >
             <div 
-              style={{backgroundColor: getCreatorColor()}}
-              className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2"
+              style={{
+                backgroundColor: getCreatorColor(),
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '12px',
+                marginRight: '8px'
+              }}
             >
               {getCreatorInitial()}
             </div>
-            <span className="text-xs text-gray-600">
+            <span 
+              className="text-xs text-gray-600"
+              style={{
+                fontSize: '12px',
+                color: '#666',
+                fontWeight: 'normal'
+              }}
+            >
               by Event Creator {event.userId}
             </span>
           </div>
