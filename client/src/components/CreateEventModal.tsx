@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image, Upload } from "lucide-react";
+import { Image, Upload, X } from "lucide-react";
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -55,12 +55,11 @@ type FormValues = z.infer<typeof formSchema>;
 export default function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [videoPreview, setVideoPreview] = useState<string | null>(null);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [isVideoProcessing, setIsVideoProcessing] = useState(false);
-  const [videoError, setVideoError] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const { user } = useAuth();
 
   const form = useForm<FormValues>({
@@ -72,48 +71,61 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       date: "",
       time: "",
       location: "",
+      images: "",
       image: "",
-      video: "",
-      thumbnail: "",
       schedule: "",
     },
   });
 
   const createEventMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      // If we have a video file, use FormData to upload directly 
-      if (videoFile) {
-        // Create form data with all event fields plus the video file
-        const formData = new FormData();
-        
-        // Add all form fields to FormData
-        Object.entries(data).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            formData.append(key, value.toString());
+      // If we have images to upload, handle that first
+      if (imageFiles.length > 0) {
+        try {
+          setIsUploading(true);
+          setUploadProgress(10);
+          
+          // Upload images first
+          const formData = new FormData();
+          imageFiles.forEach(file => {
+            formData.append('images', file);
+          });
+          
+          setUploadProgress(30);
+          
+          // Upload the images
+          const uploadResponse = await fetch('/api/upload/images', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          setUploadProgress(70);
+          
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json();
+            throw new Error(errorData.message || 'Failed to upload images');
           }
-        });
-        
-        // Add the video file
-        formData.append('video', videoFile);
-        
-        // Use fetch directly for multipart FormData
-        const response = await fetch('/api/events', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include',
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to create event');
+          
+          const uploadResult = await uploadResponse.json();
+          // Set the images URLs as JSON string in the form data
+          data.images = JSON.stringify(uploadResult.imageUrls);
+          
+          // Also set the first image as the main image for backward compatibility
+          if (uploadResult.imageUrls.length > 0) {
+            data.image = uploadResult.imageUrls[0];
+          }
+          
+          setUploadProgress(100);
+          setIsUploading(false);
+        } catch (error: any) {
+          setIsUploading(false);
+          throw new Error(error.message || 'Failed to upload images');
         }
-        
-        return response.json();
-      } else {
-        // Regular JSON submission if no video file
-        const res = await apiRequest("POST", "/api/events", data);
-        return res.json();
       }
+      
+      // Now create the event with uploaded image URLs
+      const response = await apiRequest("POST", "/api/events", data);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
@@ -123,11 +135,10 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       });
       onClose();
       form.reset();
-      setImagePreview(null);
-      setVideoPreview(null);
-      setVideoFile(null);
-      setIsVideoProcessing(false);
-      setVideoError(null);
+      setImageFiles([]);
+      setImagePreviews([]);
+      setIsUploading(false);
+      setUploadError(null);
     },
     onError: (error: any) => {
       toast({
@@ -138,162 +149,91 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
     },
   });
 
-  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     
-    // Check if file is a video
-    if (!file.type.startsWith('video/')) {
+    // Check number of files
+    if (files.length > 30) {
       toast({
-        title: 'Invalid file',
-        description: 'Please select a video file.',
+        title: 'Too many files',
+        description: 'Please select a maximum of 30 images.',
         variant: 'destructive',
       });
       return;
     }
     
-    // Reset previous video states
-    setVideoError(null);
-    setVideoFile(file);
-    setIsVideoProcessing(true);
-    setUploadProgress(0);
+    // Validate file types
+    const fileArray = Array.from(files);
+    const invalidFile = fileArray.find(file => !file.type.startsWith('image/'));
     
-    // Create FormData and append file
-    const formData = new FormData();
-    formData.append('video', file);
-    
-    try {
-      // Create new XMLHttpRequest to track upload progress with optimized settings
-      const xhr = new XMLHttpRequest();
-      
-      // Setting timeout to a higher value to avoid premature timeouts
-      xhr.timeout = 180000; // 3 minutes
-      
-      // Set up chunked transfer if the browser supports it
-      if ('mozChunkedUpload' in xhr || 'webkitChunkedUpload' in xhr) {
-        console.log('Using chunked upload for better performance');
-      }
-      
-      // Setup more frequent progress tracking with more granular updates
-      xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable) {
-          const percentComplete = Math.round((event.loaded / event.total) * 100);
-          setUploadProgress(percentComplete);
-          
-          // Add processing status message for better user feedback
-          if (percentComplete === 100) {
-            // Update to inform user that processing is happening after upload completes
-            setTimeout(() => {
-              console.log('Upload complete, now processing video...');
-            }, 500);
-          } else if (percentComplete % 5 === 0) {
-            // Log every 5% for more frequent updates
-            console.log(`Upload progress: ${percentComplete}%`);
-          }
-          
-          // Fast-forward progress for small files for better UX
-          if (event.total < 2 * 1024 * 1024 && percentComplete > 50) { // For files under 2MB
-            setUploadProgress(Math.min(percentComplete + 20, 100)); // Jump ahead to give perception of speed
-          }
-        }
-      });
-      
-      // Wait for the request to complete
-      const response = await new Promise((resolve, reject) => {
-        xhr.open('POST', '/api/upload/video');
-        
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              resolve(data);
-            } catch (e) {
-              reject(new Error('Invalid response from server'));
-            }
-          } else {
-            try {
-              const errorData = JSON.parse(xhr.responseText);
-              reject(new Error(errorData.message || 'Upload failed'));
-            } catch (e) {
-              reject(new Error(`Server error: ${xhr.status}`));
-            }
-          }
-        };
-        
-        xhr.onerror = () => {
-          reject(new Error('Network error occurred'));
-        };
-        
-        xhr.send(formData);
-      });
-      
-      // Process successful response
-      const data = response as any;
-      console.log('Video upload successful:', data);
-      
-      // Set the video and thumbnail URLs
-      form.setValue('video', data.videoPath);
-      form.setValue('thumbnail', data.thumbnailPath);
-      
-      // Set the preview with the full URL for local display
-      const thumbnailUrl = data.thumbnailPath.startsWith('/uploads') 
-        ? `http://localhost:5000${data.thumbnailPath}` 
-        : data.thumbnailPath;
-      
-      setVideoPreview(thumbnailUrl);
-      
-      // Check if it's still processing in the background
-      if (data.processing) {
-        // Still give user feedback that they're done, but reduce state to 'processing done'
-        setUploadProgress(100);
-        setTimeout(() => setIsVideoProcessing(false), 500);
-        
-        toast({
-          title: 'Video uploaded',
-          description: 'Your video was uploaded successfully and is being optimized in the background.',
-        });
-      } else {
-        setIsVideoProcessing(false);
-        
-        toast({
-          title: 'Video uploaded',
-          description: 'Your video has been uploaded and processed successfully.',
-        });
-      }
-      
-    } catch (error: any) {
-      setIsVideoProcessing(false);
-      setVideoError(error.message || 'Failed to upload video');
-      
+    if (invalidFile) {
       toast({
-        title: 'Upload failed',
-        description: error.message || 'Failed to upload video. Please try again.',
+        title: 'Invalid file type',
+        description: 'Please select only image files.',
         variant: 'destructive',
       });
+      return;
     }
+    
+    // Reset existing upload state
+    setUploadError(null);
+    setUploadProgress(0);
+    
+    // Store files for later upload
+    setImageFiles(prev => [...prev, ...fileArray]);
+    
+    // Generate previews
+    const newPreviews: string[] = [];
+    
+    for (const file of fileArray) {
+      const preview = await readFileAsDataURL(file);
+      newPreviews.push(preview);
+    }
+    
+    setImagePreviews(prev => [...prev, ...newPreviews]);
+    
+    toast({
+      title: 'Images ready',
+      description: `${fileArray.length} image${fileArray.length > 1 ? 's' : ''} selected successfully.`,
+    });
+  };
+  
+  // Helper function to read file as data URL
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+  
+  // Remove image from the list
+  const removeImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const onSubmit = (data: FormValues) => {
+    // Validate images
+    if (imageFiles.length === 0) {
+      toast({
+        title: 'Images required',
+        description: 'Please upload at least one image for your event.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     // Add the user ID to the event data
     if (user) {
       data.createdById = user.id;
     }
+    
     createEventMutation.mutate(data);
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // In a real application, you would upload this file to a server
-    // and get back a URL. For now, we'll just use a data URL.
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setImagePreview(result);
-      form.setValue("image", "https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80");
-    };
-    reader.readAsDataURL(file);
   };
 
   // Content for when user is not logged in
@@ -414,58 +354,73 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
         />
 
         <div>
-          <FormLabel className="block text-sm font-medium text-neutral-700">Event Video</FormLabel>
-          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-neutral-300 border-dashed rounded-md">
+          <FormLabel className="block text-sm font-medium text-neutral-700">Event Images (1-30)</FormLabel>
+          <div className="mt-1 flex flex-col px-6 pt-5 pb-6 border-2 border-neutral-300 border-dashed rounded-md">
             <div className="space-y-1 text-center">
-              {videoPreview ? (
-                <div className="mb-4">
-                  <img src={videoPreview} alt="Video Thumbnail" className="h-32 mx-auto rounded" />
+              {imagePreviews.length > 0 ? (
+                <div className="mb-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img src={preview} alt={`Image ${index + 1}`} className="h-24 w-full object-cover rounded" />
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeImage(index)}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="flex-shrink-0 h-12 w-12 flex items-center justify-center mx-auto text-neutral-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-video">
-                    <path d="m22 8-6 4 6 4V8Z"/>
-                    <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
-                  </svg>
+                  <Image className="h-8 w-8" />
                 </div>
               )}
               
-              {videoError && (
+              {uploadError && (
                 <div className="mt-2 text-sm text-red-600">
-                  {videoError}
+                  {uploadError}
                 </div>
               )}
               
-              {isVideoProcessing && (
+              {isUploading && (
                 <div className="mt-2 mb-2">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-medium text-blue-700">Uploading: {uploadProgress}%</span>
                   </div>
                   <Progress value={uploadProgress} className="h-2" />
                   <p className="mt-1 text-xs text-neutral-500">
-                    {uploadProgress === 100 ? "Processing video..." : "Uploading video..."}
+                    Uploading images...
                   </p>
                 </div>
               )}
               
               <div className="flex text-sm text-neutral-600 justify-center">
-                <label htmlFor="event-video" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-blue-500">
-                  <span>{isVideoProcessing ? "Processing..." : "Upload a video"}</span>
+                <label htmlFor="event-images" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-blue-500">
+                  <span>{isUploading ? "Uploading..." : "Upload images"}</span>
                   <input
-                    id="event-video"
-                    name="event-video"
+                    id="event-images"
+                    name="event-images"
                     type="file"
+                    multiple
                     className="sr-only"
-                    accept="video/*"
-                    onChange={handleVideoChange}
-                    disabled={isVideoProcessing}
+                    accept="image/*"
+                    onChange={handleImagesUpload}
+                    disabled={isUploading}
                   />
                 </label>
                 <p className="pl-1">or drag and drop</p>
               </div>
               <p className="text-xs text-neutral-500">
-                MP4, MOV, WebM up to 100MB (max duration: 1:30)
+                JPEG, PNG, GIF, WebP up to 10MB each (1-30 images)
               </p>
+              <div className="text-xs mt-2 text-neutral-600">
+                <span className="font-medium">{imagePreviews.length}</span> of 30 images selected 
+                {imagePreviews.length > 0 && 
+                  <span className="text-green-600 ml-1">✓</span>
+                }
+              </div>
             </div>
           </div>
         </div>
@@ -477,7 +432,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
           <Button
             type="submit"
             className="bg-primary hover:bg-blue-700 text-white"
-            disabled={createEventMutation.isPending}
+            disabled={createEventMutation.isPending || isUploading}
           >
             {createEventMutation.isPending ? "Creating..." : "Create Event"}
           </Button>
