@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Event } from "@shared/schema";
 import { 
   Heart, Calendar, MapPin, Users, X, ChevronLeft, ChevronRight, 
-  Maximize, ArrowLeft, ArrowRight, MessageSquare, Star, Clock,
+  Maximize, ArrowLeft, ArrowRight, Star, Clock,
   CreditCard
 } from "lucide-react";
 import {
@@ -18,7 +18,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import CommentSection from "./CommentSection";
 import EventRating from "./EventRating";
 import EventAttendance from "./EventAttendance";
 import PaymentButton from "./PaymentButton";
@@ -404,15 +403,12 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
               
               {/* Event interaction tabs */}
               <Tabs defaultValue="details" className="w-full">
-                <TabsList className="w-full grid grid-cols-3 mb-6 responsive-padding">
+                <TabsList className="w-full grid grid-cols-2 mb-6 responsive-padding">
                   <TabsTrigger value="details" className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2" /> Details
                   </TabsTrigger>
                   <TabsTrigger value="rsvp" className="flex items-center">
                     <Users className="h-4 w-4 mr-2" /> RSVP
-                  </TabsTrigger>
-                  <TabsTrigger value="comments" className="flex items-center">
-                    <MessageSquare className="h-4 w-4 mr-2" /> Discussion
                   </TabsTrigger>
                 </TabsList>
                 
@@ -443,10 +439,6 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                 
                 <TabsContent value="rsvp" className="mt-0">
                   <EventAttendance event={event} />
-                </TabsContent>
-                
-                <TabsContent value="comments" className="mt-0">
-                  <CommentSection eventId={event.id} />
                 </TabsContent>
               </Tabs>
             </div>
