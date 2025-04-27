@@ -1,9 +1,8 @@
 import { Heart, Image as ImageIcon } from "lucide-react";
 import { Event } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useState } from "react";
 
 interface EventCardProps {
   event: Event;
@@ -13,7 +12,6 @@ interface EventCardProps {
 export default function EventCard({ event, onShowDetails }: EventCardProps) {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const [creator, setCreator] = useState<any>(null);
 
   // Get image data
   let firstImage = event.image || '';
@@ -31,49 +29,10 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     }
   }
 
-  // Fetch creator information
-  useQuery({
-    queryKey: [`/api/users/${event.userId}`],
-    queryFn: async () => {
-      if (!event.userId) return null;
-      try {
-        const response = await fetch(`/api/users/${event.userId}`, {
-          credentials: 'include'
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setCreator(data);
-          return data;
-        }
-        return null;
-      } catch (error) {
-        console.error('Error fetching creator:', error);
-        return null;
-      }
-    },
-    enabled: !!event.userId,
-  });
-
-  // Mutation for favorites
-  const toggleFavoriteMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("PUT", `/api/events/${event.id}/favorite`, null);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-    }
-  });
-
   // Click handlers
   const handleImageClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onShowDetails(event, true);
-  };
-
-  const handleFavoriteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleFavoriteMutation.mutate();
   };
   
   const handleCreatorClick = (e: React.MouseEvent) => {
@@ -81,10 +40,6 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     if (event.userId) {
       navigate(`/users/${event.userId}`);
     }
-  };
-
-  const getCreatorInitial = () => {
-    return creator?.username?.charAt(0).toUpperCase() || `U${event.userId || ''}`;
   };
 
   // Format image URL
@@ -98,76 +53,99 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     return url;
   };
 
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = date.toLocaleString('default', { month: 'short' });
+      const year = date.getFullYear();
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      
+      return `${day} ${month} ${year} ${hours}:${minutes}`;
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  // Get creator initials for avatar
+  const getCreatorInitials = () => {
+    return event.userId ? `R${event.userId}` : 'R1';
+  };
+
   return (
     <div 
       onClick={() => onShowDetails(event)}
-      className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transition-shadow duration-300 hover:shadow-lg"
+      className="bg-white shadow-sm overflow-hidden cursor-pointer mb-4 border border-gray-100"
     >
-      <div className="relative h-40 bg-neutral-200">
+      {/* Event Image with Avatar */}
+      <div className="relative">
         {firstImage ? (
           <img 
             src={getFormattedImageUrl(firstImage)} 
             alt={event.title}
-            className="w-full h-full object-cover" 
+            className="w-full h-48 object-cover" 
             onClick={handleImageClick}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="w-full h-48 flex items-center justify-center bg-gray-200">
             <ImageIcon size={40} className="text-gray-400" />
           </div>
         )}
-        
-        <div className="absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-semibold bg-purple-600 text-white">
-          {event.category || 'General'}
-        </div>
-        
+
+        {/* Creator Avatar */}
         <div 
-          onClick={handleCreatorClick}
-          className="absolute top-2 right-2 w-10 h-10 rounded-full overflow-hidden border-2 border-white cursor-pointer shadow-md"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCreatorClick(e);
+          }}
+          className="absolute top-2 right-2 w-12 h-12 rounded-full overflow-hidden border-2 border-white cursor-pointer shadow-md"
           style={{
-            backgroundColor: `hsl(${(event.id || 0) * 40 % 360}, 70%, 45%)`,
+            backgroundColor: `rgb(${event.userId && event.userId % 3 === 0 ? '148, 49, 167' : event.userId && event.userId % 2 === 0 ? '239, 68, 68' : '59, 130, 246'})`
           }}
         >
-          {creator?.avatar ? (
-            <img 
-              src={getFormattedImageUrl(creator.avatar)} 
-              alt={creator.username || 'Creator'} 
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-              {getCreatorInitial()}
-            </div>
-          )}
+          <div className="w-full h-full flex items-center justify-center text-white font-bold">
+            {getCreatorInitials()}
+          </div>
         </div>
-        
-        <button
-          onClick={handleFavoriteClick}
-          className="absolute bottom-2 right-2 bg-white p-1.5 rounded-full shadow hover:bg-gray-100"
-        >
-          <Heart size={18} className={event.isFavorited ? "text-red-500 fill-red-500" : ""} />
-        </button>
       </div>
-      
+
+      {/* Card Content */}
       <div className="p-4">
-        <div className="flex justify-between text-sm text-gray-500 mb-2">
-          <div>{event.date}</div>
-          <div>{event.location}</div>
-        </div>
-        
-        <h3 className="text-lg font-semibold mb-2 text-gray-800">{event.title}</h3>
-        
-        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{event.description}</p>
-        
-        <div className="flex justify-between pt-2 border-t border-gray-100">
-          <div className="text-sm font-semibold text-purple-600">
-            {event.isFree ? 'Free' : `$${event.price}`}
+        {/* Creator Initials and Category Row */}
+        <div className="flex justify-between items-center mb-2">
+          <div 
+            className="text-white text-sm font-semibold bg-purple-600 w-10 h-10 rounded flex items-center justify-center"
+            onClick={handleCreatorClick}
+          >
+            {getCreatorInitials()}
           </div>
           
-          <div className="text-xs text-gray-500">
-            {event.attendees || 0} attending
+          <div className="px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
+            {event.category || 'General'}
           </div>
         </div>
+        
+        {/* Date */}
+        <div className="text-gray-600 text-sm mb-1">
+          {formatDate(event.date || '')}
+        </div>
+        
+        {/* Title */}
+        <h3 className="text-lg font-bold text-gray-800 mb-1">
+          {event.title}
+        </h3>
+        
+        {/* Location */}
+        <div className="text-gray-600 mb-2">
+          {event.location}
+        </div>
+        
+        {/* Description */}
+        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+          {event.description}
+        </p>
       </div>
     </div>
   );
