@@ -1,7 +1,39 @@
-import { pgTable, serial, text, timestamp, integer, boolean, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, boolean, pgEnum, date } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+
+// Gender enum for consistent gender options
+export const GENDER_OPTIONS = {
+  MALE: "male",
+  FEMALE: "female",
+  NON_BINARY: "non-binary",
+  OTHER: "other",
+  PREFER_NOT_TO_SAY: "prefer-not-to-say"
+} as const;
+
+// Gender restriction options for events
+export const GENDER_RESTRICTION = {
+  NONE: "none",
+  MALE_ONLY: "male-only",
+  FEMALE_ONLY: "female-only"
+} as const;
+
+// Create a Zod schema for gender validation
+export const genderSchema = z.enum([
+  GENDER_OPTIONS.MALE,
+  GENDER_OPTIONS.FEMALE, 
+  GENDER_OPTIONS.NON_BINARY,
+  GENDER_OPTIONS.OTHER,
+  GENDER_OPTIONS.PREFER_NOT_TO_SAY
+]);
+
+// Create a Zod schema for gender restriction validation
+export const genderRestrictionSchema = z.enum([
+  GENDER_RESTRICTION.NONE,
+  GENDER_RESTRICTION.MALE_ONLY,
+  GENDER_RESTRICTION.FEMALE_ONLY
+]);
 
 // Users table
 export const users = pgTable("users", {
@@ -10,6 +42,8 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   displayName: text("display_name"),
   email: text("email"),
+  gender: text("gender"), // Store gender as text (male, female, non-binary, other, prefer-not-to-say)
+  dateOfBirth: date("date_of_birth"), // Store date of birth for age calculation
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   bio: text("bio"),
@@ -27,6 +61,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   displayName: true,
   email: true,
+  gender: true,
+  dateOfBirth: true,
   bio: true,
   avatar: true,
   preferences: true,
@@ -55,6 +91,9 @@ export const events = pgTable("events", {
   isFree: boolean("is_free").default(true),
   price: text("price"),
   tags: text("tags"),
+  // Gender restriction fields
+  genderRestriction: text("gender_restriction"), // Store as male-only, female-only, or null for no restriction
+  ageRestriction: integer("age_restriction"), // Minimum age required (18+, 21+, etc.)
 });
 
 export const insertEventSchema = createInsertSchema(events).pick({
@@ -73,6 +112,8 @@ export const insertEventSchema = createInsertSchema(events).pick({
   isFree: true,
   price: true,
   tags: true,
+  genderRestriction: true,
+  ageRestriction: true,
 });
 
 // Comments table
