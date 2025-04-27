@@ -33,6 +33,7 @@ export interface VideoProcessingResult {
   videoPath: string;
   thumbnailPath: string;
   duration: number;
+  processing?: boolean; // Flag to indicate if video is still being processed in background
 }
 
 export async function processVideo(
@@ -123,31 +124,41 @@ export async function processVideo(
           reject(new Error(`Failed to generate thumbnail: ${err.message}`));
         });
       
-      // Fast-path ALL videos for immediate response
+      // Ultra-Fast path ALL videos for immediate response
       // Prioritize rapid response for better user experience
-      console.log('Fast-tracking video response');
+      console.log('Hyper-fast-tracking video response');
       const videoUrl = `/uploads/videos/${videoFileName}`;
       optimizedVideoPath = videoUrl;
       
-      // Return a default thumbnail if we need to resolve immediately
-      if (!thumbnailGenerated) {
-        // This is a significant speed optimization - we don't wait for the thumbnail
-        // The client will get the response immediately and can start showing a placeholder
-        // while the real thumbnail is being generated
-        console.log('Returning fast response before thumbnail is ready');
+      // Check if thumbnail already completed (rare but possible for small videos)
+      if (thumbnailGenerated && thumbnailUrl) {
+        console.log('Thumbnail already generated, using it for immediate response');
         resolve({
           videoPath: optimizedVideoPath,
-          // Use a placeholder image if the thumbnail isn't ready yet
-          thumbnailPath: `/uploads/thumbnails/default_processing.jpg`,
-          duration
+          thumbnailPath: thumbnailUrl,
+          duration,
+          processing: false
         });
       } else {
-        // If thumbnail is already done (rare but possible), use it
-        resolve({
-          videoPath: optimizedVideoPath,
-          thumbnailPath: thumbnailUrl!,
-          duration
-        });
+        // Maximum speed optimization: Return immediately with placeholder
+        // Don't wait for anything - file is already saved
+        console.log('Returning immediate response for maximum speed');
+        
+        // Set a short timeout to allow for very fast thumbnails
+        setTimeout(() => {
+          if (!thumbnailGenerated) {
+            resolve({
+              videoPath: optimizedVideoPath,
+              thumbnailPath: `/uploads/thumbnails/default_processing.jpg`,
+              duration,
+              processing: true
+            });
+          }
+        }, 100); // Short timeout to see if thumbnail completes super fast
+        
+        // Continue thumbnail generation in the background
+        // This happens after the response is already sent back
+        console.log('Continuing processing in background for better user experience');
       }
     });
   });

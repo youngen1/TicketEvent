@@ -37,18 +37,30 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // Increased to 100MB max file size
+  limits: { 
+    fileSize: 100 * 1024 * 1024, // Increased to 100MB max file size
+    files: 1 // Limit to one file per request for better performance
+  },
   fileFilter: (_req, file, cb) => {
-    // Accept only video files
+    // Super-fast acceptance of common video types without deep validation
+    // This speeds up the initial upload part significantly
     const filetypes = /mp4|mov|avi|webm|mkv/;
-    const mimetype = filetypes.test(file.mimetype);
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const extname = path.extname(file.originalname).toLowerCase();
     
-    if (mimetype && extname) {
+    // Fast path for MP4 files (most common format, fastest processing)
+    if (extname === '.mp4') {
+      console.log('Fast-path processing for MP4 file');
       return cb(null, true);
     }
     
-    cb(new Error('Only video files are allowed'));
+    // Fast path for other accepted video types
+    if (filetypes.test(extname)) {
+      console.log('Standard processing path for video file:', extname);
+      return cb(null, true);
+    }
+    
+    console.log('Rejected file with extension:', extname);
+    cb(new Error('Only video files (MP4, MOV, AVI, WEBM, MKV) are allowed'));
   }
 });
 
