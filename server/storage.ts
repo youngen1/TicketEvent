@@ -128,7 +128,7 @@ export class MemStorage implements IStorage {
     console.log("Created admin account with username: admin and password: password");
     
     // Create some sample users to follow
-    for (let i = 3; i <= 5; i++) {
+    for (let i = 3; i <= 10; i++) {
       this.users.push({
         id: this.nextUserId++,
         username: `user${i}`,
@@ -144,6 +144,57 @@ export class MemStorage implements IStorage {
         followingCount: 0,
         isAdmin: false,
         platformBalance: "0"
+      });
+    }
+    
+    // Seed followers and following relationships for the admin user (ID: 2)
+    console.log("Setting up followers and following relationships for admin user");
+    
+    // Admin user follows users 3, 4, 5
+    for (let i = 3; i <= 5; i++) {
+      this.userFollows.push({
+        id: this.nextUserFollowId++,
+        followerId: 2, // Admin user ID
+        followingId: i,
+        createdAt: new Date(),
+        updatedAt: null
+      });
+    }
+    
+    // Users 6, 7, 8, 9, 10 follow the admin user
+    for (let i = 6; i <= 10; i++) {
+      this.userFollows.push({
+        id: this.nextUserFollowId++,
+        followerId: i,
+        followingId: 2, // Admin user ID
+        createdAt: new Date(),
+        updatedAt: null
+      });
+    }
+    
+    // Update follower and following counts
+    this.users[1].followingCount = 3; // Admin user follows 3 people
+    this.users[1].followersCount = 5; // Admin user has 5 followers
+    
+    // Add platform balance for admin (from platform fees)
+    this.users[1].platformBalance = "142.50"; // Platform fee balance
+    
+    // Create some test tickets for the admin user
+    console.log("Creating test tickets for admin user");
+    
+    // Add completed tickets for different events
+    for (let i = 1; i <= 3; i++) {
+      this.tickets.push({
+        id: this.nextTicketId++,
+        userId: 2, // Admin user ID
+        eventId: i,
+        quantity: 2,
+        totalAmount: i === 1 ? 599.98 : (i === 2 ? 299.98 : 50),
+        paymentReference: `ticket-${i}-${Date.now()}`,
+        paymentStatus: "completed",
+        purchaseDate: new Date(Date.now() - (i * 24 * 60 * 60 * 1000)), // Different purchase dates
+        createdAt: new Date(Date.now() - (i * 24 * 60 * 60 * 1000)),
+        updatedAt: null
       });
     }
     
