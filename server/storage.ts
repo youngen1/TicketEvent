@@ -606,10 +606,11 @@ export class MemStorage implements IStorage {
   
   // Ticket methods
   async getUserTickets(userId: number): Promise<EventTicket[]> {
+    // For testing purposes, include pending and completed tickets
     return this.tickets
       .filter(ticket => 
         ticket.userId === userId && 
-        ticket.paymentStatus === "completed"
+        (ticket.paymentStatus === "completed" || ticket.paymentStatus === "pending")
       )
       .sort((a, b) => {
         const dateA = new Date(a.purchaseDate || 0);

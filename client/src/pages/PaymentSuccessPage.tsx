@@ -16,31 +16,78 @@ export default function PaymentSuccessPage() {
       try {
         setIsLoading(true);
         
-        // For test tickets, we don't have a reference in the URL
-        // Get latest user ticket instead
+        // Get search params
+        const searchParams = new URLSearchParams(window.location.search);
+        const reference = searchParams.get('reference');
+        const amount = searchParams.get('amount');
         
-        // First get user tickets
-        const ticketsResponse = await apiRequest('GET', '/api/users/tickets');
-        const tickets = await ticketsResponse.json();
+        console.log('Payment success page loaded with params:', { reference, amount });
         
-        if (tickets && tickets.length > 0) {
-          // Get the latest ticket (assume it's the most recently created one)
-          const latestTicket = tickets.sort((a: any, b: any) => {
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          })[0];
-          
-          console.log('Found latest user ticket:', latestTicket);
-          
-          // Create transaction details from ticket
-          setTransactionDetails({
-            reference: latestTicket.paymentReference,
-            amount: latestTicket.totalAmount * 100, // Convert to cents for display
-            status: latestTicket.paymentStatus,
-            paidAt: latestTicket.purchaseDate || latestTicket.createdAt,
-            testPayment: latestTicket.paymentReference.includes('-test')
-          });
+        if (reference) {
+          // First verify the payment with the server
+          console.log('Verifying payment reference:', reference);
+          try {
+            const verifyResponse = await apiRequest('GET', `/api/payments/verify/${reference}?amount=${amount}`);
+            const verifyResult = await verifyResponse.json();
+            
+            console.log('Payment verification result:', verifyResult);
+            
+            // Now fetch the user's tickets
+            const ticketsResponse = await apiRequest('GET', '/api/users/tickets');
+            const tickets = await ticketsResponse.json();
+            
+            console.log('User tickets after verification:', tickets);
+            
+            if (tickets && tickets.length > 0) {
+              // Find the ticket matching our reference
+              const matchingTicket = tickets.find((t: any) => t.paymentReference === reference);
+              
+              // If not found, get the latest ticket
+              const latestTicket = matchingTicket || tickets.sort((a: any, b: any) => {
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              })[0];
+              
+              console.log('Found ticket for display:', latestTicket);
+              
+              // Create transaction details from ticket
+              setTransactionDetails({
+                reference: latestTicket.paymentReference,
+                amount: latestTicket.totalAmount * 100, // Convert to cents for display
+                status: latestTicket.paymentStatus,
+                paidAt: latestTicket.purchaseDate || latestTicket.createdAt,
+                testPayment: latestTicket.paymentReference.includes('-test')
+              });
+            } else {
+              throw new Error('No tickets found');
+            }
+          } catch (error) {
+            console.error('Error verifying payment:', error);
+            throw new Error('Payment verification failed');
+          }
         } else {
-          throw new Error('No tickets found');
+          // Fallback to just showing tickets if no reference provided
+          const ticketsResponse = await apiRequest('GET', '/api/users/tickets');
+          const tickets = await ticketsResponse.json();
+          
+          if (tickets && tickets.length > 0) {
+            // Get the latest ticket
+            const latestTicket = tickets.sort((a: any, b: any) => {
+              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            })[0];
+            
+            console.log('No reference, showing latest ticket:', latestTicket);
+            
+            // Create transaction details from ticket
+            setTransactionDetails({
+              reference: latestTicket.paymentReference,
+              amount: latestTicket.totalAmount * 100, // Convert to cents for display
+              status: latestTicket.paymentStatus,
+              paidAt: latestTicket.purchaseDate || latestTicket.createdAt,
+              testPayment: latestTicket.paymentReference.includes('-test')
+            });
+          } else {
+            throw new Error('No tickets found');
+          }
         }
       } catch (err: any) {
         console.error('Error retrieving ticket details:', err);
