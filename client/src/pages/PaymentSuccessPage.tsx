@@ -19,36 +19,23 @@ export default function PaymentSuccessPage() {
         // Get reference from URL query params
         const urlParams = new URLSearchParams(window.location.search);
         const reference = urlParams.get('reference');
-        const isMock = urlParams.get('mock') === 'true';
         
         if (!reference) {
           throw new Error('Payment reference not found');
         }
         
-        if (isMock) {
-          // For mock payments, create fake transaction details
-          // Extract original amount from URL if available
-          const originalAmount = urlParams.get('amount');
-          const amountInCents = originalAmount ? Math.round(parseFloat(originalAmount) * 100) : 29999;
-          
-          setTransactionDetails({
-            reference,
-            amount: amountInCents, // In smallest currency unit (cents/kobo)
-            status: 'success',
-            paidAt: new Date().toISOString(),
-            mockPayment: true
-          });
-        } else {
-          // For real payments, verify with backend
-          const response = await apiRequest('GET', `/api/payments/verify/${reference}`);
-          const data = await response.json();
-          
-          if (!data.success) {
-            throw new Error('Payment verification failed');
-          }
-          
-          setTransactionDetails(data.data);
+        console.log('Verifying payment with reference:', reference);
+        
+        // Always verify real payments with backend
+        const response = await apiRequest('GET', `/api/payments/verify/${reference}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error('Payment verification failed');
         }
+        
+        console.log('Payment verified successfully:', data.data);
+        setTransactionDetails(data.data);
       } catch (err: any) {
         console.error('Error verifying payment:', err);
         setError(err.message || 'An error occurred while verifying your payment');
@@ -130,11 +117,7 @@ export default function PaymentSuccessPage() {
                 </dd>
               </div>
               
-              {transactionDetails.mockPayment && (
-                <div className="mt-4 p-2 bg-yellow-50 rounded text-sm text-yellow-800">
-                  This is a demo transaction. No actual payment was processed.
-                </div>
-              )}
+              {/* All transactions are now real Paystack payments */}
             </dl>
           </div>
         )}

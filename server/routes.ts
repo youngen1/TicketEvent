@@ -452,48 +452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Helper endpoint to create test tickets (for development only)
-  app.post("/api/test/create-ticket", isAuthenticated, async (req, res) => {
-    try {
-      if (!req.session.userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-      
-      const { eventId, quantity = 1, amount = 1500 } = req.body;
-      
-      if (!eventId) {
-        return res.status(400).json({ message: "Event ID is required" });
-      }
-      
-      // Verify event exists
-      const event = await storage.getEvent(parseInt(eventId));
-      if (!event) {
-        return res.status(404).json({ message: "Event not found" });
-      }
-      
-      // Create a reference
-      const reference = `${eventId}-${Date.now()}-${req.session.userId}-test`;
-      
-      // Create the ticket
-      const ticket = await storage.createTicket({
-        userId: req.session.userId,
-        eventId: parseInt(eventId),
-        quantity: parseInt(quantity.toString()),
-        totalAmount: parseFloat(amount.toString()),
-        paymentReference: reference,
-        paymentStatus: "completed"
-      } as InsertEventTicket);
-      
-      res.json({
-        success: true,
-        message: "Test ticket created successfully",
-        ticket
-      });
-    } catch (error: any) {
-      console.error('Error creating test ticket:', error);
-      res.status(500).json({ message: error.message || "Error creating test ticket" });
-    }
-  });
+  // No test endpoints for production payments
   
   // Payment settings admin routes
   app.get("/api/admin/payment-settings", isAuthenticated, async (req, res) => {

@@ -95,36 +95,9 @@ class PaystackService {
    */
   async verifyPayment(params: VerifyPaymentParams) {
     try {
-      // In development mode with dummy key, return mock data
-      const hasValidKey = process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_TEST_SECRET_KEY;
-      if (!hasValidKey) {
-        console.log('Using mock verification data for development (no valid API keys found)');
-        
-        // Try to extract amount from reference
-        // Format is typically eventId-timestamp-userId, but
-        // we will also check for query parameter if it exists
-        let mockAmount = 5000; // Default 50.00 in cents
-        
-        // If params contains amount directly (i.e., from URL params)
-        if (params.amount) {
-          mockAmount = Math.round(parseFloat(String(params.amount)) * 100);
-        }
-        
-        return {
-          status: "success",
-          reference: params.reference,
-          amount: mockAmount,
-          paid_at: new Date().toISOString(),
-          channel: "card",
-          currency: "ZAR",
-          transaction_date: new Date().toISOString(),
-          customer: {
-            email: "demo@example.com",
-            name: "Demo User"
-          }
-        };
-      }
+      console.log('Verifying Paystack payment with reference:', params.reference);
       
+      // Always using real Paystack API for verification
       const response = await this.paystack.verifyTransaction({
         reference: params.reference
       });
@@ -133,29 +106,16 @@ class PaystackService {
         throw new Error(response.body.message || 'Failed to verify transaction');
       }
 
+      console.log('Paystack payment verification successful:', {
+        reference: response.body.data.reference,
+        status: response.body.data.status,
+        amount: response.body.data.amount,
+        currency: response.body.data.currency
+      });
+
       return response.body.data;
     } catch (error: any) {
       console.error('Paystack verify payment error:', error);
-      
-      // For development, return mock data instead of failing
-      const hasValidKey = process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_TEST_SECRET_KEY;
-      if (!hasValidKey) {
-        console.log('Using mock verification data after error for development');
-        return {
-          status: "success",
-          reference: params.reference,
-          amount: 5000, // 50.00 in the smallest currency unit
-          paid_at: new Date().toISOString(),
-          channel: "card",
-          currency: "ZAR",
-          transaction_date: new Date().toISOString(),
-          customer: {
-            email: "demo@example.com",
-            name: "Demo User"
-          }
-        };
-      }
-      
       throw new Error(error.message || 'Could not verify payment');
     }
   }
