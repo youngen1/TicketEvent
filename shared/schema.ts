@@ -193,12 +193,39 @@ export type EventRating = typeof eventRatings.$inferSelect;
 export type InsertEventAttendee = z.infer<typeof insertEventAttendeeSchema>;
 export type EventAttendee = typeof eventAttendees.$inferSelect;
 
+// Event tickets for purchased events
+export const eventTickets = pgTable("event_tickets", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  eventId: integer("event_id").notNull().references(() => events.id),
+  quantity: integer("quantity").notNull().default(1),
+  totalAmount: integer("total_amount").notNull(),
+  paymentReference: text("payment_reference").notNull(),
+  paymentStatus: text("payment_status").notNull().default("completed"),
+  purchaseDate: timestamp("purchase_date").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const insertEventTicketSchema = createInsertSchema(eventTickets).pick({
+  userId: true,
+  eventId: true,
+  quantity: true,
+  totalAmount: true,
+  paymentReference: true,
+  paymentStatus: true,
+});
+
+export type InsertEventTicket = z.infer<typeof insertEventTicketSchema>;
+export type EventTicket = typeof eventTickets.$inferSelect;
+
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({
   events: many(events),
   comments: many(comments),
   ratings: many(eventRatings),
-  attendees: many(eventAttendees)
+  attendees: many(eventAttendees),
+  tickets: many(eventTickets)
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({

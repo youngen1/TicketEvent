@@ -195,6 +195,33 @@ export class MemStorage implements IStorage {
         isFree: true,
         rating: 4.5,
         ratingCount: 12
+      },
+      {
+        id: this.nextEventId++,
+        title: "Budget-Friendly Coffee Tasting",
+        description: "Try various coffee blends from around the world for just R2. Perfect for coffee lovers on a budget!",
+        date: "2025-05-10",
+        time: "14:00",
+        location: "Cape Town, SA",
+        category: "Food & Drink",
+        image: "https://images.unsplash.com/photo-1509042239860-f0ca3bf6d889?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1509042239860-f0ca3bf6d889?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80"
+        ]),
+        userId: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        views: 42,
+        attendees: 8,
+        maxAttendees: 30,
+        featured: false,
+        video: null,
+        tags: "coffee,tasting,budget,affordable",
+        price: 2,
+        isFree: false,
+        rating: 4.3,
+        ratingCount: 6
       }
     ];
     
