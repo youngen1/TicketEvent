@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Event } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
 
 interface EventCardProps {
   event: Event;
@@ -22,27 +23,39 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
   };
   const queryClient = useQueryClient();
   
-  // Fetch creator information
-  const { data: creator } = useQuery({
-    queryKey: [`/api/users/${event.userId}`],
-    queryFn: async () => {
-      if (!event.userId) return null;
-      console.log('Fetching creator info for userId:', event.userId);
-      try {
-        const response = await apiRequest("GET", `/api/users/${event.userId}`, null);
-        const data = await response.json();
-        console.log('Creator data fetched:', data);
-        return data;
-      } catch (error) {
-        console.error('Error fetching creator:', error);
-        return null;
-      }
-    },
-    enabled: !!event.userId,
-  });
+  // State to hold creator data
+  const [creator, setCreator] = useState<any>(null);
   
   // Debug logs
   console.log('Event:', event.id, 'Title:', event.title, 'UserId:', event.userId);
+  
+  // Directly fetch creator information on component mount
+  useEffect(() => {
+    async function fetchCreator() {
+      if (!event.userId) return;
+      
+      console.log('Directly fetching creator info for userId:', event.userId);
+      try {
+        const response = await fetch(`/api/users/${event.userId}`, {
+          credentials: 'include'
+        });
+        
+        console.log(`API Response for user ${event.userId} - Status:`, response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Creator data directly fetched:', data);
+          setCreator(data);
+        } else {
+          console.error('Error fetching creator:', response.status);
+        }
+      } catch (error) {
+        console.error('Exception fetching creator:', error);
+      }
+    }
+    
+    fetchCreator();
+  }, [event.userId]);
 
   const toggleFavoriteMutation = useMutation({
     mutationFn: async () => {
@@ -156,9 +169,9 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
             className="cursor-pointer flex items-center" 
             onClick={handleCreatorClick}
           >
-            <Avatar className="h-6 w-6 mr-2">
+            <Avatar className="h-6 w-6 mr-2 bg-blue-100">
               <AvatarImage 
-                src={creator?.avatar ? getFormattedImageUrl(creator.avatar) : undefined} 
+                src={creator?.avatar ? getFormattedImageUrl(creator.avatar) : `https://ui-avatars.com/api/?name=${creator?.username || 'User'}&background=random`} 
                 alt={creator?.username || 'Event creator'} 
               />
               <AvatarFallback>
