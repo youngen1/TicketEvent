@@ -107,6 +107,21 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           </div>
         )}
         
+        {/* Creator Avatar - POSITIONED IN TOP-RIGHT CORNER OF IMAGE */}
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCreatorClick(e);
+          }}
+          className="absolute top-2 right-2 w-8 h-8 rounded-full overflow-hidden border-2 border-white cursor-pointer shadow-md"
+        >
+          <img 
+            src={`https://randomuser.me/api/portraits/men/${event.id}.jpg`}
+            alt="Creator"
+            className="w-full h-full object-cover"
+          />
+        </div>
+        
         {/* Multiple images indicator */}
         {totalImages > 1 && (
           <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center">
@@ -118,7 +133,7 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
         {/* Favorite button */}
         <button
           onClick={handleFavoriteClick}
-          className="absolute top-2 right-2 bg-white p-1.5 rounded-full shadow hover:bg-gray-100"
+          className="absolute top-2 left-2 bg-white p-1.5 rounded-full shadow hover:bg-gray-100"
         >
           <Heart size={18} />
         </button>
@@ -140,42 +155,7 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           </span>
         </div>
         
-        {/* Creator Row - ABSOLUTELY GUARANTEED TO SHOW */}
-        <div className="flex items-center mb-3" style={{display: 'flex !important'}}>
-          <div 
-            onClick={handleCreatorClick} 
-            className="flex items-center cursor-pointer"
-            style={{display: 'flex !important'}}
-          >
-            <div 
-              style={{
-                backgroundColor: getCreatorColor(),
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: '12px',
-                marginRight: '8px'
-              }}
-            >
-              {getCreatorInitial()}
-            </div>
-            <span 
-              className="text-xs text-gray-600"
-              style={{
-                fontSize: '12px',
-                color: '#666',
-                fontWeight: 'normal'
-              }}
-            >
-              by Event Creator {event.userId}
-            </span>
-          </div>
-        </div>
+
         
         {/* Event Title */}
         <h3 className="font-bold text-gray-800 mb-1">
