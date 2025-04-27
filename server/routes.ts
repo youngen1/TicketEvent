@@ -9,7 +9,7 @@ import pgSession from 'connect-pg-simple';
 import multer from 'multer';
 import path from 'path';
 import { processVideo } from "./utils/videoProcessor";
-import paystackService from './services/paystackService';
+import { paystackService } from './services/paystackService';
 
 // Add userId to session
 declare module 'express-session' {
