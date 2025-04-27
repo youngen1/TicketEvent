@@ -120,7 +120,7 @@ export default function ProfilePage() {
   // Mutation for following a user
   const followUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const res = await apiRequest("POST", `/api/users/follow/${userId}`);
+      const res = await apiRequest("POST", `/api/users/${userId}/follow`);
       if (!res.ok) {
         throw new Error("Failed to follow user");
       }
@@ -148,7 +148,7 @@ export default function ProfilePage() {
   // Mutation for unfollowing a user
   const unfollowUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const res = await apiRequest("DELETE", `/api/users/follow/${userId}`);
+      const res = await apiRequest("DELETE", `/api/users/${userId}/follow`);
       if (!res.ok) {
         throw new Error("Failed to unfollow user");
       }
