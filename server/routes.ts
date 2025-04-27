@@ -27,6 +27,19 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
+// Middleware to check if user is admin
+const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+  }
+  
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup session middleware with PostgreSQL store
   const PostgresStore = pgSession(session);
@@ -1014,6 +1027,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error processing withdrawal request:', error);
       res.status(500).json({ message: error.message || "Error processing withdrawal request" });
+    }
+  });
+  
+  // Admin routes - require admin authentication
+  app.get('/api/admin/stats', isAdmin, async (req, res) => {
+    try {
+      // Get total users count
+      const allUsers = await storage.getAllUsers();
+      const totalUsers = allUsers.length;
+      
+      // Get total events count
+      const allEvents = await storage.getAllEvents();
+      const totalEvents = allEvents.length;
+      
+      // Get all tickets
+      const allTickets = await storage.getAllTickets();
+      const completedTickets = allTickets.filter(ticket => ticket.paymentStatus === 'completed');
+      
+      // Calculate total revenue and tickets sold
+      const totalTicketsSold = completedTickets.length;
+      const totalRevenue = completedTickets.reduce(
+        (sum, ticket) => sum + parseFloat(ticket.totalAmount?.toString() || '0'), 
+        0
+      );
+      
+      // Get admin user
+      const adminUser = allUsers.find(user => user.isAdmin);
+      const platformBalance = adminUser ? parseFloat(adminUser.platformBalance || '0') : 0;
+      
+      res.json({
+        totalUsers,
+        totalEvents,
+        totalTicketsSold,
+        totalRevenue,
+        platformBalance
+      });
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+      res.status(500).json({ message: 'Error fetching admin stats' });
+    }
+  });
+  
+  app.get('/api/admin/transactions', isAdmin, async (req, res) => {
+    try {
+      // Get all completed tickets for admin view
+      const allTickets = await storage.getAllTickets();
+      const completedTickets = allTickets.filter(ticket => 
+        ticket.paymentStatus === 'completed' || ticket.paymentStatus === 'pending'
+      );
+      
+      // Sort by date (newest first)
+      const sortedTickets = completedTickets.sort((a, b) => 
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+      
+      // Limit to most recent 20
+      const recentTickets = sortedTickets.slice(0, 20);
+      
+      res.json(recentTickets);
+    } catch (error) {
+      console.error('Error fetching admin transactions:', error);
+      res.status(500).json({ message: 'Error fetching admin transactions' });
     }
   });
 

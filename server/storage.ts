@@ -22,6 +22,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
   getUserEvents(userId: number): Promise<Event[]>;
+  getAllUsers(): Promise<User[]>;
   
   // Event methods
   getAllEvents(category?: string, tags?: string, featured?: boolean): Promise<Event[]>;
@@ -57,6 +58,7 @@ export interface IStorage {
   getEventTickets(eventId: number): Promise<EventTicket[]>;
   getTicket(ticketId: number): Promise<EventTicket | undefined>;
   getTicketByReference(reference: string): Promise<EventTicket | undefined>;
+  getAllTickets(): Promise<EventTicket[]>;
   
   // User follow methods
   getUserFollowers(userId: number): Promise<User[]>;
@@ -868,6 +870,16 @@ export class MemStorage implements IStorage {
   // Get all users for the follow feature
   async getUsersToFollow(): Promise<User[]> {
     return this.users;
+  }
+  
+  // Get all users (for admin purposes)
+  async getAllUsers(): Promise<User[]> {
+    return this.users;
+  }
+  
+  // Get all tickets (for admin purposes)
+  async getAllTickets(): Promise<EventTicket[]> {
+    return this.tickets;
   }
   
   // Extra properties to make TypeScript happy
