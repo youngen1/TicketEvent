@@ -54,30 +54,24 @@ export async function processVideo(
     console.log('Final video will be saved at:', videoPath);
     console.log('Thumbnail will be saved at:', thumbnailPath);
     
-    // Move the uploaded file from temp location to final location
+    // Handle file from multer memory storage
     try {
       // Make sure directories exist
       fs.ensureDirSync(videosDir);
       fs.ensureDirSync(thumbnailsDir);
       
-      // Directly use fs.copyFile with promises for more reliable copying
-      console.log('Copying video from', tempFilePath, 'to', videoPath);
-      fs.copyFileSync(tempFilePath, videoPath);
-      
-      console.log('Video file copied to final location successfully, size:', fs.statSync(videoPath).size);
-      
-      // Verify the file exists before removing the source
-      if (fs.existsSync(videoPath)) {
-        fs.unlinkSync(tempFilePath);
-        console.log('Temp file removed successfully');
+      // Write buffer to disk since we're using memory storage
+      if (videoFile.buffer) {
+        console.log('Writing file buffer to disk:', videoPath);
+        fs.writeFileSync(videoPath, videoFile.buffer);
+        console.log('Video file written to disk successfully, size:', fs.statSync(videoPath).size);
       } else {
-        console.error('Target file does not exist after copy!');
-        reject(new Error('File copy verification failed'));
+        console.error('Video file buffer is undefined!');
+        reject(new Error('Video file buffer is undefined'));
         return;
       }
     } catch (error: any) {
-      console.error('Error moving video file:', error);
-      // Don't delete temp file on error so we can debug
+      console.error('Error saving video file:', error);
       reject(new Error(`Failed to process video file: ${error.message || 'Unknown error'}`));
       return;
     }
