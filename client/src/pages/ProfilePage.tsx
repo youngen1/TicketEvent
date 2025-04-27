@@ -19,6 +19,7 @@ import {
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
 import FinanceView from "@/components/FinanceView";
+import EditProfileModal from "@/components/EditProfileModal";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 

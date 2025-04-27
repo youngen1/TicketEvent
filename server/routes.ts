@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertEventSchema, insertUserSchema, type InsertEventTicket } from "@shared/schema";
+import { insertEventSchema, insertUserSchema, type InsertEventTicket, type InsertUser } from "@shared/schema";
 import * as bcrypt from 'bcrypt';
 import session from 'express-session';
 import { db } from "./db";
@@ -1277,9 +1277,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedUser = await storage.updateUser(userId, updateData);
       
-      // Update the session with the new username if it changed
-      if (username && req.session.user) {
-        req.session.user.username = username;
+      // Update the session data if needed
+      if (username) {
+        // The session only stores userId, not the whole user object
+        // We'll just rely on the user fetching their updated profile on next request
       }
       
       res.json({

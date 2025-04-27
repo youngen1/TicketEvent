@@ -25,6 +25,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   signup: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
+  refetchUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -106,6 +107,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     }
   };
+  
+  const refetchUser = async () => {
+    try {
+      const res = await apiRequest("GET", "/api/auth/me");
+      if (res.ok) {
+        const userData = await res.json();
+        setUser(userData);
+      }
+    } catch (error) {
+      // User is not authenticated
+      setUser(null);
+      console.error("Error fetching user data:", error);
+    }
+  };
 
   return (
     <AuthContext.Provider
@@ -115,7 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         signup,
-        logout
+        logout,
+        refetchUser
       }}
     >
       {children}
