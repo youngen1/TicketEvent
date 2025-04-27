@@ -28,16 +28,22 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
 };
 
 // Middleware to check if user is admin
-const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.isAuthenticated()) {
+const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  if (!req.session.userId) {
     return res.status(401).json({ message: 'Not authenticated' });
   }
   
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+  try {
+    const user = await storage.getUser(req.session.userId);
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Error in admin middleware:', error);
+    return res.status(500).json({ message: 'Server error' });
   }
-  
-  next();
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
