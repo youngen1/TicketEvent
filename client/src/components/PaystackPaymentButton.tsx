@@ -83,21 +83,12 @@ export default function PaystackPaymentButton({
         eventId
       });
       
-      // We're still getting Paystack authentication errors, so for small amounts (R2)
-      // we'll use the test endpoint temporarily
-      if (numericAmount <= 5) {
-        console.log('Using test ticket endpoint for R2 amount:', numericAmount);
-        return apiRequest('POST', '/api/test/create-ticket', {
-          amount: numericAmount,
-          eventId
-        });
-      } else {
-        // For larger amounts, still try the real Paystack integration
-        return apiRequest('POST', '/api/payments/initialize', {
-          amount: numericAmount,
-          eventId
-        });
-      }
+      // We'll test using real Paystack integration for all amounts
+      console.log('Using Paystack live for amount:', numericAmount);
+      return apiRequest('POST', '/api/payments/initialize', {
+        amount: numericAmount,
+        eventId
+      });
     },
     onSuccess: async (response) => {
       console.log('Payment initialization response:', response);
