@@ -277,9 +277,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Payment routes
   app.post("/api/payments/initialize", isAuthenticated, async (req, res) => {
     try {
+      console.log('Payment initialization request received:', req.body);
       const { amount, eventId } = req.body;
       
       if (!amount || !eventId) {
+        console.log('Missing amount or eventId:', { amount, eventId });
         return res.status(400).json({ message: "Amount and event ID are required" });
       }
       
@@ -289,12 +291,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const user = await storage.getUser(req.session.userId);
+      console.log('Payment user:', { id: user?.id, email: user?.email });
+      
       if (!user || !user.email) {
         return res.status(400).json({ message: "User email not found" });
       }
       
       // Get event details
       const event = await storage.getEvent(parseInt(eventId));
+      console.log('Payment event:', { id: event?.id, title: event?.title, price: event?.price });
+      
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
@@ -307,6 +313,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const host = req.headers.host;
       // Add amount as query parameter to make it available to the success page
       const callbackUrl = `${protocol}://${host}/payment/success?amount=${encodeURIComponent(amount)}`;
+      console.log('Payment callback URL:', callbackUrl);
+      
+      // Check payment mode
+      const isLiveMode = process.env.PAYSTACK_MODE === 'live';
+      console.log('Payment mode:', isLiveMode ? 'LIVE' : 'TEST');
+      console.log('Payment keys present:', {
+        liveKey: !!process.env.PAYSTACK_SECRET_KEY,
+        testKey: !!process.env.PAYSTACK_TEST_SECRET_KEY
+      });
       
       // Initialize transaction with Paystack
       const transaction = await paystackService.initializeTransaction({
@@ -319,6 +334,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: req.session.userId,
           eventTitle: event.title
         }
+      });
+      
+      console.log('Payment initialization successful:', {
+        authUrl: transaction.authorization_url,
+        reference: transaction.reference
       });
       
       res.json({
