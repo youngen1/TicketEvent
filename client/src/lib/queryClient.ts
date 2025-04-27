@@ -47,21 +47,42 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    console.log(`Query request: ${queryKey[0]}`);
-    const res = await fetch(queryKey[0] as string, {
+    // Handle array-based query keys by constructing the full URL
+    let url: string;
+    
+    if (typeof queryKey[0] === 'string' && queryKey.length > 1) {
+      // Convert query key array to path segments
+      url = queryKey.reduce((path: string, segment: any, index: number) => {
+        // Skip undefined or null segments
+        if (segment === undefined || segment === null) return path;
+        
+        // First segment is the base path
+        if (index === 0) return String(segment);
+        
+        // Add subsequent segments with slashes
+        return `${path}/${String(segment)}`;
+      }, '');
+    } else {
+      // Simple string-based query key
+      url = queryKey[0] as string;
+    }
+    
+    console.log(`Query request: ${url}`);
+    
+    const res = await fetch(url, {
       credentials: "include",
     });
     
-    console.log(`Query response: ${queryKey[0]} - Status: ${res.status}`);
+    console.log(`Query response: ${url} - Status: ${res.status}`);
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      console.log(`Returning null due to 401 status for ${queryKey[0]}`);
+      console.log(`Returning null due to 401 status for ${url}`);
       return null;
     }
 
     await throwIfResNotOk(res);
     const data = await res.json();
-    console.log(`Query data for ${queryKey[0]}:`, data);
+    console.log(`Query data for ${url}:`, data);
     return data;
   };
 

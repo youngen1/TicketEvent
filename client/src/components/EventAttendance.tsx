@@ -46,12 +46,14 @@ export default function EventAttendance({ event }: EventAttendanceProps) {
 
   // Fetch all ticket purchasers for this event
   const { data: ticketAttendees = [] } = useQuery<TicketAttendee[]>({
-    queryKey: ["/api/events", event.id, "tickets/attendees"],
+    queryKey: ["/api/events", event.id, "tickets", "attendees"],
   });
 
   const hasTicket = !!userTicket;
-  const attendeeCount = ticketAttendees.length;
-  const ticketCount = ticketAttendees.reduce((sum, attendee) => sum + attendee.quantity, 0);
+  const attendeeCount = Array.isArray(ticketAttendees) ? ticketAttendees.length : 0;
+  const ticketCount = Array.isArray(ticketAttendees) 
+    ? ticketAttendees.reduce((sum, attendee) => sum + (attendee.quantity || 0), 0)
+    : 0;
 
   return (
     <>
