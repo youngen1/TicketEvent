@@ -47,15 +47,24 @@ export default function EventAttendance({ event }: EventAttendanceProps) {
   }
 
   // Fetch the user's ticket for this event
-  const { data: userTicket } = useQuery({
-    queryKey: ["/api/events", String(event.id), "ticket", user?.id ? String(user.id) : undefined],
+  const { data: userTicket, error: userTicketError } = useQuery({
+    queryKey: ["/api/events", String(event.id), "ticket", user?.id ? String(user.id) : "undefined"],
     enabled: isAuthenticated && !!user?.id,
   });
 
   // Fetch all ticket purchasers for this event
-  const { data: ticketAttendees = [] } = useQuery<TicketAttendee[]>({
+  const { data: ticketAttendees = [], error: attendeesError } = useQuery<TicketAttendee[]>({
     queryKey: ["/api/events", String(event.id), "tickets", "attendees"],
   });
+  
+  // Log any errors for debugging
+  if (userTicketError) {
+    console.error('User ticket error:', userTicketError);
+  }
+  
+  if (attendeesError) {
+    console.error('Attendees error:', attendeesError);
+  }
 
   const hasTicket = !!userTicket;
   const attendeeCount = Array.isArray(ticketAttendees) ? ticketAttendees.length : 0;

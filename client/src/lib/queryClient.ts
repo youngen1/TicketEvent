@@ -42,7 +42,7 @@ export async function apiRequest(
 }
 
 // Build URL from query key
-function buildUrlFromQueryKey(queryKey: unknown[]): string {
+function buildUrlFromQueryKey(queryKey: readonly unknown[]): string {
   if (!queryKey.length) return '';
   
   // Handle base URL (first element)
@@ -50,7 +50,7 @@ function buildUrlFromQueryKey(queryKey: unknown[]): string {
     return String(queryKey[0] || '');
   }
   
-  const baseUrl = queryKey[0];
+  const baseUrl = queryKey[0] as string;
   
   // If only one element, return it directly
   if (queryKey.length === 1) {
@@ -76,13 +76,16 @@ function buildUrlFromQueryKey(queryKey: unknown[]): string {
   }
   
   // Handle path parameters (rest of elements as URL segments)
+  // Create a regular array from readonly array for filter operation
+  const segmentsArray = [...queryKey];
+  
   // Filter out undefined/null segments
-  const validSegments = queryKey.filter(segment => 
+  const validSegments = segmentsArray.filter(segment => 
     segment !== undefined && segment !== null
   );
   
   // Build URL with segments
-  return validSegments.reduce((path, segment, index) => {
+  return validSegments.reduce((path: string, segment, index) => {
     if (index === 0) return String(segment);
     return `${path}/${String(segment)}`;
   }, '');
