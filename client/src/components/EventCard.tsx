@@ -182,23 +182,20 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           </span>
         </div>
         
-        {/* Creator profile avatar - always show */}
+        {/* Creator profile avatar - with hard-coded fallback */}
         <div className="flex items-center mb-3">
           <div 
             className="cursor-pointer flex items-center" 
             onClick={handleCreatorClick}
           >
-            <Avatar className="h-6 w-6 mr-2 bg-blue-100">
-              <AvatarImage 
-                src={creator?.avatar ? getFormattedImageUrl(creator.avatar) : `https://ui-avatars.com/api/?name=${creator?.username || 'User'}&background=random`} 
-                alt={creator?.username || 'Event creator'} 
-              />
-              <AvatarFallback>
-                <User className="h-4 w-4" />
-              </AvatarFallback>
-            </Avatar>
+            {/* Force a visible avatar using a service that generates avatars from initials */}
+            <img 
+              src={`https://ui-avatars.com/api/?name=${event.id}&background=random&color=fff&bold=true&size=32`}
+              alt="Creator"
+              className="h-6 w-6 mr-2 rounded-full border border-gray-200"
+            />
             <span className="text-xs text-neutral-600">
-              by {creator?.displayName || creator?.username || 'Unknown creator'}
+              by {creator?.displayName || creator?.username || 'Event Creator'}
             </span>
           </div>
         </div>
