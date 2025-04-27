@@ -10,7 +10,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -32,8 +34,10 @@ interface SignupModalProps {
 
 const signupSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-  confirmPassword: z.string().min(6, { message: "Confirm password is required" }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters" }),
+  confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -43,6 +47,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupModal({ isOpen, onClose, onLoginClick, onSuccess }: SignupModalProps) {
   const { toast } = useToast();
+  const [signupError, setSignupError] = useState<string | null>(null);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -54,46 +59,59 @@ export default function SignupModal({ isOpen, onClose, onLoginClick, onSuccess }
   });
 
   const signupMutation = useMutation({
-    mutationFn: async (data: Omit<SignupFormValues, 'confirmPassword'>) => {
-      const res = await apiRequest("POST", "/api/auth/signup", {
-        username: data.username,
-        password: data.password
-      });
+    mutationFn: async (data: SignupFormValues) => {
+      const { confirmPassword, ...userData } = data;
+      const res = await apiRequest("POST", "/api/auth/signup", userData);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Signup failed");
+      }
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
-        title: "Account created",
-        description: "Your account has been created successfully. Please log in.",
+        title: "Signup successful",
+        description: "Your account has been created. You can now log in.",
       });
-      onClose();
-      onLoginClick();
-      form.reset();
+      onSuccess();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const errorMessage = error.message || "An error occurred during signup. Please try again.";
+      if (errorMessage.includes("Username already taken")) {
+        setSignupError("Username already taken. Please choose a different username.");
+      } else {
+        setSignupError(errorMessage);
+      }
       toast({
         title: "Signup failed",
-        description: "Username may already be taken or server error occurred.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: SignupFormValues) => {
-    const { confirmPassword, ...signupData } = data;
-    signupMutation.mutate(signupData);
+    setSignupError(null);
+    signupMutation.mutate(data);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg font-medium text-neutral-900 font-heading">
-            Create an account
-          </DialogTitle>
+          <DialogTitle className="text-xl font-bold text-center">Create an account</DialogTitle>
+          <DialogDescription className="text-center">
+            Enter your details to create a new account
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {signupError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{signupError}</AlertDescription>
+              </Alert>
+            )}
             <FormField
               control={form.control}
               name="username"
@@ -107,7 +125,6 @@ export default function SignupModal({ isOpen, onClose, onLoginClick, onSuccess }
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="password"
@@ -121,7 +138,6 @@ export default function SignupModal({ isOpen, onClose, onLoginClick, onSuccess }
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="confirmPassword"
@@ -135,31 +151,28 @@ export default function SignupModal({ isOpen, onClose, onLoginClick, onSuccess }
                 </FormItem>
               )}
             />
-
-            <DialogFooter className="flex flex-col space-y-2">
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-blue-700 text-white"
-                disabled={signupMutation.isPending}
-              >
-                {signupMutation.isPending ? "Creating account..." : "Create account"}
-              </Button>
-              <div className="text-center text-sm">
-                <span className="text-neutral-600">Already have an account? </span>
-                <button
-                  type="button"
-                  className="text-primary hover:text-blue-700 font-medium"
-                  onClick={() => {
-                    onClose();
-                    onLoginClick();
-                  }}
-                >
-                  Log in
-                </button>
-              </div>
-            </DialogFooter>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={signupMutation.isPending}
+            >
+              {signupMutation.isPending ? "Signing up..." : "Sign up"}
+            </Button>
           </form>
         </Form>
+        <div className="pt-2 text-center text-sm">
+          <span className="text-muted-foreground">Already have an account?</span>{" "}
+          <button
+            type="button"
+            className="text-primary hover:underline font-medium"
+            onClick={() => {
+              onClose();
+              onLoginClick();
+            }}
+          >
+            Log in
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );

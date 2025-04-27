@@ -3,14 +3,15 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -22,6 +23,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -31,15 +34,16 @@ interface LoginModalProps {
 }
 
 const loginSchema = z.object({
-  username: z.string().min(1, { message: "Username is required" }),
-  password: z.string().min(1, { message: "Password is required" }),
+  username: z.string().min(3, { message: "Username must be at least 3 characters" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginModal({ isOpen, onClose, onSignupClick, onSuccess }: LoginModalProps) {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -51,28 +55,31 @@ export default function LoginModal({ isOpen, onClose, onSignupClick, onSuccess }
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormValues) => {
-      const res = await apiRequest("POST", "/api/auth/login", data);
-      return res.json();
+      return login(data.username, data.password);
     },
-    onSuccess: (data) => {
-      toast({
-        title: "Login successful",
-        description: "You have been logged in successfully.",
-      });
-      onClose();
-      onSuccess();
-      form.reset();
+    onSuccess: (success) => {
+      if (success) {
+        toast({
+          title: "Login successful",
+          description: "You have been logged in.",
+        });
+        onSuccess();
+        onClose();
+      } else {
+        setLoginError("Invalid username or password. Please try again.");
+      }
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Login failed",
-        description: "Invalid username or password. Please try again.",
+        description: "An error occurred during login. Please try again.",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: LoginFormValues) => {
+    setLoginError(null);
     loginMutation.mutate(data);
   };
 
@@ -80,12 +87,19 @@ export default function LoginModal({ isOpen, onClose, onSignupClick, onSuccess }
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg font-medium text-neutral-900 font-heading">
-            Log in to your account
-          </DialogTitle>
+          <DialogTitle className="text-xl font-bold text-center">Log in to your account</DialogTitle>
+          <DialogDescription className="text-center">
+            Enter your username and password to access your account
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {loginError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{loginError}</AlertDescription>
+              </Alert>
+            )}
             <FormField
               control={form.control}
               name="username"
@@ -99,7 +113,6 @@ export default function LoginModal({ isOpen, onClose, onSignupClick, onSuccess }
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="password"
@@ -113,31 +126,28 @@ export default function LoginModal({ isOpen, onClose, onSignupClick, onSuccess }
                 </FormItem>
               )}
             />
-
-            <DialogFooter className="flex flex-col space-y-2">
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-blue-700 text-white"
-                disabled={loginMutation.isPending}
-              >
-                {loginMutation.isPending ? "Logging in..." : "Log in"}
-              </Button>
-              <div className="text-center text-sm">
-                <span className="text-neutral-600">Don't have an account? </span>
-                <button
-                  type="button"
-                  className="text-primary hover:text-blue-700 font-medium"
-                  onClick={() => {
-                    onClose();
-                    onSignupClick();
-                  }}
-                >
-                  Sign up
-                </button>
-              </div>
-            </DialogFooter>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loginMutation.isPending}
+            >
+              {loginMutation.isPending ? "Logging in..." : "Log in"}
+            </Button>
           </form>
         </Form>
+        <div className="pt-2 text-center text-sm">
+          <span className="text-muted-foreground">Don't have an account?</span>{" "}
+          <button
+            type="button"
+            className="text-primary hover:underline font-medium"
+            onClick={() => {
+              onClose();
+              onSignupClick();
+            }}
+          >
+            Sign up
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );

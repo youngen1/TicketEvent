@@ -47,16 +47,13 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
                 <Link 
                   key={link.href} 
                   href={link.href}
+                  className={`${
+                    location === link.href
+                      ? "border-b-2 border-primary text-neutral-900"
+                      : "border-transparent text-neutral-600 hover:text-neutral-900"
+                  } inline-flex items-center px-1 pt-1 text-sm font-medium`}
                 >
-                  <a 
-                    className={`${
-                      location === link.href
-                        ? "border-b-2 border-primary text-neutral-900"
-                        : "border-transparent text-neutral-600 hover:text-neutral-900"
-                    } inline-flex items-center px-1 pt-1 text-sm font-medium`}
-                  >
-                    {link.label}
-                  </a>
+                  {link.label}
                 </Link>
               ))}
             </div>
@@ -139,16 +136,13 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
               key={link.href}
               href={link.href}
               onClick={() => setIsMobileMenuOpen(false)}
+              className={`${
+                location === link.href
+                  ? "bg-primary text-white"
+                  : "text-neutral-800 hover:bg-neutral-100"
+              } block pl-3 pr-4 py-2 text-base font-medium`}
             >
-              <a
-                className={`${
-                  location === link.href
-                    ? "bg-primary text-white"
-                    : "text-neutral-800 hover:bg-neutral-100"
-                } block pl-3 pr-4 py-2 text-base font-medium`}
-              >
-                {link.label}
-              </a>
+              {link.label}
             </Link>
           ))}
         </div>

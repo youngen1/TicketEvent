@@ -35,6 +35,7 @@ function App() {
 
   const handleLoginSuccess = () => {
     // After successful login, close modal and update UI
+    setIsLoginModalOpen(false);
   };
 
   const handleSignupSuccess = () => {
