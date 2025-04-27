@@ -1,4 +1,4 @@
-import { Heart } from "lucide-react";
+import { Heart, Image as ImageIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Event } from "@shared/schema";
@@ -28,43 +28,50 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     toggleFavoriteMutation.mutate();
   };
 
+  // Get the first image from the images array if available
+  let firstImage = event.image || '';
+  let totalImages = 0;
+  
+  if (event.images) {
+    try {
+      const imagesArray = JSON.parse(event.images);
+      if (imagesArray.length > 0) {
+        firstImage = imagesArray[0];
+        totalImages = imagesArray.length;
+      }
+    } catch (e) {
+      console.error('Failed to parse images:', e);
+    }
+  }
+
+  // Function to format image URL
+  const getFormattedImageUrl = (url: string) => {
+    return url.startsWith('/uploads') ? `http://localhost:5000${url}` : url;
+  };
+
   return (
-    <Card className="bg-white overflow-hidden shadow-sm rounded-lg hover:shadow-md transition-shadow duration-300">
-      <div className="h-40 bg-neutral-200 relative">
-        {event.thumbnail && event.thumbnail.length > 0 ? (
-          <div className="relative w-full h-full cursor-pointer" onClick={() => onShowDetails(event)}>
+    <Card 
+      className="bg-white overflow-hidden shadow-sm rounded-lg hover:shadow-md transition-shadow duration-300"
+      onClick={() => onShowDetails(event)}
+    >
+      <div className="h-40 bg-neutral-200 relative cursor-pointer">
+        {firstImage && firstImage.length > 0 ? (
+          <div className="w-full h-full">
             <img 
-              src={event.thumbnail.startsWith('/uploads') ? `http://localhost:5000${event.thumbnail}` : event.thumbnail} 
+              src={getFormattedImageUrl(firstImage)}
               alt={event.title} 
               className="w-full h-full object-cover" 
-              onError={(e) => {
-                console.error('Error loading thumbnail:', event.thumbnail);
-                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/320x240?text=Video+Thumbnail';
-              }}
             />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-black bg-opacity-50 rounded-full p-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
+            {totalImages > 1 && (
+              <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white rounded-full px-2 py-1 text-xs flex items-center">
+                <ImageIcon size={12} className="mr-1" />
+                <span>{totalImages}</span>
               </div>
-            </div>
+            )}
           </div>
-        ) : event.video && event.video.length > 0 ? (
-          <div className="relative w-full h-full cursor-pointer" onClick={() => onShowDetails(event)}>
-            <div className="w-full h-full bg-neutral-300 flex items-center justify-center">
-              <div className="bg-black bg-opacity-50 rounded-full p-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
-              </div>
-            </div>
-          </div>
-        ) : event.image && event.image.length > 0 ? (
-          <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-neutral-500">
-            No Media Available
+            <ImageIcon size={36} />
           </div>
         )}
         <div className="absolute top-0 right-0 mt-2 mr-2">
@@ -110,7 +117,10 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           <Button 
             variant="ghost" 
             className="inline-flex items-center px-3 py-1.5 text-sm text-primary hover:bg-blue-50"
-            onClick={() => onShowDetails(event)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onShowDetails(event);
+            }}
           >
             Details 
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -120,6 +130,7 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           <Button 
             variant="outline" 
             className="inline-flex items-center px-3 py-1.5 border border-primary text-sm text-primary hover:bg-blue-50"
+            onClick={(e) => e.stopPropagation()}
           >
             Register
           </Button>

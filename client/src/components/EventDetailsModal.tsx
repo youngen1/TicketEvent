@@ -1,9 +1,14 @@
+import { useState, useEffect, useRef } from "react";
 import { Event } from "@shared/schema";
-import { Heart, Calendar, MapPin, Users, X } from "lucide-react";
+import { 
+  Heart, Calendar, MapPin, Users, X, ChevronLeft, ChevronRight, 
+  Maximize, Minimize, ArrowLeft, ArrowRight 
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,6 +23,17 @@ interface EventDetailsModalProps {
 
 export default function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalProps) {
   const queryClient = useQueryClient();
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  // Reset active image index when event changes
+  useEffect(() => {
+    setActiveImageIndex(0);
+    setIsFullscreen(false);
+  }, [event?.id]);
 
   const toggleFavoriteMutation = useMutation({
     mutationFn: async () => {
@@ -42,123 +58,330 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
     }
   }
 
+  // Parse images data if available
+  let imageUrls: string[] = [];
+  if (event.images) {
+    try {
+      imageUrls = JSON.parse(event.images);
+    } catch (e) {
+      console.error("Failed to parse images:", e);
+    }
+  }
+
+  // Fallback to single image if images array is empty
+  if (imageUrls.length === 0 && event.image) {
+    imageUrls = [event.image];
+  }
+
+  const handlePrevImage = () => {
+    setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : imageUrls.length - 1));
+  };
+
+  const handleNextImage = () => {
+    setActiveImageIndex((prev) => (prev < imageUrls.length - 1 ? prev + 1 : 0));
+  };
+
+  const getFullImageUrl = (url: string) => {
+    return url.startsWith('/uploads') ? `http://localhost:5000${url}` : url;
+  };
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  // Touch swipe handlers for mobile
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isSwipe = Math.abs(distance) > minSwipeDistance;
+    
+    if (isSwipe) {
+      if (distance > 0) {
+        // Swipe left
+        handleNextImage();
+      } else {
+        // Swipe right
+        handlePrevImage();
+      }
+    }
+  };
+
+  // Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') {
+      handlePrevImage();
+    } else if (e.key === 'ArrowRight') {
+      handleNextImage();
+    } else if (e.key === 'Escape' && isFullscreen) {
+      setIsFullscreen(false);
+    } else if (e.key === 'f') {
+      toggleFullscreen();
+    }
+  };
+
+  // Fullscreen image view component
+  const FullscreenImageView = () => (
+    <div 
+      className="fixed inset-0 z-50 bg-black flex items-center justify-center"
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+    >
+      <button 
+        className="absolute top-4 right-4 text-white p-2 rounded-full bg-black/50 hover:bg-black/70"
+        onClick={toggleFullscreen}
+      >
+        <X size={24} />
+      </button>
+      
+      <div 
+        className="relative w-full h-full flex items-center justify-center"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <img 
+          ref={imageRef}
+          src={getFullImageUrl(imageUrls[activeImageIndex])}
+          alt={`${event.title} - Image ${activeImageIndex + 1}`}
+          className="max-h-full max-w-full object-contain"
+        />
+        
+        {imageUrls.length > 1 && (
+          <>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+              {imageUrls.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setActiveImageIndex(index)}
+                  className={`h-3 w-3 rounded-full ${
+                    index === activeImageIndex ? "bg-white" : "bg-white/50"
+                  }`}
+                  aria-label={`Go to image ${index + 1}`}
+                />
+              ))}
+            </div>
+            
+            <button 
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-3"
+              onClick={handlePrevImage}
+            >
+              <ArrowLeft size={24} />
+            </button>
+            
+            <button 
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-3"
+              onClick={handleNextImage}
+            >
+              <ArrowRight size={24} />
+            </button>
+            
+            <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-2 rounded-md text-sm">
+              {activeImageIndex + 1} / {imageUrls.length}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="bg-white">
-          <div className="h-56 w-full bg-neutral-200">
-            {event.video && event.video.length > 0 ? (
-              <div className="relative w-full h-full">
-                <video 
-                  controls 
-                  className="w-full h-full object-cover"
-                  poster={event.thumbnail && event.thumbnail.length > 0 ? 
-                    (event.thumbnail.startsWith('/uploads') ? `http://localhost:5000${event.thumbnail}` : event.thumbnail) 
-                    : undefined}
-                >
-                  <source 
-                    src={event.video.startsWith('/uploads') ? `http://localhost:5000${event.video}` : event.video} 
-                    type="video/mp4" 
+    <>
+      {isFullscreen && <FullscreenImageView />}
+      
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-3xl p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{event.title}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="bg-white">
+            <div 
+              className="relative h-64 sm:h-80 w-full bg-neutral-200"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              onKeyDown={handleKeyDown}
+              tabIndex={0}
+            >
+              {imageUrls.length > 0 ? (
+                <>
+                  <img 
+                    src={getFullImageUrl(imageUrls[activeImageIndex])} 
+                    alt={event.title} 
+                    className="w-full h-full object-cover cursor-pointer"
+                    onClick={toggleFullscreen}
                   />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            ) : event.image && event.image.length > 0 ? (
-              <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-neutral-500">
-                No Media Available
-              </div>
-            )}
-          </div>
-          <div className="px-4 pt-5 pb-4 sm:p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getCategoryStyles(event.category)}`}>
-                  {event.category}
-                </span>
-                <h3 className="mt-2 text-2xl font-bold text-neutral-900 font-heading">
-                  {event.title}
-                </h3>
-              </div>
-              <button 
-                className="bg-white rounded-full p-1.5 text-neutral-400 hover:text-red-500 focus:outline-none"
-                onClick={() => toggleFavoriteMutation.mutate()}
-                disabled={toggleFavoriteMutation.isPending}
-              >
-                <Heart className={event.isFavorite ? "text-red-500 fill-red-500" : ""} size={20} />
-              </button>
-            </div>
-            
-            <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-3">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Calendar className="text-primary" size={20} />
-                </div>
-                <div className="ml-3">
-                  <h4 className="text-sm font-medium text-neutral-500">Date & Time</h4>
-                  <p className="mt-1 text-sm text-neutral-900">{event.date} • {event.time}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <MapPin className="text-primary" size={20} />
-                </div>
-                <div className="ml-3">
-                  <h4 className="text-sm font-medium text-neutral-500">Location</h4>
-                  <p className="mt-1 text-sm text-neutral-900">{event.location}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Users className="text-primary" size={20} />
-                </div>
-                <div className="ml-3">
-                  <h4 className="text-sm font-medium text-neutral-500">Attendees</h4>
-                  <p className="mt-1 text-sm text-neutral-900">{event.attendees} registered</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-6">
-              <h4 className="text-lg font-medium text-neutral-900 font-heading">About The Event</h4>
-              <p className="mt-2 text-neutral-600 whitespace-pre-line">
-                {event.description}
-              </p>
-            </div>
-            
-            {scheduleItems.length > 0 && (
-              <div className="mt-6">
-                <h4 className="text-lg font-medium text-neutral-900 font-heading">Schedule</h4>
-                <div className="mt-2 border-t border-neutral-200">
-                  {scheduleItems.map((item, index) => (
-                    <div key={index} className={`py-3 flex ${index > 0 ? 'border-t border-neutral-200' : ''}`}>
-                      <div className="text-sm font-medium text-neutral-500 w-24">{item.time}</div>
-                      <div>
-                        <h5 className="text-sm font-medium text-neutral-900">{item.title}</h5>
-                        {item.description && (
-                          <p className="text-sm text-neutral-600">{item.description}</p>
-                        )}
+                  
+                  <button
+                    className="absolute top-2 right-2 bg-black/40 text-white rounded-full p-1.5 hover:bg-black/60"
+                    onClick={toggleFullscreen}
+                    aria-label="View fullscreen"
+                  >
+                    <Maximize size={18} />
+                  </button>
+                  
+                  {imageUrls.length > 1 && (
+                    <>
+                      <button 
+                        onClick={handlePrevImage}
+                        className="absolute top-1/2 left-2 -translate-y-1/2 bg-black/30 text-white rounded-full p-1 hover:bg-black/50 focus:outline-none"
+                        aria-label="Previous image"
+                      >
+                        <ChevronLeft size={24} />
+                      </button>
+                      <button 
+                        onClick={handleNextImage}
+                        className="absolute top-1/2 right-2 -translate-y-1/2 bg-black/30 text-white rounded-full p-1 hover:bg-black/50 focus:outline-none"
+                        aria-label="Next image"
+                      >
+                        <ChevronRight size={24} />
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1">
+                        {imageUrls.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setActiveImageIndex(index)}
+                            className={`h-2 w-2 rounded-full ${
+                              index === activeImageIndex ? "bg-white" : "bg-white/50"
+                            }`}
+                            aria-label={`Go to image ${index + 1}`}
+                          />
+                        ))}
                       </div>
-                    </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-neutral-500">
+                  No Media Available
+                </div>
+              )}
+            </div>
+
+            {/* Thumbnail gallery for quick navigation */}
+            {imageUrls.length > 1 && (
+              <div className="px-4 pt-2 overflow-x-auto">
+                <div className="flex space-x-2 pb-2">
+                  {imageUrls.map((url, index) => (
+                    <button
+                      key={index}
+                      className={`flex-shrink-0 h-16 w-16 rounded overflow-hidden ${
+                        index === activeImageIndex ? "ring-2 ring-primary" : ""
+                      }`}
+                      onClick={() => setActiveImageIndex(index)}
+                    >
+                      <img
+                        src={getFullImageUrl(url)}
+                        alt={`Thumbnail ${index + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                    </button>
                   ))}
                 </div>
               </div>
             )}
+            
+            <div className="px-4 pt-5 pb-4 sm:p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getCategoryStyles(event.category)}`}>
+                    {event.category}
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold text-neutral-900 font-heading">
+                    {event.title}
+                  </h3>
+                </div>
+                <button 
+                  className="bg-white rounded-full p-1.5 text-neutral-400 hover:text-red-500 focus:outline-none"
+                  onClick={() => toggleFavoriteMutation.mutate()}
+                  disabled={toggleFavoriteMutation.isPending}
+                >
+                  <Heart className={event.isFavorite ? "text-red-500 fill-red-500" : ""} size={20} />
+                </button>
+              </div>
+              
+              <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-3">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <Calendar className="text-primary" size={20} />
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-neutral-500">Date & Time</h4>
+                    <p className="mt-1 text-sm text-neutral-900">{event.date} • {event.time}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <MapPin className="text-primary" size={20} />
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-neutral-500">Location</h4>
+                    <p className="mt-1 text-sm text-neutral-900">{event.location}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <Users className="text-primary" size={20} />
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-neutral-500">Attendees</h4>
+                    <p className="mt-1 text-sm text-neutral-900">{event.attendees} registered</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <h4 className="text-lg font-medium text-neutral-900 font-heading">About The Event</h4>
+                <p className="mt-2 text-neutral-600 whitespace-pre-line">
+                  {event.description}
+                </p>
+              </div>
+              
+              {scheduleItems.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="text-lg font-medium text-neutral-900 font-heading">Schedule</h4>
+                  <div className="mt-2 border-t border-neutral-200">
+                    {scheduleItems.map((item, index) => (
+                      <div key={index} className={`py-3 flex ${index > 0 ? 'border-t border-neutral-200' : ''}`}>
+                        <div className="text-sm font-medium text-neutral-500 w-24">{item.time}</div>
+                        <div>
+                          <h5 className="text-sm font-medium text-neutral-900">{item.title}</h5>
+                          {item.description && (
+                            <p className="text-sm text-neutral-600">{item.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter className="bg-neutral-50 px-4 py-3">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Close
+              </Button>
+              <Button className="bg-primary hover:bg-blue-700 text-white">
+                Register Now
+              </Button>
+            </DialogFooter>
           </div>
-          <DialogFooter className="bg-neutral-50 px-4 py-3">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Close
-            </Button>
-            <Button className="bg-primary hover:bg-blue-700 text-white">
-              Register Now
-            </Button>
-          </DialogFooter>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
