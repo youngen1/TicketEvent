@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertEventSchema } from "@shared/schema";
+import { insertEventSchema, GENDER_RESTRICTION, genderRestrictionSchema } from "@shared/schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -52,6 +52,8 @@ const formSchema = insertEventSchema.extend({
   location: z.string().min(1, { message: "Location is required" }),
   isFree: z.boolean().default(true),
   price: z.string().default("0"),
+  genderRestriction: z.string().default(GENDER_RESTRICTION.NONE),
+  ageRestriction: z.number().nullable().default(null),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -83,6 +85,8 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       image: "",
       isFree: true,
       price: "0",
+      genderRestriction: GENDER_RESTRICTION.NONE,
+      ageRestriction: null,
     },
   });
 

@@ -24,6 +24,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from "@/components/ui/select";
+import { GENDER_OPTIONS } from "@shared/schema";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -38,6 +51,24 @@ const signupSchema = z.object({
     .string()
     .min(6, { message: "Password must be at least 6 characters" }),
   confirmPassword: z.string(),
+  gender: z.string({
+    required_error: "Please select a gender",
+  }),
+  dateOfBirth: z.date({
+    required_error: "Please select your date of birth",
+  }).refine((date) => {
+    // Check if user is at least 13 years old
+    const today = new Date();
+    const minAge = 13;
+    const minDate = new Date(
+      today.getFullYear() - minAge,
+      today.getMonth(),
+      today.getDate()
+    );
+    return date <= minDate;
+  }, {
+    message: "You must be at least 13 years old to register"
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -55,6 +86,8 @@ export default function SignupModal({ isOpen, onClose, onLoginClick, onSuccess }
       username: "",
       password: "",
       confirmPassword: "",
+      gender: "",
+      dateOfBirth: undefined,
     },
   });
 
@@ -147,6 +180,78 @@ export default function SignupModal({ isOpen, onClose, onLoginClick, onSuccess }
                   <FormControl>
                     <Input type="password" placeholder="Confirm your password" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your gender" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={GENDER_OPTIONS.MALE}>Male</SelectItem>
+                      <SelectItem value={GENDER_OPTIONS.FEMALE}>Female</SelectItem>
+                      <SelectItem value={GENDER_OPTIONS.NON_BINARY}>Non-binary</SelectItem>
+                      <SelectItem value={GENDER_OPTIONS.OTHER}>Other</SelectItem>
+                      <SelectItem value={GENDER_OPTIONS.PREFER_NOT_TO_SAY}>Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="dateOfBirth"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Date of Birth</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => {
+                          const today = new Date();
+                          const minAge = 13;
+                          const minDate = new Date(
+                            today.getFullYear() - minAge,
+                            today.getMonth(),
+                            today.getDate()
+                          );
+                          return date > minDate || date > new Date();
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
