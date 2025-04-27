@@ -27,11 +27,22 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     queryKey: [`/api/users/${event.userId}`],
     queryFn: async () => {
       if (!event.userId) return null;
-      const response = await apiRequest("GET", `/api/users/${event.userId}`, null);
-      return response.json();
+      console.log('Fetching creator info for userId:', event.userId);
+      try {
+        const response = await apiRequest("GET", `/api/users/${event.userId}`, null);
+        const data = await response.json();
+        console.log('Creator data fetched:', data);
+        return data;
+      } catch (error) {
+        console.error('Error fetching creator:', error);
+        return null;
+      }
     },
     enabled: !!event.userId,
   });
+  
+  // Debug logs
+  console.log('Event:', event.id, 'Title:', event.title, 'UserId:', event.userId);
 
   const toggleFavoriteMutation = useMutation({
     mutationFn: async () => {
@@ -139,28 +150,26 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           </span>
         </div>
         
-        {/* Creator profile avatar */}
-        {event.userId && (
-          <div className="flex items-center mb-3">
-            <div 
-              className="cursor-pointer flex items-center" 
-              onClick={handleCreatorClick}
-            >
-              <Avatar className="h-6 w-6 mr-2">
-                <AvatarImage 
-                  src={creator?.avatar ? getFormattedImageUrl(creator.avatar) : undefined} 
-                  alt={creator?.username || 'Event creator'} 
-                />
-                <AvatarFallback>
-                  <User className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-xs text-neutral-600">
-                by {creator?.displayName || creator?.username || 'Unknown creator'}
-              </span>
-            </div>
+        {/* Creator profile avatar - always show */}
+        <div className="flex items-center mb-3">
+          <div 
+            className="cursor-pointer flex items-center" 
+            onClick={handleCreatorClick}
+          >
+            <Avatar className="h-6 w-6 mr-2">
+              <AvatarImage 
+                src={creator?.avatar ? getFormattedImageUrl(creator.avatar) : undefined} 
+                alt={creator?.username || 'Event creator'} 
+              />
+              <AvatarFallback>
+                <User className="h-4 w-4" />
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-xs text-neutral-600">
+              by {creator?.displayName || creator?.username || 'Unknown creator'}
+            </span>
           </div>
-        )}
+        </div>
         <h3 className="text-lg font-medium text-neutral-900 mb-1 font-heading">{event.title}</h3>
         <p className="text-sm text-neutral-600 mb-3 line-clamp-2">{event.description}</p>
         <div className="flex items-center text-sm text-neutral-500 mb-2">
