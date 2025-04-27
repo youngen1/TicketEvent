@@ -27,9 +27,13 @@ export default function PaymentSuccessPage() {
         
         if (isMock) {
           // For mock payments, create fake transaction details
+          // Extract original amount from URL if available
+          const originalAmount = urlParams.get('amount');
+          const amountInCents = originalAmount ? Math.round(parseFloat(originalAmount) * 100) : 29999;
+          
           setTransactionDetails({
             reference,
-            amount: 29999, // In smallest currency unit (cents/kobo)
+            amount: amountInCents, // In smallest currency unit (cents/kobo)
             status: 'success',
             paidAt: new Date().toISOString(),
             mockPayment: true

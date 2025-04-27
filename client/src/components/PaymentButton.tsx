@@ -29,6 +29,8 @@ export default function PaymentButton({
     return isNaN(numericValue) ? 0 : numericValue;
   };
   
+  console.log("Payment amount received:", amount, "converted to:", getNumericAmount());
+  
   const initializePaymentMutation = useMutation({
     mutationFn: async () => {
       const numericAmount = getNumericAmount();

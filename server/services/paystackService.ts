@@ -38,6 +38,7 @@ class PaystackService {
         // Create a local callback URL that will show a payment successful page
         const successUrl = new URL(params.callback_url || 'http://localhost:5000');
         successUrl.searchParams.append('reference', params.reference || `mock-ref-${Date.now()}`);
+        successUrl.searchParams.append('amount', params.amount.toString());
         successUrl.searchParams.append('mock', 'true');
         
         return {
