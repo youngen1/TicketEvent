@@ -1,6 +1,7 @@
 import { Image as ImageIcon } from "lucide-react";
 import { Event } from "@shared/schema";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import "./EventCard.css";
 
 interface EventCardProps {
@@ -24,6 +25,31 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
       console.error('Failed to parse images:', e);
     }
   }
+
+  // Fetch creator information if available
+  const { data: creator } = useQuery({
+    queryKey: [`/api/users/${event.userId}`],
+    queryFn: async () => {
+      try {
+        if (!event.userId) return null;
+        const response = await fetch(`/api/users/${event.userId}`);
+        if (response.ok) {
+          return response.json();
+        }
+        return null;
+      } catch (error) {
+        console.error("Error fetching creator:", error);
+        return null;
+      }
+    },
+    enabled: !!event.userId,
+  });
+
+  // Get profile photo URL for creator
+  const getProfilePhotoUrl = () => {
+    // For this implementation, use real profile photos from an API
+    return `https://randomuser.me/api/portraits/${event.userId && event.userId % 2 === 0 ? 'women' : 'men'}/${(event.userId || 1) % 99}.jpg`;
+  };
 
   // Click handlers
   const handleImageClick = (e: React.MouseEvent) => {
@@ -65,9 +91,9 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     }
   };
 
-  // Get creator initials for avatar
+  // Get creator initials for avatar fallback
   const getCreatorInitials = () => {
-    return `R${event.userId || 1}`;
+    return creator?.username?.charAt(0).toUpperCase() || `R${event.userId || 1}`;
   };
 
   return (
@@ -88,17 +114,34 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           </div>
         )}
         
+        {/* Creator avatar with profile photo */}
         <div 
-          className="creator-avatar creator-initial"
+          className="creator-avatar"
           onClick={handleCreatorClick}
-        >
-          {getCreatorInitials()}
-        </div>
+          style={{
+            backgroundImage: `url(${getProfilePhotoUrl()})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        />
       </div>
       
       <div className="event-content">
         <div className="event-header">
-          <div className="creator-badge" onClick={handleCreatorClick}>
+          {/* Creator badge with profile photo */}
+          <div 
+            className="creator-badge" 
+            onClick={handleCreatorClick}
+            style={{
+              backgroundImage: `url(${getProfilePhotoUrl()})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'transparent'
+            }}
+          >
             {getCreatorInitials()}
           </div>
           <div className="category-badge">
