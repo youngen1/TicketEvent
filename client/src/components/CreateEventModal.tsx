@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image, Upload, X } from "lucide-react";
+import { Image, Video, Upload, X, Film, FileVideo } from "lucide-react";
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -59,8 +59,10 @@ type FormValues = z.infer<typeof formSchema>;
 export default function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoName, setVideoName] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -86,53 +88,79 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
 
   const createEventMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      // If we have images to upload, handle that first
-      if (imageFiles.length > 0) {
-        try {
-          setIsUploading(true);
-          setUploadProgress(10);
+      try {
+        setIsUploading(true);
+        setUploadProgress(10);
+        
+        // Create a FormData object for the API request
+        const formData = new FormData();
+        
+        // Append all the form data fields
+        Object.entries(data).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            formData.append(key, value.toString());
+          }
+        });
+        
+        // Add the cover image
+        if (coverImageFile) {
+          // Upload the cover image first
+          const imageFormData = new FormData();
+          imageFormData.append('image', coverImageFile);
           
-          // Upload images first
-          const formData = new FormData();
-          imageFiles.forEach(file => {
-            formData.append('images', file);
-          });
+          setUploadProgress(20);
           
-          setUploadProgress(30);
-          
-          // Upload the images
-          const uploadResponse = await fetch('/api/upload/images', {
+          const imageUploadResponse = await fetch('/api/upload/image', {
             method: 'POST',
-            body: formData,
+            body: imageFormData,
           });
           
-          setUploadProgress(70);
-          
-          if (!uploadResponse.ok) {
-            const errorData = await uploadResponse.json();
-            throw new Error(errorData.message || 'Failed to upload images');
+          if (!imageUploadResponse.ok) {
+            const errorData = await imageUploadResponse.json();
+            throw new Error(errorData.message || 'Failed to upload cover image');
           }
           
-          const uploadResult = await uploadResponse.json();
-          // Set the images URLs as JSON string in the form data
-          data.images = JSON.stringify(uploadResult.imageUrls);
+          const imageUploadResult = await imageUploadResponse.json();
           
-          // Also set the first image as the main image for backward compatibility
-          if (uploadResult.imageUrls.length > 0) {
-            data.image = uploadResult.imageUrls[0];
-          }
+          // Set the image URL for the event
+          formData.append('image', imageUploadResult.imageUrl);
           
-          setUploadProgress(100);
-          setIsUploading(false);
-        } catch (error: any) {
-          setIsUploading(false);
-          throw new Error(error.message || 'Failed to upload images');
+          // We still need to maintain backwards compatibility
+          formData.append('images', JSON.stringify([imageUploadResult.imageUrl]));
+          
+          setUploadProgress(50);
+        } else {
+          throw new Error('Please upload a cover image for your event');
         }
+        
+        // Add the video file if present
+        if (videoFile) {
+          formData.append('video', videoFile);
+        }
+        
+        setUploadProgress(60);
+        
+        // Now create the event with all data including uploaded image and video
+        const response = await fetch('/api/events', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        setUploadProgress(90);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create event');
+        }
+        
+        setUploadProgress(100);
+        setIsUploading(false);
+        
+        return await response.json();
+      } catch (error: any) {
+        setIsUploading(false);
+        throw new Error(error.message || 'Failed to create event');
       }
-      
-      // Now create the event with uploaded image URLs
-      const response = await apiRequest("POST", "/api/events", data);
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
@@ -142,8 +170,10 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       });
       onClose();
       form.reset();
-      setImageFiles([]);
-      setImagePreviews([]);
+      setCoverImageFile(null);
+      setCoverImagePreview(null);
+      setVideoFile(null);
+      setVideoName(null);
       setIsUploading(false);
       setUploadError(null);
     },
@@ -156,28 +186,17 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
     },
   });
 
-  const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle cover image upload
+  const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
-    // Check number of files
-    if (files.length > 30) {
-      toast({
-        title: 'Too many files',
-        description: 'Please select a maximum of 30 images.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    // Validate file types
-    const fileArray = Array.from(files);
-    const invalidFile = fileArray.find(file => !file.type.startsWith('image/'));
-    
-    if (invalidFile) {
+    // Validate file type
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
       toast({
         title: 'Invalid file type',
-        description: 'Please select only image files.',
+        description: 'Please select only image files for the cover image.',
         variant: 'destructive',
       });
       return;
@@ -187,22 +206,52 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
     setUploadError(null);
     setUploadProgress(0);
     
-    // Store files for later upload
-    setImageFiles(prev => [...prev, ...fileArray]);
+    // Store file for later upload
+    setCoverImageFile(file);
     
-    // Generate previews
-    const newPreviews: string[] = [];
-    
-    for (const file of fileArray) {
-      const preview = await readFileAsDataURL(file);
-      newPreviews.push(preview);
-    }
-    
-    setImagePreviews(prev => [...prev, ...newPreviews]);
+    // Generate preview
+    const preview = await readFileAsDataURL(file);
+    setCoverImagePreview(preview);
     
     toast({
-      title: 'Images ready',
-      description: `${fileArray.length} image${fileArray.length > 1 ? 's' : ''} selected successfully.`,
+      title: 'Cover image ready',
+      description: 'Cover image selected successfully.',
+    });
+  };
+  
+  // Handle video upload
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    // Validate file type
+    const file = files[0];
+    if (!file.type.startsWith('video/')) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please select only video files (MP4, MOV, etc.).',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Check file size (max 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please select a video file smaller than 50MB.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Store file for later upload
+    setVideoFile(file);
+    setVideoName(file.name);
+    
+    toast({
+      title: 'Video ready',
+      description: 'Video selected successfully. It will be uploaded when you create the event.',
     });
   };
   
@@ -218,18 +267,24 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
     });
   };
   
-  // Remove image from the list
-  const removeImage = (index: number) => {
-    setImageFiles(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  // Remove cover image
+  const removeCoverImage = () => {
+    setCoverImageFile(null);
+    setCoverImagePreview(null);
+  };
+  
+  // Remove video
+  const removeVideo = () => {
+    setVideoFile(null);
+    setVideoName(null);
   };
 
   const onSubmit = (data: FormValues) => {
-    // Validate images
-    if (imageFiles.length === 0) {
+    // Validate cover image
+    if (!coverImageFile) {
       toast({
-        title: 'Images required',
-        description: 'Please upload at least one image for your event.',
+        title: 'Cover image required',
+        description: 'Please upload a cover image for your event.',
         variant: 'destructive',
       });
       return;
@@ -416,28 +471,29 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
           )}
         </div>
 
+        {/* Cover Image Upload */}
         <div>
-          <FormLabel className="block text-sm font-medium text-neutral-700">Event Images (1-30)</FormLabel>
+          <FormLabel className="block text-sm font-medium text-neutral-700">Cover Image (Required)</FormLabel>
           <div className="mt-1 flex flex-col px-6 pt-5 pb-6 border-2 border-neutral-300 border-dashed rounded-md">
-            <div className="space-y-1 text-center">
-              {imagePreviews.length > 0 ? (
-                <div className="mb-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {imagePreviews.map((preview, index) => (
-                    <div key={index} className="relative group">
-                      <img src={preview} alt={`Image ${index + 1}`} className="h-24 w-full object-cover rounded" />
-                      <button
-                        type="button"
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeImage(index)}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
+            <div className="space-y-3 text-center">
+              {coverImagePreview ? (
+                <div className="relative group">
+                  <img 
+                    src={coverImagePreview} 
+                    alt="Cover image preview" 
+                    className="h-48 w-full object-cover rounded-md mx-auto" 
+                  />
+                  <button
+                    type="button"
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-80 hover:opacity-100 transition-opacity"
+                    onClick={removeCoverImage}
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
               ) : (
-                <div className="flex-shrink-0 h-12 w-12 flex items-center justify-center mx-auto text-neutral-400">
-                  <Image className="h-8 w-8" />
+                <div className="flex-shrink-0 h-16 w-16 flex items-center justify-center mx-auto text-neutral-400">
+                  <Image className="h-12 w-12" />
                 </div>
               )}
               
@@ -447,57 +503,112 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                 </div>
               )}
               
-              {isUploading && (
-                <div className="mt-2 mb-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium text-blue-700">Uploading: {uploadProgress}%</span>
+              <div className="flex text-sm text-neutral-600 justify-center">
+                <label htmlFor="cover-image" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-blue-500">
+                  <span>{!coverImagePreview ? "Upload cover image" : "Change cover image"}</span>
+                  <input
+                    id="cover-image"
+                    name="cover-image"
+                    type="file"
+                    className="sr-only"
+                    accept="image/*"
+                    onChange={handleCoverImageUpload}
+                    disabled={isUploading}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-neutral-500">
+                JPEG, PNG, GIF, WebP up to 10MB
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Video Upload (Optional) */}
+        <div>
+          <FormLabel className="block text-sm font-medium text-neutral-700">
+            Event Video (Optional)
+          </FormLabel>
+          <div className="mt-1 flex flex-col px-6 pt-5 pb-6 border-2 border-neutral-300 border-dashed rounded-md">
+            <div className="space-y-3 text-center">
+              {videoFile ? (
+                <div className="relative group bg-gray-100 p-4 rounded-md">
+                  <div className="flex items-center justify-center">
+                    <FileVideo className="h-10 w-10 text-primary mr-3" />
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-neutral-800 truncate">{videoName}</p>
+                      <p className="text-xs text-neutral-500">
+                        {(videoFile.size / (1024 * 1024)).toFixed(2)} MB
+                      </p>
+                    </div>
                   </div>
-                  <Progress value={uploadProgress} className="h-2" />
-                  <p className="mt-1 text-xs text-neutral-500">
-                    Uploading images...
-                  </p>
+                  <button
+                    type="button"
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-80 hover:opacity-100 transition-opacity"
+                    onClick={removeVideo}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex-shrink-0 h-16 w-16 flex items-center justify-center mx-auto text-neutral-400">
+                  <Film className="h-12 w-12" />
                 </div>
               )}
               
               <div className="flex text-sm text-neutral-600 justify-center">
-                <label htmlFor="event-images" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-blue-500">
-                  <span>{isUploading ? "Uploading..." : "Upload images"}</span>
+                <label htmlFor="event-video" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-blue-500">
+                  <span>{!videoFile ? "Upload video" : "Change video"}</span>
                   <input
-                    id="event-images"
-                    name="event-images"
+                    id="event-video"
+                    name="event-video"
                     type="file"
-                    multiple
                     className="sr-only"
-                    accept="image/*"
-                    onChange={handleImagesUpload}
+                    accept="video/mp4,video/mov,video/avi,video/webm,video/mkv"
+                    onChange={handleVideoUpload}
                     disabled={isUploading}
                   />
                 </label>
-                <p className="pl-1">or drag and drop</p>
               </div>
               <p className="text-xs text-neutral-500">
-                JPEG, PNG, GIF, WebP up to 10MB each (1-30 images)
+                MP4, MOV, AVI, WEBM, MKV up to 50MB (max 90 seconds)
               </p>
-              <div className="text-xs mt-2 text-neutral-600">
-                <span className="font-medium">{imagePreviews.length}</span> of 30 images selected 
-                {imagePreviews.length > 0 && 
-                  <span className="text-green-600 ml-1">✓</span>
-                }
-              </div>
             </div>
           </div>
         </div>
+        
+        {/* Upload Progress */}
+        {isUploading && (
+          <div className="mt-2 mb-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-blue-700">Uploading: {uploadProgress}%</span>
+            </div>
+            <Progress value={uploadProgress} className="h-2" />
+            <p className="mt-1 text-xs text-neutral-500">
+              Uploading files...
+            </p>
+          </div>
+        )}
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            className="bg-primary hover:bg-blue-700 text-white"
-            disabled={createEventMutation.isPending || isUploading}
+          <Button 
+            type="submit" 
+            disabled={isUploading || createEventMutation.isPending}
           >
-            {createEventMutation.isPending ? "Creating..." : "Create Event"}
+            {isUploading || createEventMutation.isPending ? (
+              <span className="flex items-center">
+                <svg className="w-4 h-4 mr-2 animate-spin" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Creating...
+              </span>
+            ) : (
+              'Create Event'
+            )}
           </Button>
         </DialogFooter>
       </form>
@@ -506,14 +617,14 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md md:max-w-2xl overflow-y-auto max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-medium text-neutral-900 font-heading">
-            Create New Event
-          </DialogTitle>
+          <DialogTitle>Create New Event</DialogTitle>
+          <DialogDescription>
+            Fill in the details to create a new event.
+          </DialogDescription>
         </DialogHeader>
-        
-        {!user ? unauthenticatedContent : eventForm}
+        {user ? eventForm : unauthenticatedContent}
       </DialogContent>
     </Dialog>
   );
