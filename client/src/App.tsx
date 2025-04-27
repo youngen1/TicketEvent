@@ -14,7 +14,7 @@ import { useState } from "react";
 import CreateEventModal from "@/components/CreateEventModal";
 import LoginModal from "@/components/LoginModal";
 import SignupModal from "@/components/SignupModal";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 function Router() {
   return (
@@ -26,32 +26,6 @@ function Router() {
       <Route component={NotFound} />
     </Switch>
   );
-}
-
-function AppContent() {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
-
-  const handleLoginSuccess = () => {
-    // After successful login, close modal and update UI
-    setIsLoginModalOpen(false);
-  };
-
-  const handleSignupSuccess = () => {
-    // After successful signup, show login modal
-    setIsSignupModalOpen(false);
-    setIsLoginModalOpen(true);
-  };
-  
-  const handleNewEventClick = () => {
-    if (isAuthenticated) {
-      setIsCreateModalOpen(true);
-    } else {
-      setIsLoginModalOpen(true);
-    }
-  };
 }
 
 function App() {
