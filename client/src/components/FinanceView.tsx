@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   Card, 
   CardContent, 
@@ -19,6 +19,29 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { 
   ChevronDown, 
   Download, 
@@ -28,10 +51,42 @@ import {
   CreditCard,
   DollarSign,
   Users,
-  LineChart
+  LineChart,
+  AlertCircle
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Event, EventTicket } from '@shared/schema';
+import { queryClient, apiRequest } from "@/lib/queryClient";
+
+// Withdrawal request schema
+const withdrawalFormSchema = z.object({
+  amount: z.string()
+    .refine(val => !isNaN(Number(val)), {
+      message: "Amount must be a valid number",
+    })
+    .refine(val => Number(val) > 0, {
+      message: "Amount must be greater than 0",
+    }),
+  accountName: z.string().min(3, {
+    message: "Account name must be at least 3 characters long",
+  }),
+  accountNumber: z.string().min(10, {
+    message: "Please enter a valid account number",
+  }),
+  bankName: z.string().min(2, {
+    message: "Please select a bank",
+  }),
+});
+
+type WithdrawalFormValues = z.infer<typeof withdrawalFormSchema>;
+
+// Withdrawal history type
+type WithdrawalRequest = {
+  id: number;
+  amount: number;
+  status: 'pending' | 'approved' | 'processed' | 'rejected';
+  date: Date;
+};
 
 interface FinanceViewProps {
   userId: number;
@@ -39,6 +94,8 @@ interface FinanceViewProps {
 
 export default function FinanceView({ userId }: FinanceViewProps) {
   const [period, setPeriod] = useState('all'); // 'all', 'month', 'week'
+  const [isWithdrawalDialogOpen, setIsWithdrawalDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   // Fetch user's events
   const { data: userEvents = [] } = useQuery<Event[]>({
@@ -112,11 +169,108 @@ export default function FinanceView({ userId }: FinanceViewProps) {
   const eventRevenue = Object.values(ticketsByEvent)
     .filter(item => item.event) // Filter out events that might not exist
     .sort((a, b) => b.revenue - a.revenue); // Sort by revenue (highest first)
+    
+  // Mock withdrawal history
+  const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalRequest[]>([
+    {
+      id: 1,
+      amount: 250.00,
+      status: 'processed',
+      date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), // 15 days ago
+    },
+    {
+      id: 2,
+      amount: 375.50,
+      status: 'approved',
+      date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+    },
+    {
+      id: 3,
+      amount: 120.75,
+      status: 'pending',
+      date: new Date(), // Today
+    }
+  ]);
+  
+  // Form for withdrawal requests
+  const form = useForm<WithdrawalFormValues>({
+    resolver: zodResolver(withdrawalFormSchema),
+    defaultValues: {
+      amount: "",
+      accountName: "",
+      accountNumber: "",
+      bankName: "",
+    },
+  });
+  
+  // Mutation for submitting withdrawal requests
+  const withdrawalMutation = useMutation({
+    mutationFn: async (data: WithdrawalFormValues) => {
+      // In a real app, this would be an API call to process the withdrawal
+      // return apiRequest("POST", "/api/finance/withdraw", data);
+      
+      // For now, we'll just simulate a successful request
+      return new Promise(resolve => {
+        setTimeout(() => {
+          // Create a new withdrawal request
+          const newRequest: WithdrawalRequest = {
+            id: withdrawalHistory.length + 1,
+            amount: parseFloat(data.amount),
+            status: 'pending',
+            date: new Date(),
+          };
+          
+          // Add to history
+          setWithdrawalHistory(prev => [newRequest, ...prev]);
+          
+          resolve({ success: true, request: newRequest });
+        }, 1000);
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Withdrawal request submitted",
+        description: "Your request is being processed and will be reviewed shortly.",
+      });
+      form.reset();
+      setIsWithdrawalDialogOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Withdrawal failed",
+        description: "There was an error processing your withdrawal request. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const onSubmit = (data: WithdrawalFormValues) => {
+    const availableBalance = totalRevenue * 0.85;
+    const requestAmount = parseFloat(data.amount);
+    
+    if (requestAmount > availableBalance) {
+      toast({
+        title: "Insufficient funds",
+        description: `You can withdraw a maximum of ${formatCurrency(availableBalance)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    withdrawalMutation.mutate(data);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Period selection */}
-      <div className="flex justify-end">
+      {/* Period selection and withdrawal request button */}
+      <div className="flex justify-between items-center">
+        <Button 
+          onClick={() => setIsWithdrawalDialogOpen(true)} 
+          className="bg-primary hover:bg-primary/90"
+        >
+          <Banknote className="mr-2 h-4 w-4" /> Request Withdrawal
+        </Button>
+        
         <Tabs value={period} onValueChange={setPeriod} className="w-[400px]">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="all">All Time</TabsTrigger>
@@ -282,6 +436,173 @@ export default function FinanceView({ userId }: FinanceViewProps) {
           )}
         </CardFooter>
       </Card>
+
+      {/* Withdrawal History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Withdrawal History</CardTitle>
+          <CardDescription>
+            Your withdrawal requests and their status
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {withdrawalHistory.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {withdrawalHistory.map(withdrawal => (
+                  <TableRow key={withdrawal.id}>
+                    <TableCell>{formatDate(withdrawal.date)}</TableCell>
+                    <TableCell>{formatCurrency(withdrawal.amount)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <span className={
+                          withdrawal.status === 'processed' 
+                            ? 'text-green-500 flex items-center' 
+                            : withdrawal.status === 'approved'
+                              ? 'text-blue-500 flex items-center'
+                              : withdrawal.status === 'rejected'
+                                ? 'text-red-500 flex items-center'
+                                : 'text-amber-500 flex items-center'
+                        }>
+                          {withdrawal.status === 'processed' ? (
+                            <>
+                              <ArrowUpRight className="mr-1 h-4 w-4" />
+                              Processed
+                            </>
+                          ) : withdrawal.status === 'approved' ? (
+                            <>
+                              <Clock className="mr-1 h-4 w-4" />
+                              Approved
+                            </>
+                          ) : withdrawal.status === 'rejected' ? (
+                            <>
+                              <AlertCircle className="mr-1 h-4 w-4" />
+                              Rejected
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="mr-1 h-4 w-4" />
+                              Pending
+                            </>
+                          )}
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-muted-foreground">No withdrawal requests yet</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Withdrawal Request Dialog */}
+      <Dialog open={isWithdrawalDialogOpen} onOpenChange={setIsWithdrawalDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Request Withdrawal</DialogTitle>
+            <DialogDescription>
+              Enter your bank details to request a withdrawal of your available funds directly to your account.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="0.00" 
+                        {...field} 
+                        type="number"
+                        step="0.01"
+                        min="10"
+                        max={(totalRevenue * 0.85).toString()}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Available: {formatCurrency(totalRevenue * 0.85)}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="bankName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bank Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your bank name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="accountName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter account holder name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="accountNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your account number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter className="mt-6">
+                <Button type="button" variant="outline" onClick={() => setIsWithdrawalDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={withdrawalMutation.isPending}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  {withdrawalMutation.isPending ? (
+                    <>
+                      <span className="animate-spin mr-2">○</span>
+                      Processing...
+                    </>
+                  ) : (
+                    "Request Withdrawal"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
