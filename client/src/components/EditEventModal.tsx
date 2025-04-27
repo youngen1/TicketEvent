@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Event } from "@shared/schema";
+import LocationSearchInput from "@/components/LocationSearchInput";
 import {
   Dialog,
   DialogContent,
@@ -98,17 +99,11 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
         ageRestriction: event.ageRestriction || null,
       });
       
-      if (event.image) {
-        setImagePreview(event.image);
-      } else {
-        setImagePreview(null);
-      }
-
-      if (event.video) {
-        setVideoPreview(event.video);
-      } else {
-        setVideoPreview(null);
-      }
+      // Update the image preview
+      setImagePreview(event.image || null);
+      
+      // Update the video preview
+      setVideoPreview(event.video || null);
     }
   }, [event, form]);
 
@@ -414,7 +409,21 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
                 <FormItem>
                   <FormLabel>Location</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter location" {...field} />
+                    <LocationSearchInput 
+                      value={field.value || ''} 
+                      onChange={(value, placeDetails) => {
+                        field.onChange(value);
+                        // If you want to store additional place details like coordinates
+                        if (placeDetails?.geometry?.location) {
+                          // You could store these in separate form fields if needed
+                          console.log('Location coordinates:', {
+                            lat: placeDetails.geometry.location.lat(),
+                            lng: placeDetails.geometry.location.lng(),
+                          });
+                        }
+                      }}
+                      placeholder="Search for a location"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

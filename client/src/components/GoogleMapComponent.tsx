@@ -45,7 +45,7 @@ function GoogleMapComponent({
 }: GoogleMapComponentProps) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey: import.meta.env.GOOGLE_MAPS_API_KEY || '',
     libraries: ['places']
   });
 
