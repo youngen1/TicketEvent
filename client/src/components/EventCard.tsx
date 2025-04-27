@@ -1,8 +1,5 @@
 import { Image as ImageIcon } from "lucide-react";
 import { Event } from "@shared/schema";
-import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import "./EventCard.css";
 
 interface EventCardProps {
   event: Event;
@@ -10,8 +7,6 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, onShowDetails }: EventCardProps) {
-  const [, navigate] = useLocation();
-
   // Get image data
   let firstImage = event.image || '';
   
@@ -26,44 +21,6 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     }
   }
 
-  // Fetch creator information if available
-  const { data: creator } = useQuery({
-    queryKey: [`/api/users/${event.userId}`],
-    queryFn: async () => {
-      try {
-        if (!event.userId) return null;
-        const response = await fetch(`/api/users/${event.userId}`);
-        if (response.ok) {
-          return response.json();
-        }
-        return null;
-      } catch (error) {
-        console.error("Error fetching creator:", error);
-        return null;
-      }
-    },
-    enabled: !!event.userId,
-  });
-
-  // Get profile photo URL for creator
-  const getProfilePhotoUrl = () => {
-    // For this implementation, use real profile photos from an API
-    return `https://randomuser.me/api/portraits/${event.userId && event.userId % 2 === 0 ? 'women' : 'men'}/${(event.userId || 1) % 99}.jpg`;
-  };
-
-  // Click handlers
-  const handleImageClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onShowDetails(event, true);
-  };
-  
-  const handleCreatorClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (event.userId) {
-      navigate(`/users/${event.userId}`);
-    }
-  };
-
   // Format image URL
   const getFormattedImageUrl = (url: string) => {
     if (!url) return '';
@@ -75,7 +32,7 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     return url;
   };
 
-  // Format date for display
+  // Format date
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -91,52 +48,47 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     }
   };
 
-  // Get creator initials for avatar fallback
-  const getCreatorInitials = () => {
-    return creator?.username?.charAt(0).toUpperCase() || `R${event.userId || 1}`;
-  };
-
   return (
     <div 
-      className="event-card" 
+      className="bg-white rounded-md shadow-sm mb-4 overflow-hidden cursor-pointer"
       onClick={() => onShowDetails(event)}
     >
-      <div className="event-image">
+      {/* Event Image */}
+      <div className="w-full h-48 bg-gray-100 relative">
         {firstImage ? (
           <img 
             src={getFormattedImageUrl(firstImage)} 
             alt={event.title}
-            onClick={handleImageClick}
+            className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-200">
+          <div className="w-full h-full flex items-center justify-center">
             <ImageIcon size={40} className="text-gray-400" />
           </div>
         )}
-        
-
       </div>
       
-      <div className="event-content">
-        <div className="event-header">
-          <div className="category-badge">
+      {/* Event Details */}
+      <div className="p-4">
+        <div className="flex justify-end mb-2">
+          <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full">
             {event.category || 'General'}
-          </div>
+          </span>
         </div>
         
-        <div className="event-date">
+        <div className="text-gray-600 text-sm mb-2">
           {formatDate(event.date || '')}
         </div>
         
-        <h3 className="event-title">
+        <h3 className="font-bold text-xl mb-2 text-gray-800">
           {event.title}
         </h3>
         
-        <div className="event-location">
+        <div className="text-gray-600 mb-2">
           {event.location}
         </div>
         
-        <p className="event-description">
+        <p className="text-gray-600 text-sm line-clamp-2">
           {event.description}
         </p>
       </div>
