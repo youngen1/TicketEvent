@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Event } from "@shared/schema";
 import { 
   Heart, Calendar, MapPin, Users, X, ChevronLeft, ChevronRight, 
-  Maximize, Minimize, ArrowLeft, ArrowRight 
+  Maximize, ArrowLeft, ArrowRight 
 } from "lucide-react";
 import {
   Dialog,
@@ -27,13 +27,63 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [parsedImages, setParsedImages] = useState<string[]>([]);
+  const [scheduleItems, setScheduleItems] = useState<{ time: string; title: string; description?: string }[]>([]);
   const imageRef = useRef<HTMLImageElement>(null);
 
-  // Reset active image index when event changes
+  // Parse event data and reset state when event changes
   useEffect(() => {
+    if (!event) return;
+    
     setActiveImageIndex(0);
     setIsFullscreen(false);
-  }, [event?.id]);
+    
+    // Parse images
+    let images: string[] = [];
+    if (event.images) {
+      try {
+        images = JSON.parse(event.images);
+      } catch (e) {
+        console.error("Failed to parse images:", e);
+      }
+    }
+    
+    // Fallback to single image if images array is empty
+    if (images.length === 0 && event.image) {
+      images = [event.image];
+    }
+    
+    setParsedImages(images);
+    
+    // Parse schedule data
+    let schedule: { time: string; title: string; description?: string }[] = [];
+    if (event.schedule) {
+      try {
+        schedule = JSON.parse(event.schedule);
+      } catch (e) {
+        console.error("Failed to parse schedule:", e);
+      }
+    }
+    
+    setScheduleItems(schedule);
+  }, [event]);
+  
+  // Listen for custom event to automatically open fullscreen view
+  useEffect(() => {
+    const handleOpenFullscreen = (e: CustomEvent) => {
+      if (!event) return;
+      const { eventId } = e.detail;
+      if (event.id === eventId) {
+        setIsFullscreen(true);
+      }
+    };
+    
+    window.addEventListener('openEventFullscreen', handleOpenFullscreen as EventListener);
+    
+    return () => {
+      window.removeEventListener('openEventFullscreen', handleOpenFullscreen as EventListener);
+    };
+  }, [event]);
 
   const toggleFavoriteMutation = useMutation({
     mutationFn: async () => {
@@ -48,37 +98,12 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
 
   if (!event) return null;
 
-  // Parse schedule data if available
-  let scheduleItems: { time: string; title: string; description?: string }[] = [];
-  if (event.schedule) {
-    try {
-      scheduleItems = JSON.parse(event.schedule);
-    } catch (e) {
-      console.error("Failed to parse schedule:", e);
-    }
-  }
-
-  // Parse images data if available
-  let imageUrls: string[] = [];
-  if (event.images) {
-    try {
-      imageUrls = JSON.parse(event.images);
-    } catch (e) {
-      console.error("Failed to parse images:", e);
-    }
-  }
-
-  // Fallback to single image if images array is empty
-  if (imageUrls.length === 0 && event.image) {
-    imageUrls = [event.image];
-  }
-
   const handlePrevImage = () => {
-    setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : imageUrls.length - 1));
+    setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : parsedImages.length - 1));
   };
 
   const handleNextImage = () => {
-    setActiveImageIndex((prev) => (prev < imageUrls.length - 1 ? prev + 1 : 0));
+    setActiveImageIndex((prev) => (prev < parsedImages.length - 1 ? prev + 1 : 0));
   };
 
   const getFullImageUrl = (url: string) => {
@@ -149,8 +174,9 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
       tabIndex={0}
     >
       <button 
-        className="absolute top-4 right-4 text-white p-2 rounded-full bg-black/50 hover:bg-black/70"
-        onClick={toggleFullscreen}
+        className="absolute top-4 right-4 z-50 text-white p-2 rounded-full bg-black/50 hover:bg-black/70"
+        onClick={() => setIsFullscreen(false)}
+        aria-label="Close fullscreen view"
       >
         <X size={24} />
       </button>
@@ -161,17 +187,19 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <img 
-          ref={imageRef}
-          src={getFullImageUrl(imageUrls[activeImageIndex])}
-          alt={`${event.title} - Image ${activeImageIndex + 1}`}
-          className="max-h-full max-w-full object-contain"
-        />
+        {parsedImages.length > 0 && (
+          <img 
+            ref={imageRef}
+            src={getFullImageUrl(parsedImages[activeImageIndex])}
+            alt={`${event.title} - Image ${activeImageIndex + 1}`}
+            className="max-h-full max-w-full object-contain"
+          />
+        )}
         
-        {imageUrls.length > 1 && (
+        {parsedImages.length > 1 && (
           <>
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
-              {imageUrls.map((_, index) => (
+              {parsedImages.map((_: string, index: number) => (
                 <button
                   key={index}
                   onClick={() => setActiveImageIndex(index)}
@@ -198,7 +226,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
             </button>
             
             <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-2 rounded-md text-sm">
-              {activeImageIndex + 1} / {imageUrls.length}
+              {activeImageIndex + 1} / {parsedImages.length}
             </div>
           </>
         )}
@@ -211,7 +239,8 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
       {isFullscreen && <FullscreenImageView />}
       
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-3xl p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl p-0 overflow-hidden max-h-[90vh] overflow-y-auto" 
+                       aria-describedby="event-details-description">
           <DialogHeader className="sr-only">
             <DialogTitle>{event.title}</DialogTitle>
           </DialogHeader>
@@ -225,10 +254,10 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
               onKeyDown={handleKeyDown}
               tabIndex={0}
             >
-              {imageUrls.length > 0 ? (
+              {parsedImages.length > 0 ? (
                 <>
                   <img 
-                    src={getFullImageUrl(imageUrls[activeImageIndex])} 
+                    src={getFullImageUrl(parsedImages[activeImageIndex])} 
                     alt={event.title} 
                     className="w-full h-full object-cover cursor-pointer"
                     onClick={toggleFullscreen}
@@ -242,7 +271,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                     <Maximize size={18} />
                   </button>
                   
-                  {imageUrls.length > 1 && (
+                  {parsedImages.length > 1 && (
                     <>
                       <button 
                         onClick={handlePrevImage}
@@ -259,7 +288,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                         <ChevronRight size={24} />
                       </button>
                       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1">
-                        {imageUrls.map((_, index) => (
+                        {parsedImages.map((_: string, index: number) => (
                           <button
                             key={index}
                             onClick={() => setActiveImageIndex(index)}
@@ -281,10 +310,10 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
             </div>
 
             {/* Thumbnail gallery for quick navigation */}
-            {imageUrls.length > 1 && (
+            {parsedImages.length > 1 && (
               <div className="px-4 pt-2 overflow-x-auto">
                 <div className="flex space-x-2 pb-2">
-                  {imageUrls.map((url, index) => (
+                  {parsedImages.map((url: string, index: number) => (
                     <button
                       key={index}
                       className={`flex-shrink-0 h-16 w-16 rounded overflow-hidden ${
@@ -303,7 +332,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
               </div>
             )}
             
-            <div className="px-4 pt-5 pb-4 sm:p-6">
+            <div className="px-4 pt-5 pb-4 sm:p-6" id="event-details-description">
               <div className="flex justify-between items-start">
                 <div>
                   <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getCategoryStyles(event.category)}`}>
@@ -349,7 +378,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                   </div>
                   <div className="ml-3">
                     <h4 className="text-sm font-medium text-neutral-500">Attendees</h4>
-                    <p className="mt-1 text-sm text-neutral-900">{event.attendees} registered</p>
+                    <p className="mt-1 text-sm text-neutral-900">{event.attendees || 0} registered</p>
                   </div>
                 </div>
               </div>

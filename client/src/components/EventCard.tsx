@@ -11,6 +11,13 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, onShowDetails }: EventCardProps) {
+  // Open the event details directly in fullscreen mode when clicking on the image
+  const handleImageClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onShowDetails(event);
+    // We'll handle fullscreen mode directly in the main pages
+    window.dispatchEvent(new CustomEvent('openEventFullscreen', { detail: { eventId: event.id } }));
+  };
   const queryClient = useQueryClient();
 
   const toggleFavoriteMutation = useMutation({
@@ -64,7 +71,10 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
       className="bg-white overflow-hidden shadow-sm rounded-lg hover:shadow-md transition-shadow duration-300"
       onClick={() => onShowDetails(event)}
     >
-      <div className="h-40 bg-neutral-200 relative cursor-pointer">
+      <div className="h-40 bg-neutral-200 relative cursor-pointer" onClick={(e) => {
+          e.stopPropagation();
+          handleImageClick(e);
+        }}>
         {firstImage && firstImage.length > 0 ? (
           <div className="w-full h-full">
             <img 
