@@ -13,7 +13,7 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, onShowDetails }: EventCardProps) {
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   // Open the event details directly in fullscreen mode when clicking on the image
   const handleImageClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -120,14 +120,14 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
             onClick={handleFavoriteClick}
             disabled={toggleFavoriteMutation.isPending}
           >
-            <Heart className={event.isFavorite ? "text-red-500 fill-red-500" : ""} />
+            <Heart className={false ? "text-red-500 fill-red-500" : ""} />
           </button>
         </div>
       </div>
       <div className="p-4">
         <div className="flex items-center mb-2">
-          <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getCategoryStyles(event.category)}`}>
-            {event.category}
+          <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getCategoryStyles(event.category || '')}`}>
+            {event.category || 'General'}
           </span>
           <span className="ml-auto text-sm text-neutral-500">
             <span className="inline-flex items-center">
@@ -138,6 +138,29 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
             </span>
           </span>
         </div>
+        
+        {/* Creator profile avatar */}
+        {event.userId && (
+          <div className="flex items-center mb-3">
+            <div 
+              className="cursor-pointer flex items-center" 
+              onClick={handleCreatorClick}
+            >
+              <Avatar className="h-6 w-6 mr-2">
+                <AvatarImage 
+                  src={creator?.avatar ? getFormattedImageUrl(creator.avatar) : undefined} 
+                  alt={creator?.username || 'Event creator'} 
+                />
+                <AvatarFallback>
+                  <User className="h-4 w-4" />
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-xs text-neutral-600">
+                by {creator?.displayName || creator?.username || 'Unknown creator'}
+              </span>
+            </div>
+          </div>
+        )}
         <h3 className="text-lg font-medium text-neutral-900 mb-1 font-heading">{event.title}</h3>
         <p className="text-sm text-neutral-600 mb-3 line-clamp-2">{event.description}</p>
         <div className="flex items-center text-sm text-neutral-500 mb-2">
