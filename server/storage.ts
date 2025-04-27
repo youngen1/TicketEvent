@@ -1,11 +1,12 @@
 import { 
-  users, events, comments, eventRatings, eventAttendees, eventTickets,
+  users, events, comments, eventRatings, eventAttendees, eventTickets, userFollows,
   type User, type InsertUser, 
   type Event, type InsertEvent,
   type Comment, type InsertComment,
   type EventRating, type InsertEventRating,
   type EventAttendee, type InsertEventAttendee,
   type EventTicket, type InsertEventTicket,
+  type UserFollow, type InsertUserFollow,
   ATTENDANCE_STATUS
 } from "@shared/schema";
 import { db } from "./db";
@@ -56,6 +57,13 @@ export interface IStorage {
   getEventTickets(eventId: number): Promise<EventTicket[]>;
   getTicket(ticketId: number): Promise<EventTicket | undefined>;
   getTicketByReference(reference: string): Promise<EventTicket | undefined>;
+  
+  // User follow methods
+  getUserFollowers(userId: number): Promise<User[]>;
+  getUserFollowing(userId: number): Promise<User[]>;
+  followUser(followerId: number, followingId: number): Promise<UserFollow>;
+  unfollowUser(followerId: number, followingId: number): Promise<void>;
+  isFollowing(followerId: number, followingId: number): Promise<boolean>;
 }
 
 // A simple in-memory storage implementation that can be used when database has issues
@@ -66,12 +74,14 @@ export class MemStorage implements IStorage {
   private ratings: EventRating[] = [];
   private attendees: EventAttendee[] = [];
   private tickets: EventTicket[] = [];
+  private userFollows: UserFollow[] = [];
   private nextUserId = 1;
   private nextEventId = 1;
   private nextCommentId = 1;
   private nextRatingId = 1;
   private nextAttendeeId = 1;
   private nextTicketId = 1;
+  private nextUserFollowId = 1;
 
   constructor() {
     console.log("Initializing MemStorage...");
@@ -87,8 +97,28 @@ export class MemStorage implements IStorage {
       avatar: null,
       bio: null,
       email: "demo@example.com", // Added email for payment processing
-      preferences: null
+      preferences: null,
+      followersCount: 0,
+      followingCount: 0
     });
+    
+    // Create some sample users to follow
+    for (let i = 2; i <= 5; i++) {
+      this.users.push({
+        id: this.nextUserId++,
+        username: `user${i}`,
+        password: "$2a$10$JdP6aRBl9m4OFlniT/GGy.DeN9/LZhW1UcRTHFCZ7K5y1ivAbU.sG", // "password"
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        displayName: `User ${i}`,
+        avatar: `https://ui-avatars.com/api/?name=User+${i}&background=random`,
+        bio: `Bio for User ${i}`,
+        email: `user${i}@example.com`,
+        preferences: null,
+        followersCount: 0,
+        followingCount: 0
+      });
+    }
     
     // Seed some events
     this.seedEvents();
@@ -660,6 +690,108 @@ export class MemStorage implements IStorage {
     };
     
     return this.tickets[index];
+  }
+  
+  // User follow methods
+  async getUserFollowers(userId: number): Promise<User[]> {
+    // Find all follows where the user is being followed
+    const followerIds = this.userFollows
+      .filter(follow => follow.followingId === userId)
+      .map(follow => follow.followerId);
+      
+    // Get the user objects for these followers
+    return this.users.filter(user => followerIds.includes(user.id));
+  }
+  
+  async getUserFollowing(userId: number): Promise<User[]> {
+    // Find all follows where the user is following someone else
+    const followingIds = this.userFollows
+      .filter(follow => follow.followerId === userId)
+      .map(follow => follow.followingId);
+      
+    // Get the user objects being followed
+    return this.users.filter(user => followingIds.includes(user.id));
+  }
+  
+  async followUser(followerId: number, followingId: number): Promise<UserFollow> {
+    // Check if users exist
+    const follower = await this.getUser(followerId);
+    const following = await this.getUser(followingId);
+    
+    if (!follower) {
+      throw new Error(`Follower user with id ${followerId} not found`);
+    }
+    
+    if (!following) {
+      throw new Error(`Following user with id ${followingId} not found`);
+    }
+    
+    // Check if already following
+    const existingFollow = this.userFollows.find(
+      follow => follow.followerId === followerId && follow.followingId === followingId
+    );
+    
+    if (existingFollow) {
+      return existingFollow; // Already following
+    }
+    
+    // Create new follow relationship
+    const newFollow: UserFollow = {
+      id: this.nextUserFollowId++,
+      followerId,
+      followingId,
+      createdAt: new Date()
+    };
+    
+    this.userFollows.push(newFollow);
+    
+    // Update follower and following counts
+    this.updateUserFollowStats(followerId, followingId);
+    
+    return newFollow;
+  }
+  
+  async unfollowUser(followerId: number, followingId: number): Promise<void> {
+    const index = this.userFollows.findIndex(
+      follow => follow.followerId === followerId && follow.followingId === followingId
+    );
+    
+    if (index !== -1) {
+      // Remove the follow relationship
+      this.userFollows.splice(index, 1);
+      
+      // Update follower and following counts
+      this.updateUserFollowStats(followerId, followingId);
+    }
+  }
+  
+  async isFollowing(followerId: number, followingId: number): Promise<boolean> {
+    return this.userFollows.some(
+      follow => follow.followerId === followerId && follow.followingId === followingId
+    );
+  }
+  
+  // Helper method to update follower and following counts
+  private async updateUserFollowStats(followerId: number, followingId: number): Promise<void> {
+    // Update follower's following count
+    const followerIndex = this.users.findIndex(user => user.id === followerId);
+    if (followerIndex !== -1) {
+      const followingCount = this.userFollows.filter(follow => follow.followerId === followerId).length;
+      this.users[followerIndex] = {
+        ...this.users[followerIndex],
+        followingCount
+      };
+    }
+    
+    // Update following's followers count
+    const followingIndex = this.users.findIndex(user => user.id === followingId);
+    if (followingIndex !== -1) {
+      const followersCount = this.userFollows.filter(follow => follow.followingId === followingId).length;
+      this.users[followingIndex] = {
+        ...this.users[followingIndex],
+        followersCount
+      };
+    }
   }
 
   // Extra properties to make TypeScript happy

@@ -15,6 +15,8 @@ export const users = pgTable("users", {
   bio: text("bio"),
   avatar: text("avatar"),
   preferences: text("preferences"),
+  followersCount: integer("followers_count").default(0),
+  followingCount: integer("following_count").default(0),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -219,13 +221,31 @@ export const insertEventTicketSchema = createInsertSchema(eventTickets).pick({
 export type InsertEventTicket = z.infer<typeof insertEventTicketSchema>;
 export type EventTicket = typeof eventTickets.$inferSelect;
 
+// User follows table for following relationships
+export const userFollows = pgTable("user_follows", {
+  id: serial("id").primaryKey(),
+  followerId: integer("follower_id").notNull().references(() => users.id),
+  followingId: integer("following_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUserFollowSchema = createInsertSchema(userFollows).pick({
+  followerId: true,
+  followingId: true,
+});
+
+export type InsertUserFollow = z.infer<typeof insertUserFollowSchema>;
+export type UserFollow = typeof userFollows.$inferSelect;
+
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({
   events: many(events),
   comments: many(comments),
   ratings: many(eventRatings),
   attendees: many(eventAttendees),
-  tickets: many(eventTickets)
+  tickets: many(eventTickets),
+  followers: many(userFollows, { relationName: "followers" }),
+  following: many(userFollows, { relationName: "following" })
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -280,5 +300,18 @@ export const eventTicketsRelations = relations(eventTickets, ({ one }) => ({
   event: one(events, {
     fields: [eventTickets.eventId],
     references: [events.id],
+  }),
+}));
+
+export const userFollowsRelations = relations(userFollows, ({ one }) => ({
+  follower: one(users, {
+    fields: [userFollows.followerId],
+    references: [users.id],
+    relationName: "following"
+  }),
+  following: one(users, {
+    fields: [userFollows.followingId],
+    references: [users.id],
+    relationName: "followers"
   }),
 }));
