@@ -93,55 +93,6 @@ export class MemStorage implements IStorage {
     // Seed some events
     this.seedEvents();
     console.log(`Seeded ${this.events.length} events in memory storage`);
-    
-    // Add some test tickets that will be available after restart
-    this.seedTestTickets();
-  }
-  
-  private seedTestTickets() {
-    // Create R2 ticket (completed)
-    this.tickets.push({
-      id: this.nextTicketId++,
-      userId: 1,
-      eventId: 5, // R2 Event
-      quantity: 1,
-      totalAmount: 2,
-      paymentReference: 'test-r2-payment',
-      paymentStatus: "completed",
-      purchaseDate: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-    
-    // Create R3 ticket (completed)
-    this.tickets.push({
-      id: this.nextTicketId++,
-      userId: 1,
-      eventId: 6, // R3 Event
-      quantity: 1,
-      totalAmount: 3,
-      paymentReference: 'test-r3-payment',
-      paymentStatus: "completed",
-      purchaseDate: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-    
-    // Create R4 ticket (completed)
-    this.tickets.push({
-      id: this.nextTicketId++,
-      userId: 1,
-      eventId: 7, // R4 Event
-      quantity: 1,
-      totalAmount: 4,
-      paymentReference: 'test-r4-payment',
-      paymentStatus: "completed",
-      purchaseDate: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-    
-    console.log(`Added ${this.tickets.length} test tickets`);
   }
 
   private seedEvents() {
