@@ -35,18 +35,26 @@ export default function EventAttendance({ event }: EventAttendanceProps) {
   const { user, isAuthenticated } = useAuth();
   const [showAttendees, setShowAttendees] = useState(false);
   
-  const eventDate = new Date(event.date + 'T' + (event.time || '00:00'));
+  // Safely handle event date check
+  const eventDate = event?.date 
+    ? new Date(event.date + 'T' + (event.time || '00:00'))
+    : new Date();
   const isPastEvent = eventDate < new Date();
+  
+  // Safety check for event
+  if (!event || typeof event.id !== 'number') {
+    return null;
+  }
 
   // Fetch the user's ticket for this event
   const { data: userTicket } = useQuery({
-    queryKey: ["/api/events", event.id, "ticket", user?.id],
+    queryKey: ["/api/events", String(event.id), "ticket", user?.id ? String(user.id) : undefined],
     enabled: isAuthenticated && !!user?.id,
   });
 
   // Fetch all ticket purchasers for this event
   const { data: ticketAttendees = [] } = useQuery<TicketAttendee[]>({
-    queryKey: ["/api/events", event.id, "tickets", "attendees"],
+    queryKey: ["/api/events", String(event.id), "tickets", "attendees"],
   });
 
   const hasTicket = !!userTicket;

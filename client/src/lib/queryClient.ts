@@ -51,11 +51,13 @@ export const getQueryFn: <T>(options: {
     let url: string;
     
     if (typeof queryKey[0] === 'string' && queryKey.length > 1) {
+      // Filter out undefined or null segments before reducing
+      const validSegments = queryKey.filter(segment => 
+        segment !== undefined && segment !== null
+      );
+      
       // Convert query key array to path segments
-      url = queryKey.reduce((path: string, segment: any, index: number) => {
-        // Skip undefined or null segments
-        if (segment === undefined || segment === null) return path;
-        
+      url = validSegments.reduce((path: string, segment: any, index: number) => {
         // First segment is the base path
         if (index === 0) return String(segment);
         
