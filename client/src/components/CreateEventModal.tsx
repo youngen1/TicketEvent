@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -33,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image } from "lucide-react";
+import { Image, Upload } from "lucide-react";
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -59,6 +60,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isVideoProcessing, setIsVideoProcessing] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { user } = useAuth();
 
   const form = useForm<FormValues>({
@@ -136,25 +138,73 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
     },
   });
 
-  // Upload video to the server
-  const uploadVideoMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('video', file);
+  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check if file is a video
+    if (!file.type.startsWith('video/')) {
+      toast({
+        title: 'Invalid file',
+        description: 'Please select a video file.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Reset previous video states
+    setVideoError(null);
+    setVideoFile(file);
+    setIsVideoProcessing(true);
+    setUploadProgress(0);
+    
+    // Create FormData and append file
+    const formData = new FormData();
+    formData.append('video', file);
+    
+    try {
+      // Create new XMLHttpRequest to track upload progress
+      const xhr = new XMLHttpRequest();
       
-      const response = await fetch('/api/upload/video', {
-        method: 'POST',
-        body: formData,
+      // Setup progress tracking
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(percentComplete);
+        }
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to upload video');
-      }
+      // Wait for the request to complete
+      const response = await new Promise((resolve, reject) => {
+        xhr.open('POST', '/api/upload/video');
+        
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              resolve(data);
+            } catch (e) {
+              reject(new Error('Invalid response from server'));
+            }
+          } else {
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              reject(new Error(errorData.message || 'Upload failed'));
+            } catch (e) {
+              reject(new Error(`Server error: ${xhr.status}`));
+            }
+          }
+        };
+        
+        xhr.onerror = () => {
+          reject(new Error('Network error occurred'));
+        };
+        
+        xhr.send(formData);
+      });
       
-      return response.json();
-    },
-    onSuccess: (data) => {
+      // Process successful response
+      const data = response as any;
       console.log('Video upload successful:', data);
       
       // Set the video and thumbnail URLs
@@ -173,8 +223,8 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
         title: 'Video uploaded',
         description: 'Your video has been uploaded and processed successfully.',
       });
-    },
-    onError: (error: any) => {
+      
+    } catch (error: any) {
       setIsVideoProcessing(false);
       setVideoError(error.message || 'Failed to upload video');
       
@@ -184,29 +234,6 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
         variant: 'destructive',
       });
     }
-  });
-
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    // Check if file is a video
-    if (!file.type.startsWith('video/')) {
-      toast({
-        title: 'Invalid file',
-        description: 'Please select a video file.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    // Reset previous video states
-    setVideoError(null);
-    setVideoFile(file);
-    setIsVideoProcessing(true);
-    
-    // Upload the video
-    uploadVideoMutation.mutate(file);
   };
 
   const onSubmit = (data: FormValues) => {
@@ -369,6 +396,18 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
               {videoError && (
                 <div className="mt-2 text-sm text-red-600">
                   {videoError}
+                </div>
+              )}
+              
+              {isVideoProcessing && (
+                <div className="mt-2 mb-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-blue-700">Uploading: {uploadProgress}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-2" />
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {uploadProgress === 100 ? "Processing video..." : "Uploading video..."}
+                  </p>
                 </div>
               )}
               
