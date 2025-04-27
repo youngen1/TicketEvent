@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
+import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
 import { processVideo } from './utils/videoProcessor';
 
@@ -16,10 +16,8 @@ const tempUploadsPath = path.join(projectRoot, 'temp-uploads');
 
 // Ensure temp uploads directory exists
 try {
-  if (!fs.existsSync(tempUploadsPath)) {
-    fs.mkdirSync(tempUploadsPath, { recursive: true });
-    console.log('Created temp-uploads directory');
-  }
+  fs.ensureDirSync(tempUploadsPath);
+  console.log('Ensured temp-uploads directory exists');
 } catch (error) {
   console.error('Error creating temp-uploads directory:', error);
 }
@@ -71,10 +69,11 @@ export function registerUploadRoutes(app: Express) {
   console.log('Setting up uploads directory for static serving at:', uploadsPath);
   
   try {
-    if (!fs.existsSync(uploadsPath)) {
-      fs.mkdirSync(uploadsPath, { recursive: true });
-      console.log('Created uploads directory');
-    }
+    // Ensure all required directories exist
+    fs.ensureDirSync(uploadsPath);
+    fs.ensureDirSync(path.join(uploadsPath, 'videos'));
+    fs.ensureDirSync(path.join(uploadsPath, 'thumbnails'));
+    console.log('Ensured all uploads directories exist');
     
     // Test write permissions
     const testFile = path.join(uploadsPath, 'test-access.txt');
@@ -99,10 +98,51 @@ export function registerUploadRoutes(app: Express) {
       
       console.log('Processing video file with size:', req.file.size);
       
+      // Check if it's an MP4 file for super-fast-path processing
+      const isMp4 = req.file.originalname.toLowerCase().endsWith('.mp4') || 
+                   req.file.mimetype === 'video/mp4';
+                   
+      if (isMp4) {
+        console.log('Fast-path processing for MP4 file');
+        
+        // Generate filenames
+        const timestamp = Date.now();
+        const videoFileName = `video_${timestamp}.mp4`;
+        const tempFilePath = req.file.path;
+        
+        // Ensure directories exist
+        const videosDir = path.join(projectRoot, 'uploads', 'videos');
+        fs.ensureDirSync(videosDir);
+        
+        // Copy file directly without processing for maximum speed
+        const videoPath = path.join(videosDir, videoFileName);
+        fs.copyFileSync(tempFilePath, videoPath);
+        
+        // For small files, we'll get a quick response
+        // For larger files, we'll process in background but already have the file
+        if (req.file.size < 3 * 1024 * 1024) { // Less than 3MB
+          // Start background thumbnail processing
+          processVideo(req.file)
+            .then(result => {
+              console.log('Background processing completed for MP4 fast-path');
+            })
+            .catch(err => {
+              console.error('Background processing error for MP4 fast-path:', err);
+            });
+          
+          return res.status(200).json({
+            message: 'Video uploaded successfully (fast path)',
+            videoPath: `/uploads/videos/${videoFileName}`,
+            thumbnailPath: `/uploads/thumbnails/default_processing.jpg`,
+            duration: 30, // Default estimate
+            processing: false
+          });
+        }
+      }
+      
       // Performance optimization: Start processing but don't await the result
       // This allows the server to respond quickly with a "processing" status
-      // which is much faster from a user experience perspective
-      if (req.file.size < 1024 * 1024) { // Less than 1MB, process synchronously
+      if (req.file.size < 3 * 1024 * 1024) { // Increased threshold to 3MB for synchronous processing
         const result = await processVideo(req.file);
         console.log('Video processing result (small file):', result);
         
