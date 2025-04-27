@@ -366,6 +366,60 @@ export class MemStorage implements IStorage {
         isFree: false,
         rating: 0,
         ratingCount: 0
+      },
+      {
+        id: this.nextEventId++,
+        title: "Video Demo Event",
+        description: "An event showcasing video upload capabilities with our new 80MB limit",
+        date: "2025-06-15",
+        time: "19:00",
+        location: "Virtual Event",
+        category: "Technology",
+        image: "https://images.unsplash.com/photo-1492619267744-f1e10ae9097c?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1492619267744-f1e10ae9097c?auto=format&fit=crop&w=800&q=80"
+        ]),
+        userId: 2,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        views: 42,
+        attendees: 18,
+        maxAttendees: 200,
+        featured: true,
+        video: "/uploads/videos/sample_video.mp4",
+        thumbnail: "/uploads/thumbnails/sample_thumbnail.jpg",
+        tags: "video,demo,technology",
+        price: 15,
+        isFree: false,
+        rating: 4.7,
+        ratingCount: 8
+      },
+      {
+        id: this.nextEventId++,
+        title: "Interactive Virtual Concert",
+        description: "Join us for a fully virtual concert experience with high-definition video",
+        date: "2025-07-20",
+        time: "20:00",
+        location: "Online",
+        category: "Entertainment",
+        image: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=800&q=80"
+        ]),
+        userId: 2,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        views: 128,
+        attendees: 62,
+        maxAttendees: 1000,
+        featured: true,
+        video: "/uploads/videos/sample_video2.mp4",
+        thumbnail: "/uploads/thumbnails/sample_thumbnail2.jpg",
+        tags: "virtual,concert,video,music",
+        price: 25,
+        isFree: false,
+        rating: 4.9,
+        ratingCount: 15
       }
     ];
     
