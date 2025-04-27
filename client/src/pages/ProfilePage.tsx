@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Event } from "@shared/schema";
@@ -10,10 +10,11 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { 
   CalendarDays, User, Settings, Star, Calendar, 
   Clock, MapPin, Upload, Camera, Loader2, Ticket, CreditCard,
-  Users, UserPlus, UserMinus
+  Users, UserPlus, UserMinus, Search
 } from "lucide-react";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
@@ -30,6 +31,8 @@ export default function ProfilePage() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showFollowersDialog, setShowFollowersDialog] = useState(false);
   const [showFollowingDialog, setShowFollowingDialog] = useState(false);
+  const [followersSearch, setFollowersSearch] = useState("");
+  const [followingSearch, setFollowingSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -526,6 +529,15 @@ export default function ProfilePage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Followers</DialogTitle>
+            <div className="relative mt-3">
+              <Input
+                placeholder="Search followers"
+                value={followersSearch}
+                onChange={(e) => setFollowersSearch(e.target.value)}
+                className="w-full pr-10"
+              />
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            </div>
           </DialogHeader>
           <div className="mt-4 max-h-96 overflow-y-auto">
             {followersLoading ? (
@@ -538,36 +550,75 @@ export default function ProfilePage() {
               </p>
             ) : (
               <div className="space-y-4">
-                {followers.map((follower: any) => (
-                  <div key={follower.id} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Avatar className="h-10 w-10 mr-3">
-                        {follower.avatar ? (
-                          <AvatarImage src={follower.avatar} alt={follower.username} />
-                        ) : null}
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {getInitials(follower.username)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{follower.displayName || follower.username}</p>
-                        {follower.displayName && <p className="text-sm text-muted-foreground">@{follower.username}</p>}
+                {followers
+                  .filter((follower: any) => {
+                    const searchTerm = followersSearch.toLowerCase();
+                    return (
+                      follower.username.toLowerCase().includes(searchTerm) ||
+                      (follower.displayName && follower.displayName.toLowerCase().includes(searchTerm))
+                    );
+                  })
+                  .map((follower: any) => (
+                    <div key={follower.id} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Avatar className="h-10 w-10 mr-3">
+                          {follower.avatar ? (
+                            <AvatarImage src={follower.avatar} alt={follower.username} />
+                          ) : null}
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            {getInitials(follower.username)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="flex items-center">
+                            <p className="font-medium">{follower.displayName || follower.username}</p>
+                            {follower.isFollowing && 
+                              <Badge variant="outline" className="ml-2 text-xs py-0">Follows you</Badge>
+                            }
+                          </div>
+                          {follower.displayName && <p className="text-sm text-muted-foreground">@{follower.username}</p>}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {follower.youFollow ? (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Unfollow logic would go here
+                            }}
+                          >
+                            Following
+                          </Button>
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Follow logic would go here
+                            }}
+                          >
+                            Follow
+                          </Button>
+                        )}
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowFollowersDialog(false);
+                            setLocation(`/users/${follower.id}`);
+                          }}
+                        >
+                          View
+                        </Button>
                       </div>
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowFollowersDialog(false);
-                        setLocation(`/users/${follower.id}`);
-                      }}
-                    >
-                      View
-                    </Button>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>
@@ -579,6 +630,15 @@ export default function ProfilePage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Following</DialogTitle>
+            <div className="relative mt-3">
+              <Input
+                placeholder="Search following"
+                value={followingSearch}
+                onChange={(e) => setFollowingSearch(e.target.value)}
+                className="w-full pr-10"
+              />
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            </div>
           </DialogHeader>
           <div className="mt-4 max-h-96 overflow-y-auto">
             {followingLoading ? (
@@ -591,36 +651,62 @@ export default function ProfilePage() {
               </p>
             ) : (
               <div className="space-y-4">
-                {following.map((followedUser: any) => (
-                  <div key={followedUser.id} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Avatar className="h-10 w-10 mr-3">
-                        {followedUser.avatar ? (
-                          <AvatarImage src={followedUser.avatar} alt={followedUser.username} />
-                        ) : null}
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {getInitials(followedUser.username)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{followedUser.displayName || followedUser.username}</p>
-                        {followedUser.displayName && <p className="text-sm text-muted-foreground">@{followedUser.username}</p>}
+                {following
+                  .filter((followedUser: any) => {
+                    const searchTerm = followingSearch.toLowerCase();
+                    return (
+                      followedUser.username.toLowerCase().includes(searchTerm) ||
+                      (followedUser.displayName && followedUser.displayName.toLowerCase().includes(searchTerm))
+                    );
+                  })
+                  .map((followedUser: any) => (
+                    <div key={followedUser.id} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Avatar className="h-10 w-10 mr-3">
+                          {followedUser.avatar ? (
+                            <AvatarImage src={followedUser.avatar} alt={followedUser.username} />
+                          ) : null}
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            {getInitials(followedUser.username)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="flex items-center">
+                            <p className="font-medium">{followedUser.displayName || followedUser.username}</p>
+                            {followedUser.followsYou && 
+                              <Badge variant="outline" className="ml-2 text-xs py-0">Follows you</Badge>
+                            }
+                          </div>
+                          {followedUser.displayName && <p className="text-sm text-muted-foreground">@{followedUser.username}</p>}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Unfollow logic would go here
+                          }}
+                        >
+                          Following
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowFollowingDialog(false);
+                            setLocation(`/users/${followedUser.id}`);
+                          }}
+                        >
+                          View
+                        </Button>
                       </div>
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowFollowingDialog(false);
-                        setLocation(`/users/${followedUser.id}`);
-                      }}
-                    >
-                      View
-                    </Button>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>
