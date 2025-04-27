@@ -67,12 +67,15 @@ class PaystackService {
       // Convert amount to kobo (Paystack uses the smallest currency unit)
       const amountInKobo = Math.round(params.amount * 100);
 
+      // Convert metadata to JSON string if it exists (Paystack requires metadata as string)
+      const metadataString = params.metadata ? JSON.stringify(params.metadata) : undefined;
+      
       const response = await this.paystack.initializeTransaction({
         email: params.email,
         amount: amountInKobo,
         reference: params.reference,
         callback_url: params.callback_url,
-        metadata: params.metadata
+        metadata: metadataString
       });
 
       if (!response.body.status) {

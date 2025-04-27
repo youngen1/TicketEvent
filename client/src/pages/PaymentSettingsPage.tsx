@@ -8,6 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+// Define allowed alert variants type
+type AlertVariant = 'default' | 'destructive' | null | undefined;
 import { useAuth } from '@/contexts/AuthContext';
 import { Redirect } from 'wouter';
 
@@ -32,10 +34,10 @@ export default function PaymentSettingsPage() {
     queryKey: ['/api/admin/payment-settings'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/admin/payment-settings');
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setLiveMode(data.liveMode);
+      const responseData = await response.json();
+      // Update state after successful fetch
+      setLiveMode(responseData.liveMode);
+      return responseData;
     },
     retry: 1,
   });
@@ -107,10 +109,10 @@ export default function PaymentSettingsPage() {
           <CardContent>
             <div className="grid gap-6">
               {!hasPaystackKeys && (
-                <Alert variant="warning" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Missing API Keys</AlertTitle>
-                  <AlertDescription>
+                <Alert className="mb-4 bg-amber-50 border-amber-300">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertTitle className="text-amber-800">Missing API Keys</AlertTitle>
+                  <AlertDescription className="text-amber-700">
                     You need to set up your Paystack API keys for both test and live modes.
                   </AlertDescription>
                 </Alert>
