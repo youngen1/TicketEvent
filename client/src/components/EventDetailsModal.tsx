@@ -408,7 +408,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                     <Calendar className="h-4 w-4 mr-2" /> Details
                   </TabsTrigger>
                   <TabsTrigger value="rsvp" className="flex items-center">
-                    <Users className="h-4 w-4 mr-2" /> RSVP
+                    <Users className="h-4 w-4 mr-2" /> Attendees
                   </TabsTrigger>
                 </TabsList>
                 
