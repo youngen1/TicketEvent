@@ -43,9 +43,12 @@ function GoogleMapComponent({
   onAddressSelect,
   isSelectable = false
 }: GoogleMapComponentProps) {
+  // Access API key directly from window._env which is injected by the server
+  const apiKey = (window as any)._env?.GOOGLE_MAPS_API_KEY || 'AIzaSyAsvpRyz_UMpIJ63M86Yj-oSEHZlCQlN0o';
+  
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey: apiKey,
     libraries: ['places']
   });
 

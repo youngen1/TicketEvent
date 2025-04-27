@@ -52,10 +52,13 @@ export default function LocationSearchInput({
       };
     }
 
+    // Access API key directly from window._env or fall back to hardcoded value
+    const apiKey = (window as any)._env?.GOOGLE_MAPS_API_KEY || 'AIzaSyAsvpRyz_UMpIJ63M86Yj-oSEHZlCQlN0o';
+    
     // Load the script if it's not already loaded or loading
     const script = document.createElement('script');
     script.id = 'google-maps-script';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
     script.async = true;
     script.defer = true;
     
