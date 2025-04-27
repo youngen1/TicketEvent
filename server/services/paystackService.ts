@@ -10,6 +10,7 @@ interface PaymentInitializeParams {
 
 interface VerifyPaymentParams {
   reference: string;
+  amount?: string | number; // Optional amount for mock payments
 }
 
 class PaystackService {
@@ -89,10 +90,21 @@ class PaystackService {
       // In development mode with dummy key, return mock data
       if (!process.env.PAYSTACK_SECRET_KEY) {
         console.log('Using mock verification data for development');
+        
+        // Try to extract amount from reference
+        // Format is typically eventId-timestamp-userId, but
+        // we will also check for query parameter if it exists
+        let mockAmount = 5000; // Default 50.00 in cents
+        
+        // If params contains amount directly (i.e., from URL params)
+        if (params.amount) {
+          mockAmount = Math.round(parseFloat(String(params.amount)) * 100);
+        }
+        
         return {
           status: "success",
           reference: params.reference,
-          amount: 5000, // 50.00 in the smallest currency unit
+          amount: mockAmount,
           paid_at: new Date().toISOString(),
           channel: "card",
           currency: "ZAR",

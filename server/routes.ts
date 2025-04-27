@@ -305,7 +305,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create a callback URL (both for real Paystack and our mock)
       const protocol = req.headers['x-forwarded-proto'] || req.protocol;
       const host = req.headers.host;
-      const callbackUrl = `${protocol}://${host}/payment/success`;
+      // Add amount as query parameter to make it available to the success page
+      const callbackUrl = `${protocol}://${host}/payment/success?amount=${encodeURIComponent(amount)}`;
       
       // Initialize transaction with Paystack
       const transaction = await paystackService.initializeTransaction({
@@ -333,13 +334,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/payments/verify/:reference", isAuthenticated, async (req, res) => {
     try {
       const { reference } = req.params;
+      const { amount } = req.query; // Get amount from query parameters if available
       
       if (!reference) {
         return res.status(400).json({ message: "Payment reference is required" });
       }
       
       // Verify the transaction
-      const verification = await paystackService.verifyPayment({ reference });
+      const verification = await paystackService.verifyPayment({ 
+        reference, 
+        amount: amount as string | undefined 
+      });
       
       if (verification.status === "success") {
         // Payment successful, you could update an order, ticket, or attendance record here

@@ -29,7 +29,14 @@ export default function PaymentButton({
     return isNaN(numericValue) ? 0 : numericValue;
   };
   
-  console.log("Payment amount received:", amount, "converted to:", getNumericAmount());
+  // For display in button
+  const getFormattedAmountForDisplay = (): string => {
+    const numericAmount = getNumericAmount();
+    return `R${numericAmount.toFixed(2)}`;
+  };
+  
+  const actualAmount = getNumericAmount();
+  console.log("Payment amount received:", amount, "converted to:", actualAmount);
   
   const initializePaymentMutation = useMutation({
     mutationFn: async () => {
@@ -80,7 +87,7 @@ export default function PaymentButton({
       className={`bg-purple-600 hover:bg-purple-700 text-white ${className}`}
     >
       {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {buttonText}
+      {buttonText || `Pay ${getFormattedAmountForDisplay()}`}
     </Button>
   );
 }
