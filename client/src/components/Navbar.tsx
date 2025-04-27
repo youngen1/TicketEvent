@@ -31,6 +31,7 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
     { href: "/", label: "Home" },
     { href: "/events", label: "Events" },
     { href: "/calendar", label: "Calendar" },
+    { href: "/map", label: "Map" },
     { href: "/about", label: "About" }
   ];
 

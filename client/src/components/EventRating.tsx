@@ -80,7 +80,7 @@ export default function EventRating({ eventId }: EventRatingProps) {
 
   const formatRating = (rating: number | null | undefined) => {
     if (rating === null || rating === undefined) return "No ratings yet";
-    return rating.toFixed(1);
+    return typeof rating === 'number' ? rating.toFixed(1) : "No ratings";
   };
 
   return (

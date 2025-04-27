@@ -9,6 +9,7 @@ import EventsPage from "@/pages/EventsPage";
 import CalendarPage from "@/pages/CalendarPage";
 import AboutPage from "@/pages/AboutPage";
 import ProfilePage from "@/pages/ProfilePage";
+import MapPage from "@/pages/MapPage";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useState } from "react";
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/events" component={EventsPage} />
       <Route path="/calendar" component={CalendarPage} />
+      <Route path="/map" component={MapPage} />
       <Route path="/about" component={AboutPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route component={NotFound} />
