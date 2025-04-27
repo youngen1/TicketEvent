@@ -485,7 +485,7 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
                     <p className="pl-1">or drag and drop</p>
                   </div>
                   <p className="text-xs text-neutral-500">
-                    MP4, MOV, WebM up to 100MB (max duration: 1:30)
+                    MP4, MOV, WebM, AVI, MKV up to 80MB (max duration: 1:30)
                   </p>
                 </div>
               </div>

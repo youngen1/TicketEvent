@@ -235,11 +235,11 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       return;
     }
     
-    // Check file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Check file size (max 80MB)
+    if (file.size > 80 * 1024 * 1024) {
       toast({
         title: 'File too large',
-        description: 'Please select a video file smaller than 10MB.',
+        description: 'Please select a video file smaller than 80MB.',
         variant: 'destructive',
       });
       return;
@@ -571,7 +571,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                 </label>
               </div>
               <p className="text-xs text-neutral-500">
-                MP4, MOV, AVI, WEBM, MKV up to 10MB (max 90 seconds)
+                MP4, MOV, AVI, WEBM, MKV up to 80MB (max 90 seconds)
               </p>
             </div>
           </div>

@@ -229,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up multer for video upload
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max file size
+    limits: { fileSize: 80 * 1024 * 1024 }, // 80MB max file size
     fileFilter: (_req, file, cb) => {
       // Accept only video files
       const filetypes = /mp4|mov|avi|webm|mkv/;
