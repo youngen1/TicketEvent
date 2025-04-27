@@ -8,6 +8,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Event } from "@shared/schema";
 import LocationSearchInput from "@/components/LocationSearchInput";
+import FallbackLocationInput from "@/components/FallbackLocationInput";
 import {
   Dialog,
   DialogContent,
@@ -89,9 +90,9 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
     if (event) {
       form.reset({
         id: event.id,
-        title: event.title,
-        description: event.description,
-        category: event.category,
+        title: event.title || "",
+        description: event.description || "",
+        category: event.category || "",
         date: event.date || "",
         time: event.time || "",
         location: event.location || "",  // This is always a string, never null
@@ -411,21 +412,31 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
                 <FormItem>
                   <FormLabel>Location</FormLabel>
                   <FormControl>
-                    <LocationSearchInput 
-                      value={field.value || ''} 
-                      onChange={(value, placeDetails) => {
-                        field.onChange(value);
-                        // If you want to store additional place details like coordinates
-                        if (placeDetails?.geometry?.location) {
-                          // You could store these in separate form fields if needed
-                          console.log('Location coordinates:', {
-                            lat: placeDetails.geometry.location.lat(),
-                            lng: placeDetails.geometry.location.lng(),
-                          });
-                        }
-                      }}
-                      placeholder="Search for a location"
-                    />
+                    {(window as any)._env?.USE_FALLBACK_MAP ? (
+                      // Use fallback input when Google Maps is not available
+                      <FallbackLocationInput 
+                        value={field.value} 
+                        onChange={(value) => field.onChange(value)}
+                        placeholder="Enter location (e.g., 123 Main St, City, State)"
+                      />
+                    ) : (
+                      // Use Google Maps input when available
+                      <LocationSearchInput 
+                        value={field.value || ''} 
+                        onChange={(value, placeDetails) => {
+                          field.onChange(value);
+                          // If you want to store additional place details like coordinates
+                          if (placeDetails?.geometry?.location) {
+                            // You could store these in separate form fields if needed
+                            console.log('Location coordinates:', {
+                              lat: placeDetails.geometry.location.lat(),
+                              lng: placeDetails.geometry.location.lng(),
+                            });
+                          }
+                        }}
+                        placeholder="Search for a location"
+                      />
+                    )}
                   </FormControl>
                   <FormMessage />
                 </FormItem>
