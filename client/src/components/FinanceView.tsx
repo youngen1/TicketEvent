@@ -62,7 +62,7 @@ export default function FinanceView({ userId }: FinanceViewProps) {
 
   // Filter completed tickets
   const completedTickets = userTickets.filter(ticket => 
-    ticket.status === 'completed' && 
+    ticket.paymentStatus === 'completed' && 
     userEvents.some(event => event.id === ticket.eventId)
   );
 
@@ -91,7 +91,7 @@ export default function FinanceView({ userId }: FinanceViewProps) {
 
   // Calculate revenue statistics
   const totalRevenue = filteredTickets.reduce(
-    (sum, ticket) => sum + parseFloat(ticket.amount.toString() || '0'), 
+    (sum, ticket) => sum + parseFloat(ticket.totalAmount.toString() || '0'), 
     0
   );
   
@@ -105,7 +105,7 @@ export default function FinanceView({ userId }: FinanceViewProps) {
       };
     }
     acc[eventId].tickets.push(ticket);
-    acc[eventId].revenue += parseFloat(ticket.amount.toString() || '0');
+    acc[eventId].revenue += parseFloat(ticket.totalAmount.toString() || '0');
     return acc;
   }, {} as Record<number, { event: Event | undefined, tickets: EventTicket[], revenue: number }>);
 
@@ -230,20 +230,22 @@ export default function FinanceView({ userId }: FinanceViewProps) {
                   .slice(0, 10) // Show only 10 most recent transactions
                   .map(ticket => {
                     const event = userEvents.find(e => e.id === ticket.eventId);
+                    // Get user info
+                    const userID = ticket.userId;
                     return (
                       <TableRow key={ticket.id}>
                         <TableCell>{formatDate(new Date(ticket.createdAt || ''))}</TableCell>
                         <TableCell className="font-medium">{event?.title}</TableCell>
-                        <TableCell>{ticket.userEmail}</TableCell>
-                        <TableCell>{formatCurrency(parseFloat(ticket.amount.toString() || '0'))}</TableCell>
+                        <TableCell>User #{userID}</TableCell>
+                        <TableCell>{formatCurrency(parseFloat(ticket.totalAmount.toString() || '0'))}</TableCell>
                         <TableCell>
                           <div className="flex items-center">
                             <span className={
-                              ticket.status === 'completed' 
+                              ticket.paymentStatus === 'completed' 
                                 ? 'text-green-500 flex items-center' 
                                 : 'text-amber-500 flex items-center'
                             }>
-                              {ticket.status === 'completed' ? (
+                              {ticket.paymentStatus === 'completed' ? (
                                 <>
                                   <ArrowUpRight className="mr-1 h-4 w-4" />
                                   Paid
