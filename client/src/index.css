@@ -55,5 +55,51 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+
+  /* Responsive typography */
+  h1 {
+    @apply text-3xl sm:text-4xl md:text-5xl font-bold;
+  }
+  
+  h2 {
+    @apply text-2xl sm:text-3xl md:text-4xl font-bold;
+  }
+  
+  h3 {
+    @apply text-xl sm:text-2xl font-bold;
+  }
+  
+  /* Custom utility classes */
+  .responsive-padding {
+    @apply px-4 py-4 sm:px-6 md:px-8 lg:px-10;
+  }
+  
+  .responsive-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6;
+  }
+  
+  /* Mobile menu enhancements */
+  .mobile-menu {
+    @apply fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center;
+  }
+  
+  /* Touch friendly targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Better text readability on mobile */
+  .mobile-text {
+    @apply text-base leading-relaxed;
+  }
+}
+
+/* Custom scrollbar for better touch experience */
+@media (max-width: 640px) {
+  .mobile-scrollbar {
+    @apply overflow-x-auto pb-2;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
