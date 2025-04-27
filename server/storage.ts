@@ -1,6 +1,13 @@
-import { users, events, type User, type InsertUser, type Event, type InsertEvent } from "@shared/schema";
+import { 
+  users, events, comments, eventRatings, eventAttendees,
+  type User, type InsertUser, 
+  type Event, type InsertEvent,
+  type Comment, type InsertComment,
+  type EventRating, type InsertEventRating,
+  type EventAttendee, type InsertEventAttendee
+} from "@shared/schema";
 import { db } from "./db";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, desc, and, avg, count, sql } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -10,13 +17,35 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
+  getUserEvents(userId: number): Promise<Event[]>;
   
   // Event methods
-  getAllEvents(category?: string): Promise<Event[]>;
+  getAllEvents(category?: string, tags?: string, featured?: boolean): Promise<Event[]>;
   getEvent(id: number): Promise<Event | undefined>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event>;
   toggleFavorite(id: number): Promise<Event>;
+  incrementEventViews(id: number): Promise<void>;
+  getFeaturedEvents(limit?: number): Promise<Event[]>;
+  searchEvents(query: string): Promise<Event[]>;
+  
+  // Comment methods
+  getEventComments(eventId: number): Promise<Comment[]>;
+  createComment(comment: InsertComment): Promise<Comment>;
+  updateComment(id: number, content: string): Promise<Comment>;
+  deleteComment(id: number): Promise<void>;
+  
+  // Rating methods
+  getEventRating(eventId: number, userId: number): Promise<EventRating | undefined>;
+  createOrUpdateRating(rating: InsertEventRating): Promise<EventRating>;
+  getAverageEventRating(eventId: number): Promise<number>;
+  
+  // Attendance methods
+  getEventAttendees(eventId: number): Promise<EventAttendee[]>;
+  getUserAttendance(userId: number, eventId: number): Promise<EventAttendee | undefined>;
+  createOrUpdateAttendance(attendance: InsertEventAttendee): Promise<EventAttendee>;
+  getUpcomingUserEvents(userId: number): Promise<Event[]>;
 }
 
 // Database implementation
@@ -39,16 +68,87 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
   
-  async getAllEvents(category?: string): Promise<Event[]> {
-    if (category) {
-      return db
-        .select()
-        .from(events)
-        .where(eq(events.category, category))
-        .orderBy(asc(events.date));
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error(`User with id ${id} not found`);
     }
     
-    return db.select().from(events).orderBy(asc(events.date));
+    return updatedUser;
+  }
+  
+  async getUserEvents(userId: number): Promise<Event[]> {
+    return db
+      .select()
+      .from(events)
+      .where(eq(events.createdById, userId))
+      .orderBy(desc(events.createdAt));
+  }
+  
+  async getAllEvents(category?: string, tags?: string, featured?: boolean): Promise<Event[]> {
+    let queryBuilder = db.select().from(events);
+    
+    // Create conditions array
+    const conditions = [];
+    
+    if (category) {
+      conditions.push(eq(events.category, category));
+    }
+    
+    if (tags) {
+      // Simple string matching for tags - in a real app, you might want to use a more sophisticated tags system
+      conditions.push(sql`${events.tags} like ${'%' + tags + '%'}`);
+    }
+    
+    if (featured === true) {
+      conditions.push(eq(events.isFeatured, true));
+    }
+    
+    // Apply conditions if any
+    if (conditions.length > 0) {
+      // Apply each condition with AND
+      for (const condition of conditions) {
+        queryBuilder = queryBuilder.where(condition);
+      }
+    }
+    
+    return queryBuilder.orderBy(asc(events.date));
+  }
+  
+  async incrementEventViews(id: number): Promise<void> {
+    await db
+      .update(events)
+      .set({
+        views: sql`${events.views} + 1`
+      })
+      .where(eq(events.id, id));
+  }
+  
+  async getFeaturedEvents(limit: number = 5): Promise<Event[]> {
+    return db
+      .select()
+      .from(events)
+      .where(eq(events.isFeatured, true))
+      .orderBy(desc(events.createdAt))
+      .limit(limit);
+  }
+  
+  async searchEvents(query: string): Promise<Event[]> {
+    return db
+      .select()
+      .from(events)
+      .where(
+        sql`${events.title} ILIKE ${'%' + query + '%'} OR 
+            ${events.description} ILIKE ${'%' + query + '%'} OR
+            ${events.location} ILIKE ${'%' + query + '%'} OR
+            ${events.category} ILIKE ${'%' + query + '%'}`
+      )
+      .orderBy(asc(events.date));
   }
   
   async getEvent(id: number): Promise<Event | undefined> {
@@ -97,6 +197,257 @@ export class DatabaseStorage implements IStorage {
     return updatedEvent;
   }
 
+  // Comment methods
+  async getEventComments(eventId: number): Promise<Comment[]> {
+    return db
+      .select({
+        id: comments.id,
+        content: comments.content,
+        userId: comments.userId,
+        eventId: comments.eventId,
+        createdAt: comments.createdAt,
+        updatedAt: comments.updatedAt,
+        username: users.username,
+        displayName: users.displayName,
+        avatar: users.avatar
+      })
+      .from(comments)
+      .innerJoin(users, eq(comments.userId, users.id))
+      .where(eq(comments.eventId, eventId))
+      .orderBy(desc(comments.createdAt));
+  }
+  
+  async createComment(comment: InsertComment): Promise<Comment> {
+    const [newComment] = await db
+      .insert(comments)
+      .values({
+        ...comment,
+        createdAt: new Date()
+      })
+      .returning();
+    
+    return newComment;
+  }
+  
+  async updateComment(id: number, content: string): Promise<Comment> {
+    const [updatedComment] = await db
+      .update(comments)
+      .set({
+        content,
+        updatedAt: new Date()
+      })
+      .where(eq(comments.id, id))
+      .returning();
+    
+    if (!updatedComment) {
+      throw new Error(`Comment with id ${id} not found`);
+    }
+    
+    return updatedComment;
+  }
+  
+  async deleteComment(id: number): Promise<void> {
+    await db
+      .delete(comments)
+      .where(eq(comments.id, id));
+  }
+  
+  // Rating methods
+  async getEventRating(eventId: number, userId: number): Promise<EventRating | undefined> {
+    const [rating] = await db
+      .select()
+      .from(eventRatings)
+      .where(
+        and(
+          eq(eventRatings.eventId, eventId),
+          eq(eventRatings.userId, userId)
+        )
+      );
+    
+    return rating;
+  }
+  
+  async createOrUpdateRating(rating: InsertEventRating): Promise<EventRating> {
+    // Check if rating already exists
+    const existingRating = await this.getEventRating(rating.eventId, rating.userId);
+    
+    if (existingRating) {
+      // Update existing rating
+      const [updatedRating] = await db
+        .update(eventRatings)
+        .set({ rating: rating.rating })
+        .where(eq(eventRatings.id, existingRating.id))
+        .returning();
+        
+      // Update event average rating
+      await this.updateEventRatingAverage(rating.eventId);
+      
+      return updatedRating;
+    } else {
+      // Create new rating
+      const [newRating] = await db
+        .insert(eventRatings)
+        .values(rating)
+        .returning();
+        
+      // Update event average rating
+      await this.updateEventRatingAverage(rating.eventId);
+      
+      return newRating;
+    }
+  }
+  
+  async getAverageEventRating(eventId: number): Promise<number> {
+    const result = await db
+      .select({
+        averageRating: avg(eventRatings.rating)
+      })
+      .from(eventRatings)
+      .where(eq(eventRatings.eventId, eventId));
+    
+    return result[0]?.averageRating || 0;
+  }
+  
+  // Helper method to update event's average rating
+  private async updateEventRatingAverage(eventId: number): Promise<void> {
+    const averageRating = await this.getAverageEventRating(eventId);
+    const ratingCount = await db
+      .select({ count: count() })
+      .from(eventRatings)
+      .where(eq(eventRatings.eventId, eventId));
+      
+    await db
+      .update(events)
+      .set({
+        rating: averageRating,
+        ratingCount: ratingCount[0].count
+      })
+      .where(eq(events.id, eventId));
+  }
+  
+  // Attendance methods
+  async getEventAttendees(eventId: number): Promise<EventAttendee[]> {
+    return db
+      .select({
+        id: eventAttendees.id,
+        userId: eventAttendees.userId,
+        eventId: eventAttendees.eventId,
+        status: eventAttendees.status,
+        createdAt: eventAttendees.createdAt,
+        username: users.username,
+        displayName: users.displayName,
+        avatar: users.avatar
+      })
+      .from(eventAttendees)
+      .innerJoin(users, eq(eventAttendees.userId, users.id))
+      .where(eq(eventAttendees.eventId, eventId));
+  }
+  
+  async getUserAttendance(userId: number, eventId: number): Promise<EventAttendee | undefined> {
+    const [attendance] = await db
+      .select()
+      .from(eventAttendees)
+      .where(
+        and(
+          eq(eventAttendees.userId, userId),
+          eq(eventAttendees.eventId, eventId)
+        )
+      );
+    
+    return attendance;
+  }
+  
+  async createOrUpdateAttendance(attendance: InsertEventAttendee): Promise<EventAttendee> {
+    const existingAttendance = await this.getUserAttendance(attendance.userId, attendance.eventId);
+    
+    if (existingAttendance) {
+      // Update existing attendance
+      const [updatedAttendance] = await db
+        .update(eventAttendees)
+        .set({ status: attendance.status })
+        .where(eq(eventAttendees.id, existingAttendance.id))
+        .returning();
+      
+      // Update attendee count
+      await this.updateEventAttendeeCount(attendance.eventId);
+      
+      return updatedAttendance;
+    } else {
+      // Create new attendance
+      const [newAttendance] = await db
+        .insert(eventAttendees)
+        .values(attendance)
+        .returning();
+      
+      // Update attendee count
+      await this.updateEventAttendeeCount(attendance.eventId);
+      
+      return newAttendance;
+    }
+  }
+  
+  async getUpcomingUserEvents(userId: number): Promise<Event[]> {
+    const today = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+    
+    return db
+      .select({
+        id: events.id,
+        title: events.title,
+        description: events.description,
+        category: events.category,
+        date: events.date,
+        time: events.time,
+        location: events.location,
+        attendees: events.attendees,
+        image: events.image,
+        images: events.images,
+        video: events.video,
+        thumbnail: events.thumbnail,
+        createdById: events.createdById,
+        isFavorite: events.isFavorite,
+        schedule: events.schedule,
+        createdAt: events.createdAt,
+        isFeatured: events.isFeatured,
+        views: events.views,
+        rating: events.rating,
+        ratingCount: events.ratingCount,
+        tags: events.tags,
+        status: eventAttendees.status
+      })
+      .from(events)
+      .innerJoin(
+        eventAttendees,
+        and(
+          eq(events.id, eventAttendees.eventId),
+          eq(eventAttendees.userId, userId)
+        )
+      )
+      .where(
+        sql`${events.date} >= ${today}`
+      )
+      .orderBy(asc(events.date));
+  }
+  
+  // Helper method to update event's attendee count
+  private async updateEventAttendeeCount(eventId: number): Promise<void> {
+    const attendeeCount = await db
+      .select({ count: count() })
+      .from(eventAttendees)
+      .where(
+        and(
+          eq(eventAttendees.eventId, eventId),
+          eq(eventAttendees.status, 'attending')
+        )
+      );
+      
+    await db
+      .update(events)
+      .set({
+        attendees: attendeeCount[0].count
+      })
+      .where(eq(events.id, eventId));
+  }
+  
   // Add sample event data for development
   async seedEvents(): Promise<void> {
     // Check if events already exist
@@ -115,6 +466,10 @@ export class DatabaseStorage implements IStorage {
         time: "09:00",
         location: "San Francisco Convention Center",
         image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1591115765373-5207764f72e4?auto=format&fit=crop&w=800&q=80"
+        ]),
         schedule: JSON.stringify([
           { time: "09:00", title: "Registration and Breakfast" },
           { time: "10:00", title: "Keynote: Future of AI", description: "By Dr. Sarah Johnson" },
@@ -130,6 +485,10 @@ export class DatabaseStorage implements IStorage {
         time: "10:00",
         location: "Grand Hyatt Hotel, New York",
         image: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80"
+        ]),
         schedule: JSON.stringify([
           { time: "10:00", title: "Welcome Address" },
           { time: "10:30", title: "Panel: Leadership in Crisis" },
@@ -144,6 +503,11 @@ export class DatabaseStorage implements IStorage {
         time: "14:00",
         location: "Central Park, New York",
         image: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=800&q=80"
+        ]),
         schedule: JSON.stringify([
           { time: "14:00", title: "Gates Open" },
           { time: "16:00", title: "Opening Act: Local Bands" },
@@ -158,6 +522,10 @@ export class DatabaseStorage implements IStorage {
         time: "11:00",
         location: "Metropolitan Museum, New York",
         image: "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1501699169021-3759ee435d66?auto=format&fit=crop&w=800&q=80"
+        ]),
       },
       {
         title: "Education Technology Conference",
@@ -167,6 +535,9 @@ export class DatabaseStorage implements IStorage {
         time: "09:30",
         location: "Chicago Convention Center",
         image: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=800&q=80"
+        ]),
       },
       {
         title: "Annual Sports Conference",
@@ -176,6 +547,10 @@ export class DatabaseStorage implements IStorage {
         time: "10:00",
         location: "Los Angeles Sports Arena",
         image: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1580237072617-771c3ecc4a24?auto=format&fit=crop&w=800&q=80"
+        ]),
       }
     ];
     

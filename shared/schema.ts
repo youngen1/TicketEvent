@@ -33,9 +33,10 @@ export const events = pgTable("events", {
   time: text("time").notNull(),
   location: text("location").notNull(),
   attendees: integer("attendees").default(0),
-  image: text("image"),
-  video: text("video"),
-  thumbnail: text("thumbnail"),
+  image: text("image"), // Keep original image field for backward compatibility
+  images: text("images"), // Stores JSON array of image URLs
+  video: text("video"), // Keep for backward compatibility 
+  thumbnail: text("thumbnail"), // Keep for backward compatibility
   createdById: integer("created_by_id").references(() => users.id),
   isFavorite: boolean("is_favorite").default(false),
   schedule: text("schedule"),
@@ -55,7 +56,8 @@ export const insertEventSchema = createInsertSchema(events).pick({
   time: true,
   location: true,
   image: true,
-  video: true, 
+  images: true,
+  video: true,
   thumbnail: true,
   schedule: true,
   createdById: true,

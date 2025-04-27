@@ -3,7 +3,6 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
-import { processVideo } from './utils/videoProcessor';
 
 // Get the current file path in ES module
 const __filename = fileURLToPath(import.meta.url);
@@ -13,13 +12,15 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 const uploadsPath = path.join(projectRoot, 'uploads');
 const tempUploadsPath = path.join(projectRoot, 'temp-uploads');
+const imagesPath = path.join(uploadsPath, 'images');
 
 // Ensure temp uploads directory exists
 try {
   fs.ensureDirSync(tempUploadsPath);
-  console.log('Ensured temp-uploads directory exists');
+  fs.ensureDirSync(imagesPath);
+  console.log('Ensured temp-uploads and images directories exist');
 } catch (error) {
-  console.error('Error creating temp-uploads directory:', error);
+  console.error('Error creating upload directories:', error);
 }
 
 // Use disk storage for better performance with larger files
@@ -36,29 +37,21 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: { 
-    fileSize: 100 * 1024 * 1024, // Increased to 100MB max file size
-    files: 1 // Limit to one file per request for better performance
+    fileSize: 10 * 1024 * 1024, // 10MB max file size for images
+    files: 30 // Allow up to 30 files per request
   },
   fileFilter: (_req, file, cb) => {
-    // Super-fast acceptance of common video types without deep validation
-    // This speeds up the initial upload part significantly
-    const filetypes = /mp4|mov|avi|webm|mkv/;
-    const extname = path.extname(file.originalname).toLowerCase();
+    // Accept common image types
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
     
-    // Fast path for MP4 files (most common format, fastest processing)
-    if (extname === '.mp4') {
-      console.log('Fast-path processing for MP4 file');
+    if (mimetype && extname) {
       return cb(null, true);
     }
     
-    // Fast path for other accepted video types
-    if (filetypes.test(extname)) {
-      console.log('Standard processing path for video file:', extname);
-      return cb(null, true);
-    }
-    
-    console.log('Rejected file with extension:', extname);
-    cb(new Error('Only video files (MP4, MOV, AVI, WEBM, MKV) are allowed'));
+    console.log('Rejected file with extension:', path.extname(file.originalname).toLowerCase());
+    cb(new Error('Only image files are allowed (JPEG, PNG, GIF, WEBP)'));
   }
 });
 
@@ -71,8 +64,7 @@ export function registerUploadRoutes(app: Express) {
   try {
     // Ensure all required directories exist
     fs.ensureDirSync(uploadsPath);
-    fs.ensureDirSync(path.join(uploadsPath, 'videos'));
-    fs.ensureDirSync(path.join(uploadsPath, 'thumbnails'));
+    fs.ensureDirSync(path.join(uploadsPath, 'images'));
     console.log('Ensured all uploads directories exist');
     
     // Test write permissions
@@ -87,100 +79,79 @@ export function registerUploadRoutes(app: Express) {
     console.error('Error setting up uploads directory:', error);
   }
   
-  app.post('/api/upload/video', upload.single('video'), async (req: Request, res: Response) => {
+  // Route for uploading multiple images
+  app.post('/api/upload/images', upload.array('images', 30), async (req: Request, res: Response) => {
     try {
-      console.log('Video upload received:', req.file?.originalname);
-      
-      if (!req.file) {
-        console.log('No video file provided in request');
-        return res.status(400).json({ message: 'No video file provided' });
+      if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
+        console.log('No image files provided in request');
+        return res.status(400).json({ message: 'No image files provided' });
       }
       
-      console.log('Processing video file with size:', req.file.size);
+      const files = req.files as Express.Multer.File[];
+      console.log(`Received ${files.length} image files for upload`);
       
-      // Check if it's an MP4 file for super-fast-path processing
-      const isMp4 = req.file.originalname.toLowerCase().endsWith('.mp4') || 
-                   req.file.mimetype === 'video/mp4';
-                   
-      if (isMp4) {
-        console.log('Fast-path processing for MP4 file');
-        
-        // Generate filenames
+      if (files.length > 30) {
+        return res.status(400).json({ message: 'Maximum 30 images allowed per event' });
+      }
+      
+      if (files.length < 1) {
+        return res.status(400).json({ message: 'At least 1 image is required' });
+      }
+      
+      // Process all uploaded images
+      const imageUrls: string[] = [];
+      
+      for (const file of files) {
         const timestamp = Date.now();
-        const videoFileName = `video_${timestamp}.mp4`;
-        const tempFilePath = req.file.path;
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        const imageFileName = `image_${timestamp}_${randomStr}${path.extname(file.originalname)}`;
+        const finalImagePath = path.join(imagesPath, imageFileName);
         
-        // Ensure directories exist
-        const videosDir = path.join(projectRoot, 'uploads', 'videos');
-        fs.ensureDirSync(videosDir);
+        // Copy from temp to final location
+        await fs.copyFile(file.path, finalImagePath);
         
-        // Copy file directly without processing for maximum speed
-        const videoPath = path.join(videosDir, videoFileName);
-        fs.copyFileSync(tempFilePath, videoPath);
+        // Add to image URLs array
+        imageUrls.push(`/uploads/images/${imageFileName}`);
         
-        // For small files, we'll get a quick response
-        // For larger files, we'll process in background but already have the file
-        if (req.file.size < 3 * 1024 * 1024) { // Less than 3MB
-          // Start background thumbnail processing
-          processVideo(req.file)
-            .then(result => {
-              console.log('Background processing completed for MP4 fast-path');
-            })
-            .catch(err => {
-              console.error('Background processing error for MP4 fast-path:', err);
-            });
-          
-          return res.status(200).json({
-            message: 'Video uploaded successfully (fast path)',
-            videoPath: `/uploads/videos/${videoFileName}`,
-            thumbnailPath: `/uploads/thumbnails/default_processing.jpg`,
-            duration: 30, // Default estimate
-            processing: false
-          });
-        }
+        // Clean up temp file
+        await fs.remove(file.path);
       }
       
-      // Performance optimization: Start processing but don't await the result
-      // This allows the server to respond quickly with a "processing" status
-      if (req.file.size < 3 * 1024 * 1024) { // Increased threshold to 3MB for synchronous processing
-        const result = await processVideo(req.file);
-        console.log('Video processing result (small file):', result);
-        
-        return res.status(200).json({
-          message: 'Video uploaded and processed successfully',
-          ...result
-        });
-      } else {
-        // For larger files, process asynchronously and return immediately
-        // This makes uploads feel much faster to the user
-        processVideo(req.file)
-          .then(result => {
-            console.log('Async video processing completed:', result);
-          })
-          .catch(err => {
-            console.error('Async video processing error:', err);
-          });
-        
-        // Save original filename for debugging
-        console.log('Original filename:', req.file.originalname);
-        console.log('Temp filename:', req.file.filename);
-        
-        // Generate a deterministic output filename based on the temp filename
-        const safeFilename = req.file.filename || `video_${Date.now()}.mp4`;
-        console.log('Safe filename to use:', safeFilename);
-        
-        // Return a quick response to the client with placeholder data
-        // Client will show processing state while actual processing continues on server
-        return res.status(200).json({
-          message: 'Video uploaded, processing in background',
-          videoPath: `/uploads/videos/${safeFilename}`,
-          thumbnailPath: `/uploads/thumbnails/default_processing.jpg`,
-          duration: 30, // Default duration estimate
-          processing: true
-        });
-      }
+      return res.status(200).json({
+        message: 'Images uploaded successfully',
+        imageUrls: imageUrls
+      });
     } catch (error: any) {
-      console.error('Error during video upload:', error.message);
+      console.error('Error during image upload:', error.message);
+      return res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Single image upload route for thumbnail or profile picture
+  app.post('/api/upload/image', upload.single('image'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        console.log('No image file provided in request');
+        return res.status(400).json({ message: 'No image file provided' });
+      }
+      
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(2, 8);
+      const imageFileName = `image_${timestamp}_${randomStr}${path.extname(req.file.originalname)}`;
+      const finalImagePath = path.join(imagesPath, imageFileName);
+      
+      // Copy from temp to final location
+      await fs.copyFile(req.file.path, finalImagePath);
+      
+      // Clean up temp file
+      await fs.remove(req.file.path);
+      
+      return res.status(200).json({
+        message: 'Image uploaded successfully',
+        imageUrl: `/uploads/images/${imageFileName}`
+      });
+    } catch (error: any) {
+      console.error('Error during image upload:', error.message);
       return res.status(400).json({ message: error.message });
     }
   });
