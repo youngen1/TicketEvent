@@ -17,6 +17,13 @@ class PaystackService {
   private paystack: any;
 
   constructor() {
+    this.initialize();
+  }
+  
+  /**
+   * Initialize the Paystack API client with the appropriate key
+   */
+  private initialize() {
     // Check for live or test mode
     const isLiveMode = process.env.PAYSTACK_MODE === 'live';
     
@@ -40,6 +47,14 @@ class PaystackService {
     } else {
       console.log(`Paystack initialized in ${isLiveMode ? 'LIVE' : 'TEST'} mode.`);
     }
+  }
+  
+  /**
+   * Reinitialize the Paystack API client with updated keys
+   */
+  public reinitialize() {
+    this.initialize();
+    console.log('Paystack service reinitialized with updated settings');
   }
 
   /**

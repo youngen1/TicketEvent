@@ -498,7 +498,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/payment-settings", isAuthenticated, async (req, res) => {
     try {
       // In a real app, you'd check if the user is an admin and store these in a database
-      // For now, we'll just return success
       
       const { 
         liveMode, 
@@ -508,12 +507,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         testPublicKey
       } = req.body;
       
-      // In a real app, you would save these values to the database
-      // and restart the application or update environment variables
+      // Update environment variables directly (for this development environment)
+      process.env.PAYSTACK_MODE = liveMode ? 'live' : 'test';
+      
+      if (liveMode) {
+        if (liveSecretKey) process.env.PAYSTACK_SECRET_KEY = liveSecretKey;
+        if (livePublicKey) process.env.VITE_PAYSTACK_PUBLIC_KEY = livePublicKey;
+      } else {
+        if (testSecretKey) process.env.PAYSTACK_TEST_SECRET_KEY = testSecretKey;
+        if (testPublicKey) process.env.VITE_PAYSTACK_TEST_PUBLIC_KEY = testPublicKey;
+      }
+      
+      // Reinitialize the Paystack service to reflect changes
+      // Note: This is a simplistic approach for demonstration
+      paystackService.reinitialize();
       
       res.json({ 
         success: true, 
-        message: "Payment settings updated successfully" 
+        message: `Payment settings updated successfully. Now using ${liveMode ? 'LIVE' : 'TEST'} mode.` 
       });
     } catch (error: any) {
       console.error('Error updating payment settings:', error);

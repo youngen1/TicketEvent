@@ -30,16 +30,22 @@ export default function PaystackPaymentButton({
         const response = await apiRequest('GET', '/api/admin/payment-settings');
         const data = await response.json();
         
-        // Use the appropriate key based on mode
-        if (data.liveMode) {
-          setPublicKey(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string);
-        } else {
-          setPublicKey(import.meta.env.VITE_PAYSTACK_TEST_PUBLIC_KEY as string);
-        }
+        // Log the current mode for debugging
+        console.log(`Using ${data.liveMode ? 'LIVE' : 'TEST'} mode for Paystack payments`);
+        
+        // Always use the live key as requested
+        setPublicKey(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string);
+        
+        // Show toast notification about live mode
+        toast({
+          title: "Live Payment Mode",
+          description: "Using actual payment processing. Your card will be charged.",
+          variant: "default",
+        });
       } catch (error) {
         console.error('Error fetching payment mode:', error);
-        // Default to test key if there's an error
-        setPublicKey(import.meta.env.VITE_PAYSTACK_TEST_PUBLIC_KEY as string);
+        // Default to live key even if there's an error
+        setPublicKey(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string);
       }
     };
     
