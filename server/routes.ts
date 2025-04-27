@@ -374,6 +374,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message || "Error fetching payment channels" });
     }
   });
+  
+  // Update user profile
+  app.put("/api/users/profile", isAuthenticated, async (req, res) => {
+    try {
+      const userData = req.body;
+      
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const updatedUser = await storage.updateUser(req.session.userId, userData);
+      
+      // Return the updated user without the password
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ message: error.message || "Error updating user profile" });
+    }
+  });
 
   const httpServer = createServer(app);
 

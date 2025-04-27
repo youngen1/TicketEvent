@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Event } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -7,12 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, User, Settings, Star, Calendar, Clock, MapPin } from "lucide-react";
+import { 
+  CalendarDays, User, Settings, Star, Calendar, 
+  Clock, MapPin, Upload, Camera, Loader2 
+} from "lucide-react";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
 import { useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function ProfilePage() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -20,12 +24,63 @@ export default function ProfilePage() {
   const [, setLocation] = useLocation();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
     setLocation("/");
     return null;
   }
+  
+  // Mutation for uploading profile photo
+  const uploadPhotoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      // Create form data
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      // Upload the image first
+      const uploadRes = await apiRequest("POST", "/api/upload/image", formData, true);
+      
+      if (!uploadRes.ok) {
+        throw new Error('Failed to upload image');
+      }
+      
+      const imageData = await uploadRes.json();
+      
+      // Update user profile with new avatar
+      const updateRes = await apiRequest("PUT", "/api/users/profile", {
+        avatar: imageData.imageUrl
+      });
+      
+      if (!updateRes.ok) {
+        throw new Error('Failed to update profile');
+      }
+      
+      return await updateRes.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate queries to refresh user data
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      
+      toast({
+        title: "Profile Photo Updated",
+        description: "Your profile photo has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update profile photo. Please try again.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setIsUploadingPhoto(false);
+    }
+  });
 
   // Get user's event history
   const { data: userEvents = [], isLoading: userEventsLoading } = useQuery({
@@ -58,6 +113,20 @@ export default function ProfilePage() {
       description: "You have been successfully logged out.",
     });
     setLocation("/");
+  };
+
+  // Handle file input change
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setIsUploadingPhoto(true);
+      uploadPhotoMutation.mutate(file);
+    }
+  };
+  
+  // Trigger file input click
+  const handlePhotoUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
   const getInitials = (name: string) => {
