@@ -225,7 +225,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                   />
                   
                   <button
-                    className="absolute top-2 right-2 bg-black/40 text-white rounded-full p-1.5 hover:bg-black/60"
+                    className="absolute bottom-2 right-2 bg-black/40 text-white rounded-full p-1.5 hover:bg-black/60 z-10"
                     onClick={toggleFullscreen}
                     aria-label="View fullscreen"
                   >
