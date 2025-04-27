@@ -23,7 +23,7 @@ export function createSeedEvents(nextEventId: () => number): Event[] {
       attendees: 75,
       maxAttendees: 200,
       featured: true,
-      video: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+      video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
       tags: "tech,innovation,ai,blockchain",
       price: "299.99",
       isFree: false,

@@ -271,12 +271,18 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
               {/* Video Player */}
               {event.video && showVideo ? (
                 <div className="w-full h-full flex items-center justify-center bg-black">
-                  <video 
-                    src={event.video} 
-                    controls 
-                    className="max-h-full max-w-full"
-                    autoPlay 
-                  />
+                  <div className="text-center">
+                    <video 
+                      src={event.video} 
+                      controls 
+                      className="max-h-full max-w-full"
+                      poster={parsedImages.length > 0 ? getFullImageUrl(parsedImages[0]) : ''}
+                      playsInline
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                    <p className="text-white text-xs mt-2">If video is slow to load, please wait a moment or click back to images.</p>
+                  </div>
                 </div>
               ) : parsedImages.length > 0 ? (
                 <>

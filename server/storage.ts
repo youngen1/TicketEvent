@@ -238,7 +238,7 @@ export class MemStorage implements IStorage {
         attendees: 20,
         maxAttendees: 100,
         featured: true,
-        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
         tags: "demo,video,technology",
         price: "0",
         isFree: true,
