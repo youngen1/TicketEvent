@@ -17,14 +17,28 @@ class PaystackService {
   private paystack: any;
 
   constructor() {
-    // Use the environment variable if available, otherwise use test key for development
-    const secretKey = process.env.PAYSTACK_SECRET_KEY || 'sk_test_your_dummy_key_here';
+    // Check for live or test mode
+    const isLiveMode = process.env.PAYSTACK_MODE === 'live';
+    
+    // Use the appropriate key based on mode
+    let secretKey;
+    if (isLiveMode) {
+      secretKey = process.env.PAYSTACK_SECRET_KEY;
+      if (!secretKey) {
+        console.warn('Live mode is set but PAYSTACK_SECRET_KEY is missing. Falling back to test mode.');
+        secretKey = process.env.PAYSTACK_TEST_SECRET_KEY || 'sk_test_your_dummy_key_here';
+      }
+    } else {
+      secretKey = process.env.PAYSTACK_TEST_SECRET_KEY || process.env.PAYSTACK_SECRET_KEY || 'sk_test_your_dummy_key_here';
+    }
     
     this.paystack = new Paystack(secretKey);
     
-    // Log that we're using a dummy key for development
-    if (!process.env.PAYSTACK_SECRET_KEY) {
+    // Log the current mode
+    if (!secretKey || secretKey === 'sk_test_your_dummy_key_here') {
       console.warn('Using a dummy PAYSTACK_SECRET_KEY for development. Payment functionality will be limited to testing flows.');
+    } else {
+      console.log(`Paystack initialized in ${isLiveMode ? 'LIVE' : 'TEST'} mode.`);
     }
   }
 
@@ -34,8 +48,9 @@ class PaystackService {
   async initializeTransaction(params: PaymentInitializeParams) {
     try {
       // In development mode with dummy key, return mock data with a local success callback
-      if (!process.env.PAYSTACK_SECRET_KEY) {
-        console.log('Using mock payment data for development');
+      const hasValidKey = process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_TEST_SECRET_KEY;
+      if (!hasValidKey) {
+        console.log('Using mock payment data for development (no valid API keys found)');
         // Create a local callback URL that will show a payment successful page
         const successUrl = new URL(params.callback_url || 'http://localhost:5000');
         successUrl.searchParams.append('reference', params.reference || `mock-ref-${Date.now()}`);
@@ -69,7 +84,8 @@ class PaystackService {
       console.error('Paystack initialize transaction error:', error);
       
       // For development, return mock data instead of failing
-      if (!process.env.PAYSTACK_SECRET_KEY) {
+      const hasValidKey = process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_TEST_SECRET_KEY;
+      if (!hasValidKey) {
         console.log('Using mock payment data after error for development');
         return {
           authorization_url: `https://checkout.paystack.com/${params.reference || 'mock-reference'}`,
@@ -88,8 +104,9 @@ class PaystackService {
   async verifyPayment(params: VerifyPaymentParams) {
     try {
       // In development mode with dummy key, return mock data
-      if (!process.env.PAYSTACK_SECRET_KEY) {
-        console.log('Using mock verification data for development');
+      const hasValidKey = process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_TEST_SECRET_KEY;
+      if (!hasValidKey) {
+        console.log('Using mock verification data for development (no valid API keys found)');
         
         // Try to extract amount from reference
         // Format is typically eventId-timestamp-userId, but
@@ -129,7 +146,8 @@ class PaystackService {
       console.error('Paystack verify payment error:', error);
       
       // For development, return mock data instead of failing
-      if (!process.env.PAYSTACK_SECRET_KEY) {
+      const hasValidKey = process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_TEST_SECRET_KEY;
+      if (!hasValidKey) {
         console.log('Using mock verification data after error for development');
         return {
           status: "success",

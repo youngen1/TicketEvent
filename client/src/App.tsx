@@ -12,6 +12,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import MapPage from "@/pages/MapPage";
 import FavoritesPage from "@/pages/FavoritesPage";
 import PaymentSuccessPage from "@/pages/PaymentSuccessPage";
+import PaymentSettingsPage from "@/pages/PaymentSettingsPage";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useState } from "react";

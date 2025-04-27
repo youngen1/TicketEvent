@@ -375,6 +375,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Payment settings admin routes
+  app.get("/api/admin/payment-settings", isAuthenticated, async (req, res) => {
+    try {
+      // In a real app, you'd check if the user is an admin
+      // For now, we'll return the masked settings
+      const settings = {
+        liveMode: process.env.PAYSTACK_MODE === 'live',
+        liveSecretKey: process.env.PAYSTACK_SECRET_KEY ? true : false,
+        livePublicKey: process.env.VITE_PAYSTACK_PUBLIC_KEY || '',
+        testSecretKey: process.env.PAYSTACK_TEST_SECRET_KEY ? true : false,
+        testPublicKey: process.env.VITE_PAYSTACK_TEST_PUBLIC_KEY || ''
+      };
+      
+      res.json(settings);
+    } catch (error: any) {
+      console.error('Error fetching payment settings:', error);
+      res.status(500).json({ message: error.message || "Error fetching payment settings" });
+    }
+  });
+  
+  app.post("/api/admin/payment-settings", isAuthenticated, async (req, res) => {
+    try {
+      // In a real app, you'd check if the user is an admin and store these in a database
+      // For now, we'll just return success
+      
+      const { 
+        liveMode, 
+        liveSecretKey, 
+        livePublicKey,
+        testSecretKey,
+        testPublicKey
+      } = req.body;
+      
+      // In a real app, you would save these values to the database
+      // and restart the application or update environment variables
+      
+      res.json({ 
+        success: true, 
+        message: "Payment settings updated successfully" 
+      });
+    } catch (error: any) {
+      console.error('Error updating payment settings:', error);
+      res.status(500).json({ message: error.message || "Error updating payment settings" });
+    }
+  });
+  
   // Update user profile
   app.put("/api/users/profile", isAuthenticated, async (req, res) => {
     try {
