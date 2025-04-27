@@ -792,7 +792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { password, ...userWithoutPassword } = user;
         
         // Check if current user is following this user
-        const isFollowing = await storage.isFollowing(req.session.userId, user.id);
+        const isFollowing = req.session.userId ? await storage.isFollowing(req.session.userId, user.id) : false;
         
         return {
           ...userWithoutPassword,
@@ -801,7 +801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
       
       // Filter out the current user
-      const users = allUsers.filter(user => user.id !== req.session.userId);
+      const users = allUsers.filter(user => req.session.userId ? user.id !== req.session.userId : true);
       
       res.json(users);
     } catch (error: any) {

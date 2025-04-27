@@ -507,6 +507,112 @@ export default function ProfilePage() {
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
       />
+      
+      {/* Followers Dialog */}
+      <Dialog open={showFollowersDialog} onOpenChange={setShowFollowersDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Followers</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 max-h-96 overflow-y-auto">
+            {followersLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : followers.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">
+                You don't have any followers yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {followers.map((follower: any) => (
+                  <div key={follower.id} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Avatar className="h-10 w-10 mr-3">
+                        {follower.avatar ? (
+                          <AvatarImage src={follower.avatar} alt={follower.username} />
+                        ) : null}
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {getInitials(follower.username)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{follower.displayName || follower.username}</p>
+                        {follower.displayName && <p className="text-sm text-muted-foreground">@{follower.username}</p>}
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowFollowersDialog(false);
+                        setLocation(`/users/${follower.id}`);
+                      }}
+                    >
+                      View
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Following Dialog */}
+      <Dialog open={showFollowingDialog} onOpenChange={setShowFollowingDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Following</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 max-h-96 overflow-y-auto">
+            {followingLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : following.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">
+                You aren't following anyone yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {following.map((followedUser: any) => (
+                  <div key={followedUser.id} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Avatar className="h-10 w-10 mr-3">
+                        {followedUser.avatar ? (
+                          <AvatarImage src={followedUser.avatar} alt={followedUser.username} />
+                        ) : null}
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {getInitials(followedUser.username)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{followedUser.displayName || followedUser.username}</p>
+                        {followedUser.displayName && <p className="text-sm text-muted-foreground">@{followedUser.username}</p>}
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowFollowingDialog(false);
+                        setLocation(`/users/${followedUser.id}`);
+                      }}
+                    >
+                      View
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
