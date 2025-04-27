@@ -1,8 +1,7 @@
-import { Heart, Image as ImageIcon } from "lucide-react";
+import { Image as ImageIcon } from "lucide-react";
 import { Event } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import "./EventCard.css";
 
 interface EventCardProps {
   event: Event;
@@ -11,18 +10,15 @@ interface EventCardProps {
 
 export default function EventCard({ event, onShowDetails }: EventCardProps) {
   const [, navigate] = useLocation();
-  const queryClient = useQueryClient();
 
   // Get image data
   let firstImage = event.image || '';
-  let totalImages = 0;
   
   if (event.images) {
     try {
       const imagesArray = JSON.parse(event.images);
       if (imagesArray.length > 0) {
         firstImage = imagesArray[0];
-        totalImages = imagesArray.length;
       }
     } catch (e) {
       console.error('Failed to parse images:', e);
@@ -71,79 +67,58 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
 
   // Get creator initials for avatar
   const getCreatorInitials = () => {
-    return event.userId ? `R${event.userId}` : 'R1';
+    return `R${event.userId || 1}`;
   };
 
   return (
     <div 
+      className="event-card" 
       onClick={() => onShowDetails(event)}
-      className="bg-white shadow-sm overflow-hidden cursor-pointer mb-4 border border-gray-100"
     >
-      {/* Event Image with Avatar */}
-      <div className="relative">
+      <div className="event-image">
         {firstImage ? (
           <img 
             src={getFormattedImageUrl(firstImage)} 
             alt={event.title}
-            className="w-full h-48 object-cover" 
             onClick={handleImageClick}
           />
         ) : (
-          <div className="w-full h-48 flex items-center justify-center bg-gray-200">
+          <div className="w-full h-full flex items-center justify-center bg-gray-200">
             <ImageIcon size={40} className="text-gray-400" />
           </div>
         )}
-
-        {/* Creator Avatar */}
+        
         <div 
-          onClick={(e) => {
-            e.stopPropagation();
-            handleCreatorClick(e);
-          }}
-          className="absolute top-2 right-2 w-12 h-12 rounded-full overflow-hidden border-2 border-white cursor-pointer shadow-md"
-          style={{
-            backgroundColor: `rgb(${event.userId && event.userId % 3 === 0 ? '148, 49, 167' : event.userId && event.userId % 2 === 0 ? '239, 68, 68' : '59, 130, 246'})`
-          }}
+          className="creator-avatar creator-initial"
+          onClick={handleCreatorClick}
         >
-          <div className="w-full h-full flex items-center justify-center text-white font-bold">
-            {getCreatorInitials()}
-          </div>
+          {getCreatorInitials()}
         </div>
       </div>
-
-      {/* Card Content */}
-      <div className="p-4">
-        {/* Creator Initials and Category Row */}
-        <div className="flex justify-between items-center mb-2">
-          <div 
-            className="text-white text-sm font-semibold bg-purple-600 w-10 h-10 rounded flex items-center justify-center"
-            onClick={handleCreatorClick}
-          >
+      
+      <div className="event-content">
+        <div className="event-header">
+          <div className="creator-badge" onClick={handleCreatorClick}>
             {getCreatorInitials()}
           </div>
-          
-          <div className="px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
+          <div className="category-badge">
             {event.category || 'General'}
           </div>
         </div>
         
-        {/* Date */}
-        <div className="text-gray-600 text-sm mb-1">
+        <div className="event-date">
           {formatDate(event.date || '')}
         </div>
         
-        {/* Title */}
-        <h3 className="text-lg font-bold text-gray-800 mb-1">
+        <h3 className="event-title">
           {event.title}
         </h3>
         
-        {/* Location */}
-        <div className="text-gray-600 mb-2">
+        <div className="event-location">
           {event.location}
         </div>
         
-        {/* Description */}
-        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+        <p className="event-description">
           {event.description}
         </p>
       </div>
