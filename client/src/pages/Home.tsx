@@ -4,7 +4,7 @@ import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
 import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronDown, Plus, Share2 } from "lucide-react";
+import { Search, Plus, Share2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +19,7 @@ import {
 import { Link } from "wouter";
 import { format } from "date-fns";
 
-// Category options based on the reference design
+// Category options based on the EventCircle.site
 const CATEGORIES = [
   "Recreational",
   "Religious",
@@ -45,6 +45,7 @@ export default function Home() {
   const [locationFilter, setLocationFilter] = useState<string>("");
   const [dateFilter, setDateFilter] = useState<string>("Upcoming");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [isFilterVisible, setIsFilterVisible] = useState(true);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -104,7 +105,8 @@ export default function Home() {
     const matchesSearch = !searchQuery 
       ? true
       : (event.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         event.description?.toLowerCase().includes(searchQuery.toLowerCase()));
+         event.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         event.location?.toLowerCase().includes(searchQuery.toLowerCase()));
 
     // Location filter
     const matchesLocation = locationFilter === "all-locations" || !locationFilter 
@@ -133,6 +135,15 @@ export default function Home() {
   const sortedEvents = [...filteredEvents].sort((a, b) => {
     return a.date.localeCompare(b.date);
   });
+
+  // Generate initials for user avatar badge
+  const getInitials = (name: string) => {
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   // Skeleton loader for event cards
   const renderEventSkeletons = () => (
@@ -196,29 +207,37 @@ export default function Home() {
     return (
       <div className="space-y-4">
         {sortedEvents.map(event => (
-          <div key={event.id} className="bg-white rounded-lg shadow overflow-hidden">
+          <div 
+            key={event.id} 
+            className="bg-white rounded-lg shadow overflow-hidden"
+            onClick={() => handleShowDetails(event)}
+          >
             <div className="relative">
               <img
                 src={event.image || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80'}
                 alt={event.title}
                 className="w-full h-48 object-cover"
               />
-              {/* User avatar in top right corner */}
-              {event.category && (
-                <div className="absolute top-2 right-2">
-                  <div className="w-8 h-8 bg-gray-300 rounded-full overflow-hidden border-2 border-white">
-                    <img 
-                      src={`https://ui-avatars.com/api/?name=${event.category?.charAt(0) || "E"}&background=8B5CF6&color=fff`} 
-                      alt="Avatar" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+              {/* Profile circle in top right corner */}
+              <div className="absolute top-2 right-2">
+                <div className="w-8 h-8 bg-gray-300 rounded-full overflow-hidden border-2 border-white">
+                  <img 
+                    src={`https://ui-avatars.com/api/?name=${event.organizer || "Admin"}&background=8B5CF6&color=fff`} 
+                    alt="Organizer" 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-              )}
-              {/* Category badge in top right */}
+              </div>
+              {/* Category badge */}
               <div className="absolute top-4 right-12">
                 <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200">
                   {event.category || "Event"}
+                </Badge>
+              </div>
+              {/* Event code badge in top left */}
+              <div className="absolute top-4 left-4">
+                <Badge className="bg-purple-500 text-white hover:bg-purple-600">
+                  {event.code || `R${event.id}`}
                 </Badge>
               </div>
             </div>
@@ -250,7 +269,10 @@ export default function Home() {
                   size="sm"
                   variant="outline"
                   className="text-purple-600 border-none"
-                  onClick={() => {/* Share functionality */}}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Share functionality would go here
+                  }}
                 >
                   <Share2 className="h-4 w-4" />
                 </Button>
@@ -263,8 +285,25 @@ export default function Home() {
   };
 
   return (
-    <div className="max-w-lg mx-auto py-4 px-4">
-      {/* Header with Add Event button */}
+    <div className="max-w-lg mx-auto py-4 px-4 bg-gray-50 min-h-screen">
+      {/* User info and header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <div className="w-10 h-10 bg-gray-800 rounded-full overflow-hidden mr-3">
+            <img 
+              src="https://ui-avatars.com/api/?name=Admin&background=1A202C&color=fff" 
+              alt="Admin" 
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Admin</h2>
+            <p className="text-sm text-gray-600">admin</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Events header with Add Event button */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Events</h1>
@@ -276,7 +315,7 @@ export default function Home() {
 
       {/* Search and Filter Section */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
-        {/* Location Search */}
+        {/* Search input */}
         <div className="relative mb-4">
           <Input
             type="text"
@@ -324,7 +363,7 @@ export default function Home() {
               <Badge
                 key={category}
                 variant={selectedCategories.includes(category) ? "default" : "outline"}
-                className={`cursor-pointer ${
+                className={`cursor-pointer rounded-full px-3 py-1 font-normal ${
                   selectedCategories.includes(category) 
                     ? "bg-purple-100 text-purple-800 hover:bg-purple-200" 
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -345,7 +384,7 @@ export default function Home() {
               <Badge
                 key={filter}
                 variant={dateFilter === filter ? "default" : "outline"}
-                className={`cursor-pointer ${
+                className={`cursor-pointer rounded-full px-3 py-1 font-normal ${
                   dateFilter === filter 
                     ? "bg-purple-100 text-purple-800 hover:bg-purple-200" 
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
