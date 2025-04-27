@@ -1032,6 +1032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get the user's completed tickets to calculate available balance
       const userId = req.session.userId;
+      const user = await storage.getUser(userId);
       const userTickets = await storage.getUserTickets(userId);
       const completedTickets = userTickets.filter(ticket => ticket.paymentStatus === 'completed');
       
@@ -1040,7 +1041,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         0
       );
       
-      const availableBalance = totalRevenue * 0.85; // After platform fee (15%)
+      // Check if user is admin - admin doesn't pay platform fees
+      const isAdmin = user?.isAdmin === true;
+      const availableBalance = isAdmin ? totalRevenue : totalRevenue * 0.85; // Only apply 15% fee for non-admin users
       
       if (withdrawalAmount > availableBalance) {
         return res.status(400).json({ 

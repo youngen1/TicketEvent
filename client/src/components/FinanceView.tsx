@@ -65,6 +65,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Event, EventTicket } from '@shared/schema';
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Withdrawal request schema
 const withdrawalFormSchema = z.object({
@@ -144,6 +145,10 @@ export default function FinanceView({ userId }: FinanceViewProps) {
   // Use all completed tickets
   const filteredTickets = completedTickets;
 
+  // Get if user is admin from AuthContext
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin === true;
+  
   // Calculate revenue statistics
   const totalRevenue = filteredTickets.reduce(
     (sum, ticket) => sum + parseFloat(ticket.totalAmount.toString() || '0'), 
@@ -245,7 +250,8 @@ export default function FinanceView({ userId }: FinanceViewProps) {
   });
   
   const onSubmit = (data: WithdrawalFormValues) => {
-    const availableBalance = totalRevenue * 0.85;
+    // Admin gets 100% of their revenue, regular users get 85%
+    const availableBalance = isAdmin ? totalRevenue : totalRevenue * 0.85;
     const requestAmount = parseFloat(data.amount);
     
     if (requestAmount > availableBalance) {
@@ -296,9 +302,9 @@ export default function FinanceView({ userId }: FinanceViewProps) {
             <Banknote className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue * 0.85)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(isAdmin ? totalRevenue : totalRevenue * 0.85)}</div>
             <p className="text-xs text-muted-foreground">
-              After platform fee (15%)
+              {isAdmin ? 'No platform fee for admin' : 'After platform fee (15%)'}
             </p>
           </CardContent>
         </Card>
