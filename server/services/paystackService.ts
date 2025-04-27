@@ -63,7 +63,12 @@ class PaystackService {
       });
       
       // Convert amount to kobo (Paystack uses the smallest currency unit)
-      const amountInKobo = Math.round(params.amount * 100);
+      // Make sure minimum amount is at least 1000 kobo (R10) to avoid Paystack errors
+      const minimumKobo = 1000; // R10 in kobo
+      const calculatedKobo = Math.round(params.amount * 100);
+      const amountInKobo = calculatedKobo < minimumKobo ? minimumKobo : calculatedKobo;
+      
+      console.log(`Processing payment: Original amount ${params.amount} → ${calculatedKobo} kobo → Adjusted to ${amountInKobo} kobo if needed`);
 
       // Convert metadata to JSON string if it exists (Paystack requires metadata as string)
       const metadataString = params.metadata ? JSON.stringify(params.metadata) : undefined;
