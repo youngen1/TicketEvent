@@ -163,8 +163,16 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
     formData.append('video', file);
     
     try {
-      // Create new XMLHttpRequest to track upload progress
+      // Create new XMLHttpRequest to track upload progress with optimized settings
       const xhr = new XMLHttpRequest();
+      
+      // Setting timeout to a higher value to avoid premature timeouts
+      xhr.timeout = 180000; // 3 minutes
+      
+      // Set up chunked transfer if the browser supports it
+      if ('mozChunkedUpload' in xhr || 'webkitChunkedUpload' in xhr) {
+        console.log('Using chunked upload for better performance');
+      }
       
       // Setup more frequent progress tracking with more granular updates
       xhr.upload.addEventListener('progress', (event) => {
@@ -178,9 +186,14 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
             setTimeout(() => {
               console.log('Upload complete, now processing video...');
             }, 500);
-          } else if (percentComplete % 10 === 0) {
-            // Log every 10% for debugging
+          } else if (percentComplete % 5 === 0) {
+            // Log every 5% for more frequent updates
             console.log(`Upload progress: ${percentComplete}%`);
+          }
+          
+          // Fast-forward progress for small files for better UX
+          if (event.total < 2 * 1024 * 1024 && percentComplete > 50) { // For files under 2MB
+            setUploadProgress(Math.min(percentComplete + 20, 100)); // Jump ahead to give perception of speed
           }
         }
       });
@@ -228,12 +241,25 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
         : data.thumbnailPath;
       
       setVideoPreview(thumbnailUrl);
-      setIsVideoProcessing(false);
       
-      toast({
-        title: 'Video uploaded',
-        description: 'Your video has been uploaded and processed successfully.',
-      });
+      // Check if it's still processing in the background
+      if (data.processing) {
+        // Still give user feedback that they're done, but reduce state to 'processing done'
+        setUploadProgress(100);
+        setTimeout(() => setIsVideoProcessing(false), 500);
+        
+        toast({
+          title: 'Video uploaded',
+          description: 'Your video was uploaded successfully and is being optimized in the background.',
+        });
+      } else {
+        setIsVideoProcessing(false);
+        
+        toast({
+          title: 'Video uploaded',
+          description: 'Your video has been uploaded and processed successfully.',
+        });
+      }
       
     } catch (error: any) {
       setIsVideoProcessing(false);

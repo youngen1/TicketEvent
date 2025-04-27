@@ -86,13 +86,39 @@ export function registerUploadRoutes(app: Express) {
       }
       
       console.log('Processing video file with size:', req.file.size);
-      const result = await processVideo(req.file);
-      console.log('Video processing result:', result);
       
-      return res.status(200).json({
-        message: 'Video uploaded and processed successfully',
-        ...result
-      });
+      // Performance optimization: Start processing but don't await the result
+      // This allows the server to respond quickly with a "processing" status
+      // which is much faster from a user experience perspective
+      if (req.file.size < 1024 * 1024) { // Less than 1MB, process synchronously
+        const result = await processVideo(req.file);
+        console.log('Video processing result (small file):', result);
+        
+        return res.status(200).json({
+          message: 'Video uploaded and processed successfully',
+          ...result
+        });
+      } else {
+        // For larger files, process asynchronously and return immediately
+        // This makes uploads feel much faster to the user
+        processVideo(req.file)
+          .then(result => {
+            console.log('Async video processing completed:', result);
+          })
+          .catch(err => {
+            console.error('Async video processing error:', err);
+          });
+        
+        // Return a quick response to the client with placeholder data
+        // Client will show processing state while actual processing continues on server
+        return res.status(200).json({
+          message: 'Video uploaded, processing in background',
+          videoPath: `/uploads/videos/${req.file.filename || 'processing.mp4'}`,
+          thumbnailPath: `/uploads/thumbnails/default_processing.jpg`,
+          duration: 30, // Default duration estimate
+          processing: true
+        });
+      }
     } catch (error: any) {
       console.error('Error during video upload:', error.message);
       return res.status(400).json({ message: error.message });

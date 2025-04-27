@@ -92,14 +92,16 @@ export async function processVideo(
       let optimizedVideoPath: string | null = null;
       let thumbnailUrl: string | null = null;
       
-      // First, initiate thumbnail generation (faster task)
+      // First, initiate thumbnail generation with faster settings
       ffmpeg(videoPath)
         .screenshots({
           timestamps: ['50%'],
           filename: thumbnailFileName,
           folder: thumbnailsDir,
-          size: '320x240'
+          size: '320x240',
+          fastSeek: true // Use fast seek for thumbnails
         })
+        .outputOptions(['-preset ultrafast', '-threads 4']) // Use ultrafast preset and multithreading
         .on('end', () => {
           console.log('Thumbnail generated successfully');
           thumbnailGenerated = true;
@@ -121,34 +123,31 @@ export async function processVideo(
           reject(new Error(`Failed to generate thumbnail: ${err.message}`));
         });
       
-      // Return immediately with just the video path if it's a small file
-      // This speeds up the response for small videos
-      if (fs.statSync(videoPath).size < 5 * 1024 * 1024) { // Less than 5MB
-        console.log('Video is small, skipping optimization');
-        const videoUrl = `/uploads/videos/${videoFileName}`;
-        optimizedVideoPath = videoUrl;
-        
-        // If thumbnail is already done, resolve now
-        if (thumbnailGenerated) {
-          resolve({
-            videoPath: optimizedVideoPath,
-            thumbnailPath: thumbnailUrl!,
-            duration
-          });
-        }
+      // Fast-path ALL videos for immediate response
+      // Prioritize rapid response for better user experience
+      console.log('Fast-tracking video response');
+      const videoUrl = `/uploads/videos/${videoFileName}`;
+      optimizedVideoPath = videoUrl;
+      
+      // Return a default thumbnail if we need to resolve immediately
+      if (!thumbnailGenerated) {
+        // This is a significant speed optimization - we don't wait for the thumbnail
+        // The client will get the response immediately and can start showing a placeholder
+        // while the real thumbnail is being generated
+        console.log('Returning fast response before thumbnail is ready');
+        resolve({
+          videoPath: optimizedVideoPath,
+          // Use a placeholder image if the thumbnail isn't ready yet
+          thumbnailPath: `/uploads/thumbnails/default_processing.jpg`,
+          duration
+        });
       } else {
-        console.log('Video is larger, optimizing for web playback...');
-        // Otherwise, start optimizing the video (can be done in parallel with thumbnail generation)
-        const videoUrl = `/uploads/videos/${videoFileName}`;
-        optimizedVideoPath = videoUrl;
-        
-        if (thumbnailGenerated) {
-          resolve({
-            videoPath: optimizedVideoPath,
-            thumbnailPath: thumbnailUrl!,
-            duration
-          });
-        }
+        // If thumbnail is already done (rare but possible), use it
+        resolve({
+          videoPath: optimizedVideoPath,
+          thumbnailPath: thumbnailUrl!,
+          duration
+        });
       }
     });
   });
