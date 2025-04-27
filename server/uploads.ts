@@ -121,11 +121,19 @@ export function registerUploadRoutes(app: Express) {
             console.error('Async video processing error:', err);
           });
         
+        // Save original filename for debugging
+        console.log('Original filename:', req.file.originalname);
+        console.log('Temp filename:', req.file.filename);
+        
+        // Generate a deterministic output filename based on the temp filename
+        const safeFilename = req.file.filename || `video_${Date.now()}.mp4`;
+        console.log('Safe filename to use:', safeFilename);
+        
         // Return a quick response to the client with placeholder data
         // Client will show processing state while actual processing continues on server
         return res.status(200).json({
           message: 'Video uploaded, processing in background',
-          videoPath: `/uploads/videos/${req.file.filename || 'processing.mp4'}`,
+          videoPath: `/uploads/videos/${safeFilename}`,
           thumbnailPath: `/uploads/thumbnails/default_processing.jpg`,
           duration: 30, // Default duration estimate
           processing: true

@@ -56,12 +56,28 @@ export async function processVideo(
     
     // Move the uploaded file from temp location to final location
     try {
+      // Make sure directories exist
+      fs.ensureDirSync(videosDir);
+      fs.ensureDirSync(thumbnailsDir);
+      
+      // Directly use fs.copyFile with promises for more reliable copying
+      console.log('Copying video from', tempFilePath, 'to', videoPath);
       fs.copyFileSync(tempFilePath, videoPath);
-      console.log('Video file moved to final location successfully');
-      // Remove the temp file after successful copy
-      fs.unlinkSync(tempFilePath);
+      
+      console.log('Video file copied to final location successfully, size:', fs.statSync(videoPath).size);
+      
+      // Verify the file exists before removing the source
+      if (fs.existsSync(videoPath)) {
+        fs.unlinkSync(tempFilePath);
+        console.log('Temp file removed successfully');
+      } else {
+        console.error('Target file does not exist after copy!');
+        reject(new Error('File copy verification failed'));
+        return;
+      }
     } catch (error: any) {
       console.error('Error moving video file:', error);
+      // Don't delete temp file on error so we can debug
       reject(new Error(`Failed to process video file: ${error.message || 'Unknown error'}`));
       return;
     }
