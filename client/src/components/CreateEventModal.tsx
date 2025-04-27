@@ -124,10 +124,18 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       return response.json();
     },
     onSuccess: (data) => {
+      console.log('Video upload successful:', data);
+      
       // Set the video and thumbnail URLs
       form.setValue('video', data.videoPath);
       form.setValue('thumbnail', data.thumbnailPath);
-      setVideoPreview(data.thumbnailPath);
+      
+      // Set the preview with the full URL for local display
+      const thumbnailUrl = data.thumbnailPath.startsWith('/uploads') 
+        ? `http://localhost:5000${data.thumbnailPath}` 
+        : data.thumbnailPath;
+      
+      setVideoPreview(thumbnailUrl);
       setIsVideoProcessing(false);
       
       toast({
