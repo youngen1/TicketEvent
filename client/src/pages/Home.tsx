@@ -4,20 +4,48 @@ import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
 import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, ChevronRight, Calendar, MapPin, Users } from "lucide-react";
+import { Search, ChevronDown, Plus, Share2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Link } from "wouter";
+import { format } from "date-fns";
+
+// Category options based on the reference design
+const CATEGORIES = [
+  "Recreational",
+  "Religious",
+  "Sports",
+  "Cultural",
+  "Concert",
+  "Conference",
+  "Workshop",
+  "Meetup",
+  "Party"
+];
+
+// Date filter options
+const DATE_FILTERS = [
+  "Today",
+  "Upcoming"
+];
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [currentTab, setCurrentTab] = useState("featured");
+  const [locationFilter, setLocationFilter] = useState<string>("");
+  const [dateFilter, setDateFilter] = useState<string>("Upcoming");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -61,68 +89,84 @@ export default function Home() {
     }
   };
 
-  // Filter events based on search query
-  const filteredEvents = events.filter((event) => {    
-    if (!searchQuery) return true;
-    
-    const searchTerms = searchQuery.toLowerCase();
-    return (
-      (event.title?.toLowerCase().includes(searchTerms)) ||
-      (event.description?.toLowerCase().includes(searchTerms)) ||
-      (event.location?.toLowerCase().includes(searchTerms)) ||
-      (event.category?.toLowerCase().includes(searchTerms))
-    );
-  });
-
-  // Get featured events
-  const featuredEvents = events.filter(event => event.featured);
-  
-  // Get upcoming events (events with dates in the future)
-  const today = new Date().toISOString().split('T')[0];
-  const upcomingEvents = events.filter(event => event.date >= today)
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  // Get events by category
-  const getEventsByCategory = (category: string) => {
-    return events.filter(event => event.category === category);
+  // Handle category selection
+  const toggleCategory = (category: string) => {
+    if (selectedCategories.includes(category)) {
+      setSelectedCategories(selectedCategories.filter(c => c !== category));
+    } else {
+      setSelectedCategories([...selectedCategories, category]);
+    }
   };
 
-  // Skeleton loaders
-  const renderFeaturedSkeleton = () => (
+  // Filter events based on all selected filters
+  const filteredEvents = events.filter((event) => {    
+    // Search query filter
+    const matchesSearch = !searchQuery 
+      ? true
+      : (event.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         event.description?.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    // Location filter
+    const matchesLocation = locationFilter === "all-locations" || !locationFilter 
+      ? true 
+      : event.location?.toLowerCase().includes(locationFilter.toLowerCase());
+
+    // Category filter
+    const matchesCategory = selectedCategories.length === 0 
+      ? true 
+      : event.category && selectedCategories.includes(event.category);
+
+    // Date filter
+    let matchesDateFilter = true;
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (dateFilter === "Today") {
+      matchesDateFilter = event.date === today;
+    } else if (dateFilter === "Upcoming") {
+      matchesDateFilter = event.date >= today;
+    }
+
+    return matchesSearch && matchesLocation && matchesCategory && matchesDateFilter;
+  });
+
+  // Sort events by date (upcoming first)
+  const sortedEvents = [...filteredEvents].sort((a, b) => {
+    return a.date.localeCompare(b.date);
+  });
+
+  // Skeleton loader for event cards
+  const renderEventSkeletons = () => (
     <div className="space-y-4">
-      <Skeleton className="h-8 w-64" />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Skeleton className="h-[400px] rounded-xl" />
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-6 w-1/2" />
-          <Skeleton className="h-6 w-1/3" />
-          <div className="flex space-x-3 mt-4">
-            <Skeleton className="h-10 w-28" />
-            <Skeleton className="h-10 w-28" />
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="bg-white rounded-lg shadow overflow-hidden">
+          <Skeleton className="h-48 w-full" />
+          <div className="p-4 space-y-2">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-4 w-1/3" />
           </div>
         </div>
-      </div>
-    </div>
-  );
-
-  const renderCategorySkeleton = () => (
-    <div className="space-y-4">
-      <Skeleton className="h-7 w-48" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-[280px] rounded-lg" />
-        ))}
-      </div>
+      ))}
     </div>
   );
 
   // Show a message when no events are found
-  const renderEmptyState = (message = "No events found") => {
+  const renderEmptyState = () => {
     return (
-      <div className="col-span-full flex flex-col items-center justify-center py-12">
-        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-300">
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="64" 
+          height="64" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="1" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          className="text-gray-300"
+        >
           <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
           <line x1="16" x2="16" y1="2" y2="6" />
           <line x1="8" x2="8" y1="2" y2="6" />
@@ -134,252 +178,189 @@ export default function Home() {
           <path d="M12 18h.01" />
           <path d="M16 18h.01" />
         </svg>
-        <h3 className="mt-4 text-lg font-medium text-neutral-900">{message}</h3>
-        <p className="mt-1 text-sm text-neutral-500">
-          {searchQuery 
-            ? "Try a different search term or clear your filters."
-            : "Check back later for upcoming events."}
+        <h3 className="mt-4 text-lg font-medium text-gray-900">No events found</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          {searchQuery || selectedCategories.length > 0 || locationFilter
+            ? "Try changing your filters or search term."
+            : "No events are currently available."}
         </p>
       </div>
     );
   };
 
-  // Function to render the featured event section
-  const renderFeaturedSection = () => {
-    if (isLoading) return renderFeaturedSkeleton();
-    if (featuredEvents.length === 0) return renderEmptyState("No featured events");
+  // Event list rendering
+  const renderEventList = () => {
+    if (isLoading) return renderEventSkeletons();
+    if (sortedEvents.length === 0) return renderEmptyState();
 
-    const featuredEvent = featuredEvents[0];
-    
     return (
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-neutral-900">Featured Event</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white rounded-xl overflow-hidden shadow-sm">
-          <div className="aspect-video md:aspect-auto md:h-full overflow-hidden relative">
-            <img 
-              src={featuredEvent.image || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80'} 
-              alt={featuredEvent.title} 
-              className="object-cover w-full h-full" 
-            />
-            <div className="absolute top-4 left-4">
-              <Badge variant="outline" className="bg-black/50 text-white border-0 backdrop-blur-sm">
-                {featuredEvent.category}
-              </Badge>
-            </div>
-          </div>
-          <div className="p-6 flex flex-col">
-            <div>
-              <h3 className="text-xl font-bold text-neutral-900 mb-2">{featuredEvent.title}</h3>
-              <p className="text-neutral-600 line-clamp-3 mb-4">{featuredEvent.description}</p>
-              
-              <div className="space-y-2 text-sm text-neutral-500 mb-4">
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-2 text-neutral-400" />
-                  <span>{new Date(featuredEvent.date).toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}</span>
-                  {featuredEvent.time && <span className="ml-1">at {featuredEvent.time}</span>}
+        {sortedEvents.map(event => (
+          <div key={event.id} className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="relative">
+              <img
+                src={event.image || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80'}
+                alt={event.title}
+                className="w-full h-48 object-cover"
+              />
+              {/* User avatar in top right corner */}
+              {event.category && (
+                <div className="absolute top-2 right-2">
+                  <div className="w-8 h-8 bg-gray-300 rounded-full overflow-hidden border-2 border-white">
+                    <img 
+                      src={`https://ui-avatars.com/api/?name=${event.category?.charAt(0) || "E"}&background=8B5CF6&color=fff`} 
+                      alt="Avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
-                
-                {featuredEvent.location && (
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-2 text-neutral-400" />
-                    <span>{featuredEvent.location}</span>
+              )}
+              {/* Category badge in top right */}
+              <div className="absolute top-4 right-12">
+                <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200">
+                  {event.category || "Event"}
+                </Badge>
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="text-sm text-gray-500">
+                {event.date && (
+                  <div>
+                    {format(new Date(event.date), "dd MMM yyyy")} {event.time}
                   </div>
                 )}
-                
-                <div className="flex items-center">
-                  <Users className="h-4 w-4 mr-2 text-neutral-400" />
-                  <span>
-                    {featuredEvent.attendees || 0} attending
-                    {featuredEvent.maxAttendees && 
-                      ` · ${featuredEvent.maxAttendees - (featuredEvent.attendees || 0)} spots left`
-                    }
-                  </span>
-                </div>
               </div>
-            </div>
-            
-            <div className="mt-auto flex flex-wrap gap-3">
-              <Button 
-                variant="default"
-                onClick={() => handleShowDetails(featuredEvent)}
-                className="flex-1 sm:flex-none"
-              >
-                View Details
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Render events categorized by their categories
-  const renderCategorizedEvents = () => {
-    if (isLoading) {
-      return (
-        <div className="space-y-12">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="mb-8">
-              {renderCategorySkeleton()}
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    // Get unique categories
-    const categories = [...new Set(events.map(event => event.category))].filter(Boolean);
-    
-    if (categories.length === 0) return null;
-    
-    return (
-      <div className="space-y-12 mt-8">
-        {categories.map(category => {
-          const categoryEvents = getEventsByCategory(category || '');
-          if (!categoryEvents.length) return null;
-          
-          return (
-            <div key={category} className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-neutral-900">{category} Events</h2>
-                <Button variant="ghost" size="sm" className="text-primary hover:text-primary-dark">
-                  <Link href={`/events?category=${category}`} className="flex items-center">
-                    View All <ChevronRight className="h-4 w-4 ml-1" />
-                  </Link>
+              <h3 className="text-lg font-bold mt-1">{event.title}</h3>
+              <p className="text-gray-600 text-sm mt-1">
+                {event.location || "Location not specified"}
+              </p>
+              <p className="text-gray-600 text-sm mt-2 line-clamp-2">
+                {event.description}
+              </p>
+              
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-sm text-gray-500">
+                  {event.attendees ? (
+                    `${event.attendees} ${event.attendees === 1 ? 'person' : 'people'} joined`
+                  ) : (
+                    "No one has joined yet"
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-purple-600 border-none"
+                  onClick={() => {/* Share functionality */}}
+                >
+                  <Share2 className="h-4 w-4" />
                 </Button>
               </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {categoryEvents.slice(0, 4).map(event => (
-                  <EventCard 
-                    key={event.id} 
-                    event={event} 
-                    onShowDetails={handleShowDetails} 
-                  />
-                ))}
-              </div>
             </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  // Render calendar section with upcoming events
-  const renderUpcomingEvents = () => {
-    if (isLoading) return renderCategorySkeleton();
-    if (upcomingEvents.length === 0) return renderEmptyState("No upcoming events");
-    
-    return (
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold text-neutral-900">Upcoming Events</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {upcomingEvents.slice(0, 8).map(event => (
-            <EventCard 
-              key={event.id} 
-              event={event} 
-              onShowDetails={handleShowDetails} 
-            />
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     );
   };
 
   return (
-    <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-primary-50 to-blue-50 rounded-xl p-8 mb-8">
-        <div className="max-w-3xl">
-          <h1 className="text-4xl font-extrabold text-neutral-900 tracking-tight mb-4">
-            Discover Amazing Events Near You
-          </h1>
-          <p className="text-lg text-neutral-700 mb-6">
-            Browse and join the best events in your area. From tech conferences to music festivals,
-            find something for everyone.
-          </p>
-          <div className="relative max-w-xl">
-            <Input
-              type="text"
-              placeholder="Search for events..."
-              className="w-full pl-12 pr-4 py-3 text-lg shadow-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-neutral-400" />
-            </div>
+    <div className="max-w-lg mx-auto py-4 px-4">
+      {/* Header with Add Event button */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Events</h1>
+        </div>
+        <Button className="bg-purple-500 hover:bg-purple-600">
+          <Plus className="h-5 w-5 mr-1" /> Add Event
+        </Button>
+      </div>
+
+      {/* Search and Filter Section */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        {/* Location Search */}
+        <div className="relative mb-4">
+          <Input
+            type="text"
+            placeholder="Search by location"
+            className="pl-10 pr-4 py-2"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-gray-400" />
+          </div>
+        </div>
+
+        {/* Location Dropdown */}
+        <div className="mb-4">
+          <Select
+            value={locationFilter}
+            onValueChange={setLocationFilter}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Search by Location" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all-locations">All Locations</SelectItem>
+              {events
+                .map(e => e.location)
+                .filter((location, index, array) => 
+                  location && array.indexOf(location) === index
+                )
+                .map(location => (
+                  <SelectItem key={location} value={location || "unknown-location"}>
+                    {location}
+                  </SelectItem>
+                ))
+              }
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Categories */}
+        <div className="mb-4">
+          <h3 className="font-medium text-gray-700 mb-2">Categories</h3>
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIES.map(category => (
+              <Badge
+                key={category}
+                variant={selectedCategories.includes(category) ? "default" : "outline"}
+                className={`cursor-pointer ${
+                  selectedCategories.includes(category) 
+                    ? "bg-purple-100 text-purple-800 hover:bg-purple-200" 
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+                onClick={() => toggleCategory(category)}
+              >
+                {category}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* Date Filter */}
+        <div>
+          <h3 className="font-medium text-gray-700 mb-2">Date Filter</h3>
+          <div className="flex flex-wrap gap-2">
+            {DATE_FILTERS.map(filter => (
+              <Badge
+                key={filter}
+                variant={dateFilter === filter ? "default" : "outline"}
+                className={`cursor-pointer ${
+                  dateFilter === filter 
+                    ? "bg-purple-100 text-purple-800 hover:bg-purple-200" 
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+                onClick={() => setDateFilter(filter)}
+              >
+                {filter}
+              </Badge>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Main Content with Tabs */}
-      <Tabs 
-        defaultValue="featured" 
-        className="space-y-6"
-        value={currentTab}
-        onValueChange={setCurrentTab}
-      >
-        <TabsList className="bg-transparent border-b border-neutral-200 w-full justify-start mb-6 p-0 h-auto">
-          <TabsTrigger 
-            value="featured" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary px-4 py-2"
-          >
-            Featured
-          </TabsTrigger>
-          <TabsTrigger 
-            value="upcoming" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary px-4 py-2"
-          >
-            Upcoming
-          </TabsTrigger>
-          <TabsTrigger 
-            value="categories" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary px-4 py-2"
-          >
-            Categories
-          </TabsTrigger>
-        </TabsList>
-        
-        {searchQuery ? (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-4">Search Results</h2>
-            {filteredEvents.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredEvents.map(event => (
-                  <EventCard 
-                    key={event.id} 
-                    event={event} 
-                    onShowDetails={handleShowDetails} 
-                  />
-                ))}
-              </div>
-            ) : (
-              renderEmptyState(`No results found for "${searchQuery}"`)
-            )}
-          </div>
-        ) : (
-          <>
-            <TabsContent value="featured" className="p-0 m-0">
-              {renderFeaturedSection()}
-              {renderUpcomingEvents()}
-            </TabsContent>
-            
-            <TabsContent value="upcoming" className="p-0 m-0">
-              {renderUpcomingEvents()}
-            </TabsContent>
-            
-            <TabsContent value="categories" className="p-0 m-0">
-              {renderCategorizedEvents()}
-            </TabsContent>
-          </>
-        )}
-      </Tabs>
+      {/* Events List */}
+      {renderEventList()}
 
       {/* Event Details Modal */}
       <EventDetailsModal
@@ -387,6 +368,6 @@ export default function Home() {
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
       />
-    </main>
+    </div>
   );
 }
