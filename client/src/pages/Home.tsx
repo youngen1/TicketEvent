@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
 import { Event } from "@shared/schema";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Filter, ArrowDownAZ } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,34 +16,59 @@ export default function Home() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const eventsPerPage = 8;
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: events = [], isLoading, refetch } = useQuery<Event[]>({
-    queryKey: ["/api/events"],
-  });
-  
-  // Refetch events when component mounts
+  // Force a fresh fetch of events when the page loads
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+  }, [queryClient]);
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["/api/events"],
+    staleTime: 0, // Always consider the data stale to force refetch
+  });
+
+  // Convert data to typed array
+  const events: Event[] = data as Event[] || [];
+  
+  // Log for debugging
+  useEffect(() => {
+    console.log("Events loaded:", events.length);
+    if (error) {
+      console.error("Error loading events:", error);
+      toast({
+        title: "Error loading events",
+        description: "There was a problem loading the events. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [events, error, toast]);
 
   const handleShowDetails = (event: Event) => {
     setSelectedEvent(event);
     setIsDetailsModalOpen(true);
   };
 
-  const filteredEvents = events.filter((event) => {
-    // Skip events with empty titles or categories
-    if (!event.title || !event.category) return false;
-    
-    const matchesSearch = 
-      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.location.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // In a real app, we would have date filtering logic here
-    // For now, let's just return all events for the 'upcoming' tab
-    return matchesSearch;
-  });
+  // Apply filters for search and tab logic
+  const filteredEvents = events
+    .filter((event) => {    
+      const matchesSearch = !searchQuery 
+        ? true
+        : (event.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           event.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           event.location?.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      // Tab filters would go here in a real app
+      // For now, show all events regardless of tab
+      return matchesSearch;
+    })
+    // Sort by createdAt date (newest first)
+    .sort((a, b) => {
+      const dateA = new Date(a.createdAt || '');
+      const dateB = new Date(b.createdAt || '');
+      return dateB.getTime() - dateA.getTime();
+    });
 
   // Calculate pagination
   const indexOfLastEvent = currentPage * eventsPerPage;
@@ -51,6 +77,8 @@ export default function Home() {
   const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
 
   const renderPagination = () => {
+    if (filteredEvents.length === 0) return null;
+    
     return (
       <div className="mt-10 flex items-center justify-between">
         <div className="text-sm text-neutral-700">
@@ -122,6 +150,32 @@ export default function Home() {
     ));
   };
 
+  // Show a message when no events are found
+  const renderEmptyState = () => {
+    return (
+      <div className="col-span-full flex flex-col items-center justify-center py-16">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-300">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+          <line x1="16" x2="16" y1="2" y2="6" />
+          <line x1="8" x2="8" y1="2" y2="6" />
+          <line x1="3" x2="21" y1="10" y2="10" />
+          <path d="M8 14h.01" />
+          <path d="M12 14h.01" />
+          <path d="M16 14h.01" />
+          <path d="M8 18h.01" />
+          <path d="M12 18h.01" />
+          <path d="M16 18h.01" />
+        </svg>
+        <h3 className="mt-4 text-lg font-medium text-neutral-900">No events found</h3>
+        <p className="mt-1 text-sm text-neutral-500">
+          {searchQuery 
+            ? "Try a different search term or clear your filters."
+            : "Create an event to get started."}
+        </p>
+      </div>
+    );
+  };
+
   return (
     <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
       {/* Header Section */}
@@ -145,9 +199,13 @@ export default function Home() {
               </div>
             </div>
             <div className="inline-flex rounded-md shadow-sm">
-              <Button variant="outline" className="inline-flex items-center">
+              <Button 
+                variant="outline" 
+                className="inline-flex items-center"
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/events"] })}
+              >
                 <Filter className="h-4 w-4 mr-2" />
-                Filter
+                Refresh
               </Button>
               <Button variant="outline" className="ml-2 inline-flex items-center">
                 <ArrowDownAZ className="h-4 w-4 mr-2" />
@@ -209,18 +267,22 @@ export default function Home() {
       {/* Events Grid */}
       <div className="px-4 sm:px-0">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {isLoading
-            ? renderEventSkeletons()
-            : currentEvents.map((event: Event) => (
-                <EventCard 
-                  key={event.id} 
-                  event={event} 
-                  onShowDetails={handleShowDetails} 
-                />
-              ))}
+          {isLoading ? (
+            renderEventSkeletons()
+          ) : filteredEvents.length === 0 ? (
+            renderEmptyState()
+          ) : (
+            currentEvents.map((event) => (
+              <EventCard 
+                key={event.id} 
+                event={event} 
+                onShowDetails={handleShowDetails} 
+              />
+            ))
+          )}
         </div>
 
-        {!isLoading && renderPagination()}
+        {!isLoading && filteredEvents.length > 0 && renderPagination()}
       </div>
 
       {/* Event Details Modal */}

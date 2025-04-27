@@ -47,18 +47,23 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
       <DialogContent className="sm:max-w-3xl p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="bg-white">
           <div className="h-56 w-full bg-neutral-200">
-            {event.video ? (
+            {event.video && event.video.length > 0 ? (
               <div className="relative w-full h-full">
                 <video 
-                  src={event.video} 
                   controls 
                   className="w-full h-full object-cover"
-                  poster={event.thumbnail || undefined}
+                  poster={event.thumbnail && event.thumbnail.length > 0 ? 
+                    (event.thumbnail.startsWith('/uploads') ? `http://localhost:5000${event.thumbnail}` : event.thumbnail) 
+                    : undefined}
                 >
+                  <source 
+                    src={event.video.startsWith('/uploads') ? `http://localhost:5000${event.video}` : event.video} 
+                    type="video/mp4" 
+                  />
                   Your browser does not support the video tag.
                 </video>
               </div>
-            ) : event.image ? (
+            ) : event.image && event.image.length > 0 ? (
               <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-neutral-500">
