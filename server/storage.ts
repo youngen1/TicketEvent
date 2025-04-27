@@ -209,30 +209,55 @@ export class MemStorage implements IStorage {
       },
       {
         id: this.nextEventId++,
-        title: "Budget-Friendly Coffee Tasting",
-        description: "Try various coffee blends from around the world for just R2. Perfect for coffee lovers on a budget!",
-        date: "2025-05-10",
-        time: "14:00",
-        location: "Cape Town, SA",
-        category: "Food & Drink",
-        image: "https://images.unsplash.com/photo-1509042239860-f0ca3bf6d889?auto=format&fit=crop&w=800&q=80",
+        title: "R2 Live Payment Test Event",
+        description: "A small test event that costs exactly R2 to test the live payment system",
+        date: "2025-05-01",
+        time: "18:00",
+        location: "Johannesburg",
+        category: "Testing",
+        image: "https://images.unsplash.com/photo-1556745753-b2904692b3cd?auto=format&fit=crop&w=800&q=80",
         images: JSON.stringify([
-          "https://images.unsplash.com/photo-1509042239860-f0ca3bf6d889?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80"
+          "https://images.unsplash.com/photo-1556745753-b2904692b3cd?auto=format&fit=crop&w=800&q=80"
         ]),
         userId: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
-        views: 42,
-        attendees: 8,
-        maxAttendees: 30,
+        views: 0,
+        attendees: 0,
+        maxAttendees: 100,
         featured: false,
         video: null,
-        tags: "coffee,tasting,budget,affordable",
+        tags: "test,payment,R2,budget",
         price: 2,
         isFree: false,
-        rating: 4.3,
-        ratingCount: 6
+        rating: 0,
+        ratingCount: 0
+      },
+      {
+        id: this.nextEventId++,
+        title: "R3 Live Payment Test Event",
+        description: "A test event that costs exactly R3 to test the live payment system",
+        date: "2025-05-10",
+        time: "18:00",
+        location: "Cape Town",
+        category: "Testing",
+        image: "https://images.unsplash.com/photo-1560439514-4e9645039924?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1560439514-4e9645039924?auto=format&fit=crop&w=800&q=80"
+        ]),
+        userId: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        views: 0,
+        attendees: 0,
+        maxAttendees: 100,
+        featured: false,
+        video: null,
+        tags: "test,payment,R3,live",
+        price: 3,
+        isFree: false,
+        rating: 0,
+        ratingCount: 0
       }
     ];
     
