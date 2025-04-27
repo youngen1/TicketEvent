@@ -45,9 +45,18 @@ export default function Home() {
     }
   }, [events, error, toast]);
 
-  const handleShowDetails = (event: Event) => {
+  const handleShowDetails = (event: Event, openFullscreen = false) => {
     setSelectedEvent(event);
     setIsDetailsModalOpen(true);
+    
+    // If openFullscreen is true, dispatch event after a short delay to ensure modal is open
+    if (openFullscreen) {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('openEventFullscreen', { 
+          detail: { eventId: event.id } 
+        }));
+      }, 300); // Short delay to ensure modal and images are loaded
+    }
   };
 
   // Apply filters for search and tab logic

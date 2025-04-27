@@ -15,9 +15,18 @@ export default function CalendarPage() {
     queryKey: ["/api/events"],
   });
 
-  const handleShowDetails = (event: Event) => {
+  const handleShowDetails = (event: Event, openFullscreen = false) => {
     setSelectedEvent(event);
     setIsDetailsModalOpen(true);
+    
+    // If openFullscreen is true, dispatch event after a short delay to ensure modal is open
+    if (openFullscreen) {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('openEventFullscreen', { 
+          detail: { eventId: event.id } 
+        }));
+      }, 300); // Short delay to ensure modal and images are loaded
+    }
   };
 
   // Filter events for the selected date

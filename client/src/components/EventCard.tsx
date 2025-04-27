@@ -7,16 +7,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface EventCardProps {
   event: Event;
-  onShowDetails: (event: Event) => void;
+  onShowDetails: (event: Event, openFullscreen?: boolean) => void;
 }
 
 export default function EventCard({ event, onShowDetails }: EventCardProps) {
   // Open the event details directly in fullscreen mode when clicking on the image
   const handleImageClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onShowDetails(event);
-    // We'll handle fullscreen mode directly in the main pages
-    window.dispatchEvent(new CustomEvent('openEventFullscreen', { detail: { eventId: event.id } }));
+    // Pass true as second argument to enable fullscreen mode
+    onShowDetails(event, true);
   };
   const queryClient = useQueryClient();
 
