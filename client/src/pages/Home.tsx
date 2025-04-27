@@ -40,7 +40,8 @@ const CATEGORIES = [
   "Conference",
   "Workshop",
   "Meetup",
-  "Party"
+  "Party",
+  "Testing"
 ];
 
 // Date filter options
