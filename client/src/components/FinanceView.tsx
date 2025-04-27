@@ -280,7 +280,7 @@ export default function FinanceView({ userId }: FinanceViewProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <Banknote className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
@@ -502,128 +502,162 @@ export default function FinanceView({ userId }: FinanceViewProps) {
         </CardContent>
       </Card>
 
-      {/* Withdrawal Request Dialog */}
-      <Dialog open={isWithdrawalDialogOpen} onOpenChange={setIsWithdrawalDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Request Withdrawal</DialogTitle>
-            <DialogDescription>
-              Enter your bank details to request a withdrawal of your available funds directly to your account.
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="0.00" 
-                        {...field} 
-                        type="number"
-                        step="0.01"
-                        min="50"
-                        max={(totalRevenue * 0.85).toString()}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Available: {formatCurrency(totalRevenue * 0.85)}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="bankName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bank Name</FormLabel>
-                    <FormControl>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select your bank" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[200px] overflow-y-auto">
-                          {isLoadingBanks ? (
-                            <div className="flex items-center justify-center py-2">
-                              <span className="animate-spin mr-2">○</span> Loading banks...
-                            </div>
-                          ) : banks.length > 0 ? (
-                            banks
-                              .sort((a: any, b: any) => a.name.localeCompare(b.name))
-                              .map((bank: any) => (
-                                <SelectItem key={bank.id} value={bank.name}>
-                                  {bank.name}
-                                </SelectItem>
-                              ))
-                          ) : (
-                            <div className="p-2 text-center text-muted-foreground">
-                              No banks available. Please try again later.
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="accountName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter account holder name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="accountNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter your account number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter className="mt-6">
-                <Button type="button" variant="outline" onClick={() => setIsWithdrawalDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={withdrawalMutation.isPending}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  {withdrawalMutation.isPending ? (
-                    <>
-                      <span className="animate-spin mr-2">○</span>
-                      Processing...
-                    </>
-                  ) : (
-                    "Request Withdrawal"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      {/* Withdrawal Request Full Page */}
+      {isWithdrawalDialogOpen && (
+        <div className="fixed inset-0 bg-background z-50 overflow-y-auto">
+          <div className="container mx-auto py-10 px-4 sm:px-6 max-w-4xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-3xl font-bold">Request Withdrawal</h2>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsWithdrawalDialogOpen(false)}
+                className="rounded-full"
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+            
+            <div className="bg-card rounded-lg border p-6 shadow-sm">
+              <p className="text-muted-foreground mb-8">
+                Enter your bank details to request a withdrawal of your available funds directly to your account.
+              </p>
+              
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                          <FormLabel className="text-lg">Amount</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="0.00" 
+                              {...field} 
+                              type="number"
+                              step="0.01"
+                              min="50"
+                              max={(totalRevenue * 0.85).toString()}
+                              className="text-lg h-12"
+                            />
+                          </FormControl>
+                          <FormDescription className="text-base">
+                            Minimum withdrawal amount is R50. Available: {formatCurrency(totalRevenue * 0.85)}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="bankName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-lg">Bank Name</FormLabel>
+                          <FormControl>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <SelectTrigger className="w-full h-12 text-base">
+                                <SelectValue placeholder="Select your bank" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-[300px] overflow-y-auto">
+                                {isLoadingBanks ? (
+                                  <div className="flex items-center justify-center py-2">
+                                    <span className="animate-spin mr-2">○</span> Loading banks...
+                                  </div>
+                                ) : banks.length > 0 ? (
+                                  banks
+                                    .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                                    .map((bank: any) => (
+                                      <SelectItem key={bank.id} value={bank.name} className="text-base">
+                                        {bank.name}
+                                      </SelectItem>
+                                    ))
+                                ) : (
+                                  <div className="p-2 text-center text-muted-foreground">
+                                    No banks available. Please try again later.
+                                  </div>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="accountName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-lg">Account Name</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Enter account holder name" 
+                              {...field} 
+                              className="h-12 text-base" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="accountNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-lg">Account Number</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Enter your account number" 
+                              {...field} 
+                              className="h-12 text-base"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-end space-x-4 pt-6 mt-8 border-t">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsWithdrawalDialogOpen(false)}
+                      className="h-12 px-6 text-base"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={withdrawalMutation.isPending}
+                      className="bg-primary hover:bg-primary/90 h-12 px-6 text-base"
+                    >
+                      {withdrawalMutation.isPending ? (
+                        <>
+                          <span className="animate-spin mr-2">○</span>
+                          Processing...
+                        </>
+                      ) : (
+                        "Request Withdrawal"
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
