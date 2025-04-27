@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { processVideo } from './utils/videoProcessor';
 
@@ -29,9 +30,27 @@ const upload = multer({
 
 export function registerUploadRoutes(app: Express) {
   // Serve static files from uploads directory
-  const uploadsPath = path.join(__dirname, '../uploads');
-  console.log('Setting up uploads directory at:', uploadsPath);
-  app.use('/uploads', express.static(uploadsPath));
+  const projectRoot = path.resolve(__dirname, '..');
+  const uploadsPath = path.join(projectRoot, 'uploads');
+  console.log('Setting up uploads directory for static serving at:', uploadsPath);
+  
+  try {
+    if (!fs.existsSync(uploadsPath)) {
+      fs.mkdirSync(uploadsPath, { recursive: true });
+      console.log('Created uploads directory');
+    }
+    
+    // Test write permissions
+    const testFile = path.join(uploadsPath, 'test-access.txt');
+    fs.writeFileSync(testFile, 'Testing write access');
+    console.log('Successfully wrote test file to uploads directory');
+    
+    // Use absolute path for static serving
+    app.use('/uploads', express.static(uploadsPath));
+    console.log('Static file serving configured for uploads directory');
+  } catch (error) {
+    console.error('Error setting up uploads directory:', error);
+  }
   
   app.post('/api/upload/video', upload.single('video'), async (req: Request, res: Response) => {
     try {

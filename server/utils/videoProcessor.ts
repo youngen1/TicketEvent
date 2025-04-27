@@ -8,13 +8,26 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../../uploads');
+const projectRoot = path.resolve(__dirname, '../..');
+const uploadsDir = path.join(projectRoot, 'uploads');
 const videosDir = path.join(uploadsDir, 'videos');
 const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
 
-fs.ensureDirSync(uploadsDir);
-fs.ensureDirSync(videosDir);
-fs.ensureDirSync(thumbnailsDir);
+console.log('Project root directory:', projectRoot);
+console.log('Uploads directory:', uploadsDir);
+console.log('Videos directory:', videosDir);
+console.log('Thumbnails directory:', thumbnailsDir);
+
+try {
+  fs.ensureDirSync(uploadsDir);
+  fs.ensureDirSync(videosDir);
+  fs.ensureDirSync(thumbnailsDir);
+  console.log('Successfully ensured all directories exist');
+  fs.writeFileSync(path.join(uploadsDir, 'test.txt'), 'This is a test file to verify write permissions');
+  console.log('Successfully wrote test file to uploads directory');
+} catch (error: any) {
+  console.error('Error ensuring directories exist:', error.message);
+}
 
 export interface VideoProcessingResult {
   videoPath: string;
