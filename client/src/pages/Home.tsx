@@ -4,18 +4,20 @@ import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
 import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, ArrowDownAZ } from "lucide-react";
+import { Search, Filter, ChevronRight, Calendar, MapPin, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "wouter";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentTab, setCurrentTab] = useState("upcoming");
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const eventsPerPage = 8;
+  const [currentTab, setCurrentTab] = useState("featured");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -24,13 +26,13 @@ export default function Home() {
     queryClient.invalidateQueries({ queryKey: ["/api/events"] });
   }, [queryClient]);
 
-  const { data, isLoading, error } = useQuery({
+  const { data: allEvents, isLoading, error } = useQuery({
     queryKey: ["/api/events"],
     staleTime: 0, // Always consider the data stale to force refetch
   });
 
   // Convert data to typed array
-  const events: Event[] = data as Event[] || [];
+  const events: Event[] = allEvents as Event[] || [];
   
   // Log for debugging
   useEffect(() => {
@@ -59,110 +61,67 @@ export default function Home() {
     }
   };
 
-  // Apply filters for search and tab logic
-  const filteredEvents = events
-    .filter((event) => {    
-      const matchesSearch = !searchQuery 
-        ? true
-        : (event.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           event.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           event.location?.toLowerCase().includes(searchQuery.toLowerCase()));
-      
-      // Tab filters would go here in a real app
-      // For now, show all events regardless of tab
-      return matchesSearch;
-    })
-    // Sort by createdAt date (newest first)
-    .sort((a, b) => {
-      const dateA = new Date(a.createdAt || '');
-      const dateB = new Date(b.createdAt || '');
-      return dateB.getTime() - dateA.getTime();
-    });
-
-  // Calculate pagination
-  const indexOfLastEvent = currentPage * eventsPerPage;
-  const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
-  const currentEvents = filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent);
-  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
-
-  const renderPagination = () => {
-    if (filteredEvents.length === 0) return null;
+  // Filter events based on search query
+  const filteredEvents = events.filter((event) => {    
+    if (!searchQuery) return true;
     
+    const searchTerms = searchQuery.toLowerCase();
     return (
-      <div className="mt-10 flex items-center justify-between">
-        <div className="text-sm text-neutral-700">
-          Showing <span className="font-medium">{indexOfFirstEvent + 1}</span> to{" "}
-          <span className="font-medium">
-            {Math.min(indexOfLastEvent, filteredEvents.length)}
-          </span>{" "}
-          of <span className="font-medium">{filteredEvents.length}</span> results
-        </div>
-        <div className="flex items-center">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="mr-3"
-          >
-            Previous
-          </Button>
-          <div className="hidden md:flex">
-            {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-              const pageNum = i + 1;
-              return (
-                <Button
-                  key={pageNum}
-                  variant={currentPage === pageNum ? "default" : "outline"}
-                  className={`mr-2 ${
-                    currentPage === pageNum
-                      ? "bg-primary text-white"
-                      : "text-neutral-700"
-                  }`}
-                  onClick={() => setCurrentPage(pageNum)}
-                >
-                  {pageNum}
-                </Button>
-              );
-            })}
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages || totalPages === 0}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      (event.title?.toLowerCase().includes(searchTerms)) ||
+      (event.description?.toLowerCase().includes(searchTerms)) ||
+      (event.location?.toLowerCase().includes(searchTerms)) ||
+      (event.category?.toLowerCase().includes(searchTerms))
     );
+  });
+
+  // Get featured events
+  const featuredEvents = events.filter(event => event.featured);
+  
+  // Get upcoming events (events with dates in the future)
+  const today = new Date().toISOString().split('T')[0];
+  const upcomingEvents = events.filter(event => event.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Get events by category
+  const getEventsByCategory = (category: string) => {
+    return events.filter(event => event.category === category);
   };
 
-  const renderEventSkeletons = () => {
-    return Array.from({ length: 8 }).map((_, index) => (
-      <div key={index} className="bg-white overflow-hidden shadow-sm rounded-lg">
-        <Skeleton className="h-40 w-full" />
-        <div className="p-4">
-          <div className="flex items-center mb-2">
-            <Skeleton className="h-6 w-20 rounded-full" />
-            <Skeleton className="h-4 w-10 ml-auto" />
-          </div>
-          <Skeleton className="h-6 w-3/4 mb-1" />
-          <Skeleton className="h-12 w-full mb-3" />
-          <Skeleton className="h-4 w-1/2 mb-2" />
-          <Skeleton className="h-4 w-1/2 mb-3" />
-          <div className="mt-4 flex justify-between">
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-8 w-20" />
+  // Skeleton loaders
+  const renderFeaturedSkeleton = () => (
+    <div className="space-y-4">
+      <Skeleton className="h-8 w-64" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Skeleton className="h-[400px] rounded-xl" />
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-6 w-1/2" />
+          <Skeleton className="h-6 w-1/3" />
+          <div className="flex space-x-3 mt-4">
+            <Skeleton className="h-10 w-28" />
+            <Skeleton className="h-10 w-28" />
           </div>
         </div>
       </div>
-    ));
-  };
+    </div>
+  );
+
+  const renderCategorySkeleton = () => (
+    <div className="space-y-4">
+      <Skeleton className="h-7 w-48" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-[280px] rounded-lg" />
+        ))}
+      </div>
+    </div>
+  );
 
   // Show a message when no events are found
-  const renderEmptyState = () => {
+  const renderEmptyState = (message = "No events found") => {
     return (
-      <div className="col-span-full flex flex-col items-center justify-center py-16">
+      <div className="col-span-full flex flex-col items-center justify-center py-12">
         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-300">
           <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
           <line x1="16" x2="16" y1="2" y2="6" />
@@ -175,124 +134,252 @@ export default function Home() {
           <path d="M12 18h.01" />
           <path d="M16 18h.01" />
         </svg>
-        <h3 className="mt-4 text-lg font-medium text-neutral-900">No events found</h3>
+        <h3 className="mt-4 text-lg font-medium text-neutral-900">{message}</h3>
         <p className="mt-1 text-sm text-neutral-500">
           {searchQuery 
             ? "Try a different search term or clear your filters."
-            : "Create an event to get started."}
+            : "Check back later for upcoming events."}
         </p>
       </div>
     );
   };
 
-  return (
-    <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      {/* Header Section */}
-      <div className="px-4 py-6 sm:px-0">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold text-neutral-800 font-heading">Upcoming Events</h2>
-            <p className="mt-1 text-sm text-neutral-600">View and manage your upcoming events and activities</p>
+  // Function to render the featured event section
+  const renderFeaturedSection = () => {
+    if (isLoading) return renderFeaturedSkeleton();
+    if (featuredEvents.length === 0) return renderEmptyState("No featured events");
+
+    const featuredEvent = featuredEvents[0];
+    
+    return (
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold text-neutral-900">Featured Event</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white rounded-xl overflow-hidden shadow-sm">
+          <div className="aspect-video md:aspect-auto md:h-full overflow-hidden relative">
+            <img 
+              src={featuredEvent.image || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80'} 
+              alt={featuredEvent.title} 
+              className="object-cover w-full h-full" 
+            />
+            <div className="absolute top-4 left-4">
+              <Badge variant="outline" className="bg-black/50 text-white border-0 backdrop-blur-sm">
+                {featuredEvent.category}
+              </Badge>
+            </div>
           </div>
-          <div className="mt-4 md:mt-0 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Search events..."
-                className="w-full pl-10 pr-4 py-2"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-neutral-400" />
+          <div className="p-6 flex flex-col">
+            <div>
+              <h3 className="text-xl font-bold text-neutral-900 mb-2">{featuredEvent.title}</h3>
+              <p className="text-neutral-600 line-clamp-3 mb-4">{featuredEvent.description}</p>
+              
+              <div className="space-y-2 text-sm text-neutral-500 mb-4">
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-2 text-neutral-400" />
+                  <span>{new Date(featuredEvent.date).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}</span>
+                  {featuredEvent.time && <span className="ml-1">at {featuredEvent.time}</span>}
+                </div>
+                
+                {featuredEvent.location && (
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-2 text-neutral-400" />
+                    <span>{featuredEvent.location}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center">
+                  <Users className="h-4 w-4 mr-2 text-neutral-400" />
+                  <span>
+                    {featuredEvent.attendees || 0} attending
+                    {featuredEvent.maxAttendees && 
+                      ` · ${featuredEvent.maxAttendees - (featuredEvent.attendees || 0)} spots left`
+                    }
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="inline-flex rounded-md shadow-sm">
+            
+            <div className="mt-auto flex flex-wrap gap-3">
               <Button 
-                variant="outline" 
-                className="inline-flex items-center"
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/events"] })}
+                variant="default"
+                onClick={() => handleShowDetails(featuredEvent)}
+                className="flex-1 sm:flex-none"
               >
-                <Filter className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <Button variant="outline" className="ml-2 inline-flex items-center">
-                <ArrowDownAZ className="h-4 w-4 mr-2" />
-                Sort
+                View Details
               </Button>
             </div>
           </div>
         </div>
       </div>
+    );
+  };
 
-      {/* Event Tabs */}
-      <div className="px-4 sm:px-0 mb-6">
-        <div className="border-b border-neutral-200">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                currentTab === "upcoming"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
-              }`}
-              onClick={() => setCurrentTab("upcoming")}
-            >
-              Upcoming
-            </button>
-            <button
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                currentTab === "past"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
-              }`}
-              onClick={() => setCurrentTab("past")}
-            >
-              Past
-            </button>
-            <button
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                currentTab === "myEvents"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
-              }`}
-              onClick={() => setCurrentTab("myEvents")}
-            >
-              My Events
-            </button>
-            <button
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                currentTab === "favorites"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
-              }`}
-              onClick={() => setCurrentTab("favorites")}
-            >
-              Favorites
-            </button>
-          </nav>
+  // Render events categorized by their categories
+  const renderCategorizedEvents = () => {
+    if (isLoading) {
+      return (
+        <div className="space-y-12">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="mb-8">
+              {renderCategorySkeleton()}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Get unique categories
+    const categories = [...new Set(events.map(event => event.category))].filter(Boolean);
+    
+    if (categories.length === 0) return null;
+    
+    return (
+      <div className="space-y-12 mt-8">
+        {categories.map(category => {
+          const categoryEvents = getEventsByCategory(category || '');
+          if (!categoryEvents.length) return null;
+          
+          return (
+            <div key={category} className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-neutral-900">{category} Events</h2>
+                <Button variant="ghost" size="sm" className="text-primary hover:text-primary-dark">
+                  <Link href={`/events?category=${category}`} className="flex items-center">
+                    View All <ChevronRight className="h-4 w-4 ml-1" />
+                  </Link>
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {categoryEvents.slice(0, 4).map(event => (
+                  <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    onShowDetails={handleShowDetails} 
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Render calendar section with upcoming events
+  const renderUpcomingEvents = () => {
+    if (isLoading) return renderCategorySkeleton();
+    if (upcomingEvents.length === 0) return renderEmptyState("No upcoming events");
+    
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-neutral-900">Upcoming Events</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {upcomingEvents.slice(0, 8).map(event => (
+            <EventCard 
+              key={event.id} 
+              event={event} 
+              onShowDetails={handleShowDetails} 
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-primary-50 to-blue-50 rounded-xl p-8 mb-8">
+        <div className="max-w-3xl">
+          <h1 className="text-4xl font-extrabold text-neutral-900 tracking-tight mb-4">
+            Discover Amazing Events Near You
+          </h1>
+          <p className="text-lg text-neutral-700 mb-6">
+            Browse and join the best events in your area. From tech conferences to music festivals,
+            find something for everyone.
+          </p>
+          <div className="relative max-w-xl">
+            <Input
+              type="text"
+              placeholder="Search for events..."
+              className="w-full pl-12 pr-4 py-3 text-lg shadow-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-neutral-400" />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Events Grid */}
-      <div className="px-4 sm:px-0">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {isLoading ? (
-            renderEventSkeletons()
-          ) : filteredEvents.length === 0 ? (
-            renderEmptyState()
-          ) : (
-            currentEvents.map((event) => (
-              <EventCard 
-                key={event.id} 
-                event={event} 
-                onShowDetails={handleShowDetails} 
-              />
-            ))
-          )}
-        </div>
-
-        {!isLoading && filteredEvents.length > 0 && renderPagination()}
-      </div>
+      {/* Main Content with Tabs */}
+      <Tabs 
+        defaultValue="featured" 
+        className="space-y-6"
+        value={currentTab}
+        onValueChange={setCurrentTab}
+      >
+        <TabsList className="bg-transparent border-b border-neutral-200 w-full justify-start mb-6 p-0 h-auto">
+          <TabsTrigger 
+            value="featured" 
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary px-4 py-2"
+          >
+            Featured
+          </TabsTrigger>
+          <TabsTrigger 
+            value="upcoming" 
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary px-4 py-2"
+          >
+            Upcoming
+          </TabsTrigger>
+          <TabsTrigger 
+            value="categories" 
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary px-4 py-2"
+          >
+            Categories
+          </TabsTrigger>
+        </TabsList>
+        
+        {searchQuery ? (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-neutral-900 mb-4">Search Results</h2>
+            {filteredEvents.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredEvents.map(event => (
+                  <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    onShowDetails={handleShowDetails} 
+                  />
+                ))}
+              </div>
+            ) : (
+              renderEmptyState(`No results found for "${searchQuery}"`)
+            )}
+          </div>
+        ) : (
+          <>
+            <TabsContent value="featured" className="p-0 m-0">
+              {renderFeaturedSection()}
+              {renderUpcomingEvents()}
+            </TabsContent>
+            
+            <TabsContent value="upcoming" className="p-0 m-0">
+              {renderUpcomingEvents()}
+            </TabsContent>
+            
+            <TabsContent value="categories" className="p-0 m-0">
+              {renderCategorizedEvents()}
+            </TabsContent>
+          </>
+        )}
+      </Tabs>
 
       {/* Event Details Modal */}
       <EventDetailsModal
