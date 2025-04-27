@@ -16,29 +16,35 @@ export default function PaymentSuccessPage() {
       try {
         setIsLoading(true);
         
-        // Get reference from URL query params
-        const urlParams = new URLSearchParams(window.location.search);
-        const reference = urlParams.get('reference');
+        // For test tickets, we don't have a reference in the URL
+        // Get latest user ticket instead
         
-        if (!reference) {
-          throw new Error('Payment reference not found');
+        // First get user tickets
+        const ticketsResponse = await apiRequest('GET', '/api/users/tickets');
+        const tickets = await ticketsResponse.json();
+        
+        if (tickets && tickets.length > 0) {
+          // Get the latest ticket (assume it's the most recently created one)
+          const latestTicket = tickets.sort((a: any, b: any) => {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          })[0];
+          
+          console.log('Found latest user ticket:', latestTicket);
+          
+          // Create transaction details from ticket
+          setTransactionDetails({
+            reference: latestTicket.paymentReference,
+            amount: latestTicket.totalAmount * 100, // Convert to cents for display
+            status: latestTicket.paymentStatus,
+            paidAt: latestTicket.purchaseDate || latestTicket.createdAt,
+            testPayment: latestTicket.paymentReference.includes('-test')
+          });
+        } else {
+          throw new Error('No tickets found');
         }
-        
-        console.log('Verifying payment with reference:', reference);
-        
-        // Always verify real payments with backend
-        const response = await apiRequest('GET', `/api/payments/verify/${reference}`);
-        const data = await response.json();
-        
-        if (!data.success) {
-          throw new Error('Payment verification failed');
-        }
-        
-        console.log('Payment verified successfully:', data.data);
-        setTransactionDetails(data.data);
       } catch (err: any) {
-        console.error('Error verifying payment:', err);
-        setError(err.message || 'An error occurred while verifying your payment');
+        console.error('Error retrieving ticket details:', err);
+        setError('We could not find your ticket. Please check your profile page.');
       } finally {
         setIsLoading(false);
       }
@@ -117,7 +123,11 @@ export default function PaymentSuccessPage() {
                 </dd>
               </div>
               
-              {/* All transactions are now real Paystack payments */}
+              {transactionDetails.testPayment && (
+                <div className="mt-4 p-2 bg-yellow-50 rounded text-sm text-yellow-700">
+                  This is a temporary test ticket while we fix the Paystack integration.
+                </div>
+              )}
             </dl>
           </div>
         )}
