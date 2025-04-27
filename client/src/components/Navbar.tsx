@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, User, Plus, LogIn, LogOut, Heart, Bell, Calendar, CreditCard, Lock } from "lucide-react";
+import { Menu, X, User, Plus, LogIn, LogOut, Heart, Bell, Calendar, CreditCard, Lock, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -128,6 +128,13 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
                         <Lock className="h-4 w-4 mr-2" /> Change Password
                       </Link>
                     </DropdownMenuItem>
+                    {user?.isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="w-full">
+                          <ShieldCheck className="h-4 w-4 mr-2" /> Admin Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout} className="text-red-600 w-full">
                       <LogOut className="h-4 w-4 mr-2" /> Log out
@@ -251,6 +258,17 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
                   <Lock className="h-4 w-4 mr-2" /> Change Password
                 </div>
               </Link>
+              {user?.isAdmin && (
+                <Link 
+                  href="/admin" 
+                  className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <div className="flex items-center">
+                    <ShieldCheck className="h-4 w-4 mr-2" /> Admin Dashboard
+                  </div>
+                </Link>
+              )}
               <button 
                 className="block w-full text-left px-4 py-2 text-base font-medium text-red-600 hover:bg-neutral-100"
                 onClick={logout}

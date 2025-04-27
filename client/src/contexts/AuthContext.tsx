@@ -12,6 +12,10 @@ interface User {
   bio: string | null;
   avatar: string | null;
   preferences: string | null;
+  isAdmin: boolean | null;
+  followersCount: number | null;
+  followingCount: number | null;
+  platformBalance: string | null;
 }
 
 interface AuthContextType {

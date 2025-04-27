@@ -38,6 +38,7 @@ function Router() {
       <Route path="/payment/success" component={PaymentSuccessPage} />
       <Route path="/payment/settings" component={PaymentSettingsPage} />
       <Route path="/finance" component={FinancePage} />
+      <Route path="/admin" component={AdminPage} />
       <Route component={NotFound} />
     </Switch>
   );

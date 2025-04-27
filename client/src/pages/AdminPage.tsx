@@ -1,214 +1,287 @@
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
-  Banknote, 
-  Users, 
-  LineChart, 
-  ShieldCheck,
-  ArrowUpDown,
-  Calendar
-} from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
-import { User, EventTicket } from '@shared/schema';
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { Redirect } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { formatCurrency } from "@/lib/utils";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Loader2, Users, Calendar, Ticket, Database, TrendingUp, CircleDollarSign } from "lucide-react";
+
+interface AdminStats {
+  totalUsers: number;
+  totalEvents: number;
+  totalTicketsSold: number;
+  totalRevenue: number;
+  platformBalance: number;
+}
+
+interface Transaction {
+  id: number;
+  eventId: number;
+  userId: number;
+  quantity: number;
+  totalAmount: number;
+  paymentStatus: string;
+  paymentReference: string;
+  purchaseDate: string;
+  createdAt: string;
+}
 
 export default function AdminPage() {
+  const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
-  const [platformStats, setPlatformStats] = useState({
-    totalUsers: 0,
-    totalEvents: 0,
-    totalTicketsSold: 0,
-    totalRevenue: 0,
-    platformBalance: 0
+  
+  // Fetch admin stats
+  const { 
+    data: stats,
+    isLoading: isStatsLoading,
+    error: statsError,
+    refetch: refetchStats
+  } = useQuery<AdminStats>({
+    queryKey: ['/api/admin/stats'],
+    enabled: isAuthenticated && user?.isAdmin === true
   });
   
-  // Fetch admin data 
-  const { data: adminData, isLoading: isLoadingAdmin } = useQuery({
-    queryKey: ['/api/admin/stats'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/stats');
-      if (!response.ok) {
-        if (response.status === 401) {
-          toast({
-            title: "Access denied",
-            description: "You don't have admin privileges to view this page.",
-            variant: "destructive",
-          });
-          throw new Error("Unauthorized");
-        }
-        throw new Error('Failed to fetch admin data');
-      }
-      return response.json();
-    },
-    retry: false
-  });
-
-  // Fetch recent transactions
-  const { data: recentTransactions = [], isLoading: isLoadingTransactions } = useQuery<EventTicket[]>({
+  // Fetch admin transactions
+  const { 
+    data: transactions,
+    isLoading: isTransactionsLoading,
+    error: transactionsError,
+    refetch: refetchTransactions
+  } = useQuery<Transaction[]>({
     queryKey: ['/api/admin/transactions'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/transactions');
-      if (!response.ok) throw new Error('Failed to fetch transactions');
-      return response.json();
-    },
-    retry: false
+    enabled: isAuthenticated && user?.isAdmin === true
   });
-
-  useEffect(() => {
-    if (adminData) {
-      setPlatformStats({
-        totalUsers: adminData.totalUsers || 0,
-        totalEvents: adminData.totalEvents || 0,
-        totalTicketsSold: adminData.totalTicketsSold || 0,
-        totalRevenue: adminData.totalRevenue || 0,
-        platformBalance: adminData.platformBalance || 0
-      });
-    }
-  }, [adminData]);
-
-  if (isLoadingAdmin) {
+  
+  // Handle auth loading state
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
+  
+  // Redirect non-admin users
+  if (!isAuthenticated || user?.isAdmin !== true) {
+    toast({
+      title: "Access Denied",
+      description: "You don't have permission to view this page.",
+      variant: "destructive"
+    });
+    return <Redirect to="/" />;
+  }
 
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="text-primary h-6 w-6" />
-          <span className="text-lg font-medium">Platform Administration</span>
-        </div>
-      </div>
-
+    <div className="container mx-auto py-8 px-4 md:px-8">
+      <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+      
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Platform Balance</CardTitle>
-            <Banknote className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-medium flex items-center">
+              <Users className="h-5 w-5 mr-2 text-primary" />
+              Users
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(platformStats.platformBalance)}</div>
-            <p className="text-xs text-muted-foreground">
-              15% of all ticket sales
+            <p className="text-3xl font-bold">
+              {isStatsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                stats?.totalUsers || 0
+              )}
             </p>
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <LineChart className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-medium flex items-center">
+              <Calendar className="h-5 w-5 mr-2 text-primary" />
+              Events
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(platformStats.totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">
-              From all ticket sales
+            <p className="text-3xl font-bold">
+              {isStatsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                stats?.totalEvents || 0
+              )}
             </p>
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-medium flex items-center">
+              <Ticket className="h-5 w-5 mr-2 text-primary" />
+              Tickets Sold
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{platformStats.totalUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              Registered users
+            <p className="text-3xl font-bold">
+              {isStatsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                stats?.totalTicketsSold || 0
+              )}
             </p>
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Events</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-medium flex items-center">
+              <TrendingUp className="h-5 w-5 mr-2 text-primary" />
+              Total Revenue
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{platformStats.totalEvents}</div>
-            <p className="text-xs text-muted-foreground">
-              {platformStats.totalTicketsSold} tickets sold
+            <p className="text-3xl font-bold">
+              {isStatsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                formatCurrency(stats?.totalRevenue || 0)
+              )}
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-medium flex items-center">
+              <CircleDollarSign className="h-5 w-5 mr-2 text-primary" />
+              Platform Balance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">
+              {isStatsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                formatCurrency(stats?.platformBalance || 0)
+              )}
             </p>
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent transactions */}
-      <Card>
+      
+      {/* Recent Transactions */}
+      <Card className="mb-8">
         <CardHeader>
           <CardTitle>Recent Transactions</CardTitle>
           <CardDescription>
-            Recent ticket sales with platform fees
+            The most recent ticket purchases on the platform
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoadingTransactions ? (
+          {isTransactionsLoading ? (
             <div className="flex justify-center py-8">
-              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : recentTransactions.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Event</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Platform Fee</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentTransactions
-                  .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-                  .map(transaction => {
-                    const totalAmount = parseFloat(transaction.totalAmount?.toString() || "0");
-                    const platformFee = totalAmount * 0.15;
-                    
-                    return (
-                      <TableRow key={transaction.id}>
-                        <TableCell>{formatDate(new Date(transaction.createdAt || ''))}</TableCell>
-                        <TableCell className="font-medium">Event #{transaction.eventId}</TableCell>
-                        <TableCell>User #{transaction.userId}</TableCell>
-                        <TableCell>{formatCurrency(totalAmount)}</TableCell>
-                        <TableCell className="text-primary font-medium">
-                          {formatCurrency(platformFee)}
-                        </TableCell>
-                        <TableCell>
-                          <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            transaction.paymentStatus === 'completed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : transaction.paymentStatus === 'pending' 
-                              ? 'bg-yellow-100 text-yellow-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {transaction.paymentStatus}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
-            </Table>
+          ) : transactionsError ? (
+            <div className="text-center py-8 text-red-500">
+              Error loading transactions
+            </div>
+          ) : (transactions?.length || 0) === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No transactions found
+            </div>
           ) : (
-            <div className="text-center py-6">
-              <p className="text-muted-foreground">No transaction data available yet</p>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableCaption>A list of recent ticket purchases.</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Event</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Reference</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions?.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell className="font-medium">{transaction.id}</TableCell>
+                      <TableCell>{transaction.eventId}</TableCell>
+                      <TableCell>{transaction.userId}</TableCell>
+                      <TableCell>{transaction.quantity}</TableCell>
+                      <TableCell className="font-medium">{formatCurrency(transaction.totalAmount)}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          transaction.paymentStatus === 'completed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : transaction.paymentStatus === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {transaction.paymentStatus}
+                        </span>
+                      </TableCell>
+                      <TableCell>{new Date(transaction.purchaseDate).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-mono text-xs">{transaction.paymentReference.substring(0, 8)}...</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button variant="outline" onClick={() => {
+            refetchTransactions();
+            refetchStats();
+          }}>
+            Refresh Data
+          </Button>
+        </CardFooter>
+      </Card>
+      
+      {/* System Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle>System Management</CardTitle>
+          <CardDescription>
+            Administrative functions for platform management
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Button className="flex items-center" variant="outline">
+            <Database className="mr-2 h-4 w-4" />
+            Database Backup
+          </Button>
+          <Button className="flex items-center" variant="outline">
+            <Users className="mr-2 h-4 w-4" />
+            Manage Users
+          </Button>
+          <Button className="flex items-center" variant="outline">
+            <Calendar className="mr-2 h-4 w-4" />
+            Event Controls
+          </Button>
         </CardContent>
       </Card>
     </div>
