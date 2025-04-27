@@ -33,9 +33,8 @@ class PaystackService {
       throw new Error('PAYSTACK_SECRET_KEY is required for live payments but is missing');
     }
     
-    // Per Paystack-Node documentation, we need to pass environment as the second parameter
-    // Using 'production' to ensure live mode
-    this.paystack = new Paystack(secretKey, 'production');
+    // Fix: Paystack-Node doesn't actually support environment parameter in constructor
+    this.paystack = new Paystack(secretKey);
     
     // Log that we're using live mode
     console.log(`Paystack initialized in LIVE mode with correct environment settings.`);

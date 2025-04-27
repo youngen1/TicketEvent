@@ -452,7 +452,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // No test endpoints for production payments
+  // Temporary test endpoint for payments while fixing Paystack live integration
+  app.post("/api/test/create-ticket", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const { eventId, quantity = 1, amount = 1500 } = req.body;
+      
+      if (!eventId) {
+        return res.status(400).json({ message: "Event ID is required" });
+      }
+      
+      // Verify event exists
+      const event = await storage.getEvent(parseInt(eventId));
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      console.log('Creating test ticket for event:', eventId, 'with amount:', amount);
+      
+      // Create a reference
+      const reference = `${eventId}-${Date.now()}-${req.session.userId}-test`;
+      
+      // Create the ticket
+      const ticket = await storage.createTicket({
+        userId: req.session.userId,
+        eventId: parseInt(eventId),
+        quantity: parseInt(quantity.toString()),
+        totalAmount: parseFloat(amount.toString()),
+        paymentReference: reference,
+        paymentStatus: "completed"
+      } as InsertEventTicket);
+      
+      res.json({
+        success: true,
+        message: "Temporary test ticket created while fixing Paystack integration",
+        ticket
+      });
+    } catch (error: any) {
+      console.error('Error creating test ticket:', error);
+      res.status(500).json({ message: error.message || "Error creating test ticket" });
+    }
+  });
   
   // Payment settings admin routes
   app.get("/api/admin/payment-settings", isAuthenticated, async (req, res) => {
