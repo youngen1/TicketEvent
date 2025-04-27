@@ -32,6 +32,7 @@ function Router() {
       <Route path="/about" component={AboutPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/payment/success" component={PaymentSuccessPage} />
+      <Route path="/payment/settings" component={PaymentSettingsPage} />
       <Route component={NotFound} />
     </Switch>
   );

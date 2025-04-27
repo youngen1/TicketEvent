@@ -119,6 +119,11 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
+                      <Link href="/payment/settings" className="w-full">
+                        <CreditCard className="h-4 w-4 mr-2" /> Payment Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
                       <Link href="/change-password" className="w-full">
                         <Lock className="h-4 w-4 mr-2" /> Change Password
                       </Link>
@@ -226,6 +231,15 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
               >
                 <div className="flex items-center">
                   <CreditCard className="h-4 w-4 mr-2" /> Finance
+                </div>
+              </Link>
+              <Link 
+                href="/payment/settings" 
+                className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <div className="flex items-center">
+                  <CreditCard className="h-4 w-4 mr-2" /> Payment Settings
                 </div>
               </Link>
               <Link 

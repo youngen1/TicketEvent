@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Event } from "@shared/schema";
 import { 
   Heart, Calendar, MapPin, Users, X, ChevronLeft, ChevronRight, 
-  Maximize, ArrowLeft, ArrowRight, MessageSquare, Star, Clock
+  Maximize, ArrowLeft, ArrowRight, MessageSquare, Star, Clock,
+  CreditCard
 } from "lucide-react";
 import {
   Dialog,
@@ -21,6 +22,7 @@ import CommentSection from "./CommentSection";
 import EventRating from "./EventRating";
 import EventAttendance from "./EventAttendance";
 import PaymentButton from "./PaymentButton";
+import PaystackPaymentButton from "./PaystackPaymentButton";
 
 interface EventDetailsModalProps {
   event: Event | null;
