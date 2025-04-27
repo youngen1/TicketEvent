@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Event } from "@shared/schema";
 import { 
   Heart, Calendar, MapPin, Users, X, ChevronLeft, ChevronRight, 
-  Maximize, ArrowLeft, ArrowRight 
+  Maximize, ArrowLeft, ArrowRight, MessageSquare, Star, Clock
 } from "lucide-react";
 import {
   Dialog,
@@ -12,8 +12,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import CommentSection from "./CommentSection";
+import EventRating from "./EventRating";
+import EventAttendance from "./EventAttendance";
 
 interface EventDetailsModalProps {
   event: Event | null;
@@ -335,9 +341,9 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
             <div className="px-4 pt-5 pb-4 sm:p-6" id="event-details-description">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getCategoryStyles(event.category)}`}>
+                  <Badge className={`${getCategoryStyles(event.category)}`}>
                     {event.category}
-                  </span>
+                  </Badge>
                   <h3 className="mt-2 text-2xl font-bold text-neutral-900 font-heading">
                     {event.title}
                   </h3>
@@ -385,36 +391,64 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
               
               <div className="mt-6">
                 <h4 className="text-lg font-medium text-neutral-900 font-heading">About The Event</h4>
-                <p className="mt-2 text-neutral-600 whitespace-pre-line">
+                <p className="mt-2 text-neutral-600 whitespace-pre-line mobile-text">
                   {event.description}
                 </p>
               </div>
               
-              {scheduleItems.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="text-lg font-medium text-neutral-900 font-heading">Schedule</h4>
-                  <div className="mt-2 border-t border-neutral-200">
-                    {scheduleItems.map((item, index) => (
-                      <div key={index} className={`py-3 flex ${index > 0 ? 'border-t border-neutral-200' : ''}`}>
-                        <div className="text-sm font-medium text-neutral-500 w-24">{item.time}</div>
-                        <div>
-                          <h5 className="text-sm font-medium text-neutral-900">{item.title}</h5>
-                          {item.description && (
-                            <p className="text-sm text-neutral-600">{item.description}</p>
-                          )}
-                        </div>
+              <Separator className="my-6" />
+              
+              {/* Event interaction tabs */}
+              <Tabs defaultValue="details" className="w-full">
+                <TabsList className="w-full grid grid-cols-3 mb-6 responsive-padding">
+                  <TabsTrigger value="details" className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-2" /> Details
+                  </TabsTrigger>
+                  <TabsTrigger value="rsvp" className="flex items-center">
+                    <Users className="h-4 w-4 mr-2" /> RSVP
+                  </TabsTrigger>
+                  <TabsTrigger value="comments" className="flex items-center">
+                    <MessageSquare className="h-4 w-4 mr-2" /> Discussion
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="details" className="mt-0 space-y-6">
+                  {/* Event schedule */}
+                  {scheduleItems.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-medium text-neutral-900 font-heading">Schedule</h4>
+                      <div className="mt-2 border-t border-neutral-200">
+                        {scheduleItems.map((item, index) => (
+                          <div key={index} className={`py-3 flex ${index > 0 ? 'border-t border-neutral-200' : ''}`}>
+                            <div className="text-sm font-medium text-neutral-500 w-24">{item.time}</div>
+                            <div>
+                              <h5 className="text-sm font-medium text-neutral-900">{item.title}</h5>
+                              {item.description && (
+                                <p className="text-sm text-neutral-600">{item.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    </div>
+                  )}
+                  
+                  {/* Event rating component */}
+                  <EventRating eventId={event.id} />
+                </TabsContent>
+                
+                <TabsContent value="rsvp" className="mt-0">
+                  <EventAttendance event={event} />
+                </TabsContent>
+                
+                <TabsContent value="comments" className="mt-0">
+                  <CommentSection eventId={event.id} />
+                </TabsContent>
+              </Tabs>
             </div>
             <DialogFooter className="bg-neutral-50 px-4 py-3">
               <Button type="button" variant="outline" onClick={onClose}>
                 Close
-              </Button>
-              <Button className="bg-primary hover:bg-blue-700 text-white">
-                Register Now
               </Button>
             </DialogFooter>
           </div>
