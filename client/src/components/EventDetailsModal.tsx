@@ -6,6 +6,7 @@ import {
   CreditCard, Map
 } from "lucide-react";
 import GoogleMapComponent from "@/components/GoogleMapComponent";
+import FallbackMapComponent from "@/components/FallbackMapComponent";
 import {
   Dialog,
   DialogContent,
@@ -453,10 +454,18 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                   </div>
                 </div>
                 <div className="mt-2 rounded-lg overflow-hidden border border-neutral-200 h-48">
-                  <GoogleMapComponent 
-                    height="100%"
-                    address={event.location || ''}
-                  />
+                  {(window as any)._env?.USE_FALLBACK_MAP ? (
+                    <FallbackMapComponent 
+                      height="100%"
+                      address={event.location || ''}
+                      selectedEvent={event}
+                    />
+                  ) : (
+                    <GoogleMapComponent 
+                      height="100%"
+                      address={event.location || ''}
+                    />
+                  )}
                 </div>
               </div>
 
