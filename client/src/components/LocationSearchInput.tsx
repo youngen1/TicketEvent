@@ -19,22 +19,37 @@ export default function LocationSearchInput({
   const [isApiLoaded, setIsApiLoaded] = useState(false);
 
   useEffect(() => {
+    let handleScriptLoad: () => void;
+
+    // Function to initialize Google Places Autocomplete
+    const setupAutocomplete = () => {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        initializeAutocomplete();
+        setIsApiLoaded(true);
+      }
+    };
+
     // Check if the Google Maps API is already loaded
     if (window.google && window.google.maps && window.google.maps.places) {
-      initializeAutocomplete();
+      setupAutocomplete();
       return;
     }
 
     // Check if the script is already being loaded
-    const existingScript = document.getElementById('google-maps-script');
+    const existingScript = document.getElementById('google-maps-script') as HTMLScriptElement | null;
+    
     if (existingScript) {
       // If it's already loading, wait for it to finish
-      const handleScriptLoad = () => {
-        initializeAutocomplete();
-        existingScript.removeEventListener('load', handleScriptLoad);
+      handleScriptLoad = () => {
+        setupAutocomplete();
       };
+      
       existingScript.addEventListener('load', handleScriptLoad);
-      return;
+      return () => {
+        if (existingScript) {
+          existingScript.removeEventListener('load', handleScriptLoad);
+        }
+      };
     }
 
     // Load the script if it's not already loaded or loading
@@ -44,10 +59,11 @@ export default function LocationSearchInput({
     script.async = true;
     script.defer = true;
     
-    script.onload = () => {
-      setIsApiLoaded(true);
-      initializeAutocomplete();
+    handleScriptLoad = () => {
+      setupAutocomplete();
     };
+    
+    script.addEventListener('load', handleScriptLoad);
     
     script.onerror = () => {
       toast({
@@ -59,14 +75,11 @@ export default function LocationSearchInput({
     
     document.head.appendChild(script);
     
+    // Cleanup function
     return () => {
-      // Cleanup - remove event listeners but don't remove the script
-      // as other components might be using it
-      if (existingScript) {
-        existingScript.removeEventListener('load', initializeAutocomplete);
-      }
+      script.removeEventListener('load', handleScriptLoad);
     };
-  }, []);
+  }, [toast]);
 
   const initializeAutocomplete = () => {
     if (!inputRef.current) return;
