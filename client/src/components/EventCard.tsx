@@ -31,11 +31,22 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
   return (
     <Card className="bg-white overflow-hidden shadow-sm rounded-lg hover:shadow-md transition-shadow duration-300">
       <div className="h-40 bg-neutral-200 relative">
-        {event.image ? (
+        {event.thumbnail ? (
+          <div className="relative w-full h-full">
+            <img src={event.thumbnail} alt={event.title} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-black bg-opacity-50 rounded-full p-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        ) : event.image ? (
           <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-neutral-500">
-            No Image Available
+            No Media Available
           </div>
         )}
         <div className="absolute top-0 right-0 mt-2 mr-2">

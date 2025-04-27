@@ -23,6 +23,8 @@ export const events = pgTable("events", {
   location: text("location").notNull(),
   attendees: integer("attendees").default(0),
   image: text("image"),
+  video: text("video"),
+  thumbnail: text("thumbnail"),
   createdById: integer("created_by_id").references(() => users.id),
   isFavorite: boolean("is_favorite").default(false),
   schedule: text("schedule"),
@@ -37,6 +39,8 @@ export const insertEventSchema = createInsertSchema(events).pick({
   time: true,
   location: true,
   image: true,
+  video: true, 
+  thumbnail: true,
   schedule: true,
   createdById: true,
 });
@@ -49,11 +53,7 @@ export type Event = typeof events.$inferSelect;
 
 // Session table for express-session
 export const session = pgTable("session", {
-  sid: varchar("sid").notNull(),
+  sid: varchar("sid").primaryKey(),
   sess: text("sess").notNull(),
   expire: timestamp("expire", { mode: 'date' }).notNull(),
-}, (table) => {
-  return {
-    pk: primaryKey({ columns: [table.sid] }),
-  }
 });

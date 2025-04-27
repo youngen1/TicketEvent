@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage, DatabaseStorage } from "./storage";
 import { db } from "./db";
+import { registerUploadRoutes } from "./uploads";
 
 const app = express();
 app.use(express.json());
@@ -85,6 +86,7 @@ const initDatabase = async () => {
     await initDatabase();
     
     const server = await registerRoutes(app);
+    registerUploadRoutes(app);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;

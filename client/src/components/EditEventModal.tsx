@@ -52,6 +52,10 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [isVideoProcessing, setIsVideoProcessing] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -63,6 +67,8 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
       time: "",
       location: "",
       image: "",
+      video: "",
+      thumbnail: "",
       schedule: "",
     },
   });
@@ -134,7 +140,7 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg font-medium text-neutral-900 font-heading">
             Edit Event
