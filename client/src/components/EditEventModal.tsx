@@ -85,6 +85,8 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
         time: event.time,
         location: event.location,
         image: event.image || "",
+        video: event.video || "",
+        thumbnail: event.thumbnail || "",
         schedule: event.schedule || "",
       });
       
@@ -92,6 +94,12 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
         setImagePreview(event.image);
       } else {
         setImagePreview(null);
+      }
+
+      if (event.thumbnail) {
+        setVideoPreview(event.thumbnail);
+      } else {
+        setVideoPreview(null);
       }
     }
   }, [event, form]);
@@ -109,6 +117,10 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
         description: "Your event has been updated successfully.",
       });
       onClose();
+      setVideoPreview(null);
+      setVideoFile(null);
+      setIsVideoProcessing(false);
+      setVideoError(null);
     },
     onError: (error) => {
       toast({
@@ -121,6 +133,71 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
 
   const onSubmit = (data: FormValues) => {
     updateEventMutation.mutate(data);
+  };
+
+  // Upload video to the server
+  const uploadVideoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('video', file);
+      
+      const response = await fetch('/api/upload/video', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to upload video');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Set the video and thumbnail URLs
+      form.setValue('video', data.videoPath);
+      form.setValue('thumbnail', data.thumbnailPath);
+      setVideoPreview(data.thumbnailPath);
+      setIsVideoProcessing(false);
+      
+      toast({
+        title: 'Video uploaded',
+        description: 'Your video has been uploaded and processed successfully.',
+      });
+    },
+    onError: (error: any) => {
+      setIsVideoProcessing(false);
+      setVideoError(error.message || 'Failed to upload video');
+      
+      toast({
+        title: 'Upload failed',
+        description: error.message || 'Failed to upload video. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check if file is a video
+    if (!file.type.startsWith('video/')) {
+      toast({
+        title: 'Invalid file',
+        description: 'Please select a video file.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Reset previous video states
+    setVideoError(null);
+    setVideoFile(file);
+    setIsVideoProcessing(true);
+    
+    // Upload the video
+    uploadVideoMutation.mutate(file);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,6 +222,9 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
           <DialogTitle className="text-lg font-medium text-neutral-900 font-heading">
             Edit Event
           </DialogTitle>
+          <p className="text-sm text-neutral-500 mt-2">
+            Uploading a new video will replace any existing video for this event.
+          </p>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -247,32 +327,45 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
             />
 
             <div>
-              <FormLabel className="block text-sm font-medium text-neutral-700">Event Image</FormLabel>
+              <FormLabel className="block text-sm font-medium text-neutral-700">Event Video</FormLabel>
               <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-neutral-300 border-dashed rounded-md">
                 <div className="space-y-1 text-center">
-                  {imagePreview ? (
+                  {videoPreview ? (
                     <div className="mb-4">
-                      <img src={imagePreview} alt="Preview" className="h-32 mx-auto rounded" />
+                      <img src={videoPreview} alt="Video Thumbnail" className="h-32 mx-auto rounded" />
                     </div>
                   ) : (
-                    <Image className="h-12 w-12 mx-auto text-neutral-400" />
+                    <div className="flex-shrink-0 h-12 w-12 flex items-center justify-center mx-auto text-neutral-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-video">
+                        <path d="m22 8-6 4 6 4V8Z"/>
+                        <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+                      </svg>
+                    </div>
                   )}
+                  
+                  {videoError && (
+                    <div className="mt-2 text-sm text-red-600">
+                      {videoError}
+                    </div>
+                  )}
+                  
                   <div className="flex text-sm text-neutral-600 justify-center">
-                    <label htmlFor="event-image-edit" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-blue-500">
-                      <span>Upload a file</span>
+                    <label htmlFor="event-video-edit" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-blue-500">
+                      <span>{isVideoProcessing ? "Processing..." : "Upload a video"}</span>
                       <input
-                        id="event-image-edit"
-                        name="event-image-edit"
+                        id="event-video-edit"
+                        name="event-video-edit"
                         type="file"
                         className="sr-only"
-                        accept="image/*"
-                        onChange={handleImageChange}
+                        accept="video/*"
+                        onChange={handleVideoChange}
+                        disabled={isVideoProcessing}
                       />
                     </label>
                     <p className="pl-1">or drag and drop</p>
                   </div>
                   <p className="text-xs text-neutral-500">
-                    PNG, JPG, GIF up to 10MB
+                    MP4, MOV, WebM up to 50MB (max duration: 1:30)
                   </p>
                 </div>
               </div>
