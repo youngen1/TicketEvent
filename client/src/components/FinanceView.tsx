@@ -1,323 +1,204 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  Tabs, TabsContent, TabsList, TabsTrigger 
-} from '@/components/ui/tabs';
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { 
-  CreditCard, DollarSign, RefreshCw, TrendingUp, 
-  BarChart2, Calendar, Clock, ArrowUp, ArrowDown 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  ChevronDown, 
+  Download, 
+  Banknote, 
+  ArrowUpRight, 
+  Clock,
+  CreditCard,
+  DollarSign,
+  Users,
+  LineChart
 } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import { apiRequest } from '@/lib/queryClient';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { Event, EventTicket } from '@shared/schema';
 
 interface FinanceViewProps {
   userId: number;
 }
 
-interface FinanceStats {
-  totalRevenue: number;
-  pendingPayouts: number;
-  completedPayouts: number;
-  ticketsSold: number;
-  events: {
-    id: number;
-    title: string;
-    date: string;
-    revenue: number;
-    ticketsSold: number;
-  }[];
-  recentTransactions: {
-    id: number;
-    date: string;
-    amount: number;
-    type: 'payout' | 'sale';
-    status: 'completed' | 'pending' | 'failed';
-    description: string;
-  }[];
-}
-
 export default function FinanceView({ userId }: FinanceViewProps) {
-  const { toast } = useToast();
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [viewPeriod, setViewPeriod] = useState<'all' | 'month' | 'week'>('all');
+  const [period, setPeriod] = useState('all'); // 'all', 'month', 'week'
 
-  // Fetch finance data
-  const { data: financeData, isLoading } = useQuery({
-    queryKey: [`/api/users/${userId}/finance`, viewPeriod, refreshKey],
+  // Fetch user's events
+  const { data: userEvents = [] } = useQuery<Event[]>({
+    queryKey: ['/api/users', userId, 'events'],
     queryFn: async () => {
-      try {
-        // Simulating API call for now
-        // In production, this would be a real API call to the backend
-        // const response = await apiRequest('GET', `/api/users/${userId}/finance?period=${viewPeriod}`);
-        // return response.json();
-        
-        // For now, calculate finance data from tickets
-        const ticketsResponse = await apiRequest('GET', '/api/users/tickets');
-        const tickets = await ticketsResponse.json();
-        
-        const eventsResponse = await apiRequest('GET', `/api/users/${userId}/events`);
-        const events = await eventsResponse.json();
-        
-        // Calculate finance stats
-        const stats: FinanceStats = {
-          totalRevenue: 0,
-          pendingPayouts: 0,
-          completedPayouts: 0,
-          ticketsSold: 0,
-          events: [],
-          recentTransactions: []
-        };
-        
-        // Process event tickets
-        const eventTicketMap = new Map();
-        
-        // Only count completed tickets
-        const completedTickets = tickets.filter((ticket: any) => 
-          ticket.paymentStatus === 'completed' && events.some((e: any) => e.id === ticket.eventId)
-        );
-        
-        completedTickets.forEach((ticket: any) => {
-          const eventId = ticket.eventId;
-          stats.totalRevenue += ticket.totalAmount;
-          stats.ticketsSold += ticket.quantity || 1;
-          
-          // Track per-event metrics
-          if (!eventTicketMap.has(eventId)) {
-            const event = events.find((e: any) => e.id === eventId);
-            if (event) {
-              eventTicketMap.set(eventId, {
-                id: eventId,
-                title: event.title,
-                date: event.date,
-                revenue: 0,
-                ticketsSold: 0
-              });
-            }
-          }
-          
-          if (eventTicketMap.has(eventId)) {
-            const eventStats = eventTicketMap.get(eventId);
-            eventStats.revenue += ticket.totalAmount;
-            eventStats.ticketsSold += ticket.quantity || 1;
-            eventTicketMap.set(eventId, eventStats);
-          }
-          
-          // Add to transactions
-          stats.recentTransactions.push({
-            id: ticket.id,
-            date: ticket.purchaseDate || ticket.createdAt,
-            amount: ticket.totalAmount,
-            type: 'sale',
-            status: 'completed',
-            description: `Ticket sale for ${ticket.event?.title || 'Unknown Event'}`
-          });
-        });
-        
-        // Sort transactions by date (newest first)
-        stats.recentTransactions.sort((a, b) => 
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
-        
-        // Set events data
-        stats.events = Array.from(eventTicketMap.values());
-        
-        // Simulate pending payouts as 20% of revenue not yet paid out
-        stats.pendingPayouts = Math.round(stats.totalRevenue * 0.2 * 100) / 100;
-        stats.completedPayouts = Math.round((stats.totalRevenue - stats.pendingPayouts) * 100) / 100;
-        
-        return stats;
-      } catch (error) {
-        console.error('Error fetching finance data:', error);
-        toast({
-          title: 'Failed to load financial data',
-          description: 'Please try again later.',
-          variant: 'destructive'
-        });
-        return null;
-      }
+      const response = await fetch(`/api/users/${userId}/events`);
+      if (!response.ok) throw new Error('Failed to fetch events');
+      return response.json();
     }
   });
 
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
-    toast({
-      title: 'Refreshing financial data',
-      description: 'Your financial overview is being updated.',
-    });
+  // Fetch all sold tickets
+  const { data: userTickets = [] } = useQuery<EventTicket[]>({
+    queryKey: ['/api/users/tickets'],
+    queryFn: async () => {
+      const response = await fetch('/api/users/tickets');
+      if (!response.ok) throw new Error('Failed to fetch tickets');
+      return response.json();
+    }
+  });
+
+  // Filter completed tickets
+  const completedTickets = userTickets.filter(ticket => 
+    ticket.status === 'completed' && 
+    userEvents.some(event => event.id === ticket.eventId)
+  );
+
+  // Filter based on period
+  const getPeriodDate = () => {
+    const now = new Date();
+    if (period === 'week') {
+      const weekAgo = new Date();
+      weekAgo.setDate(now.getDate() - 7);
+      return weekAgo;
+    } else if (period === 'month') {
+      const monthAgo = new Date();
+      monthAgo.setMonth(now.getMonth() - 1);
+      return monthAgo;
+    }
+    return new Date(0); // Beginning of time for 'all'
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
+  const periodDate = getPeriodDate();
+  
+  const filteredTickets = completedTickets.filter(ticket => {
+    if (period === 'all') return true;
+    const ticketDate = new Date(ticket.updatedAt || ticket.createdAt);
+    return ticketDate >= periodDate;
+  });
 
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
+  // Calculate revenue statistics
+  const totalRevenue = filteredTickets.reduce(
+    (sum, ticket) => sum + parseFloat(ticket.amount.toString() || '0'), 
+    0
+  );
+  
+  const ticketsByEvent = filteredTickets.reduce((acc, ticket) => {
+    const eventId = ticket.eventId;
+    if (!acc[eventId]) {
+      acc[eventId] = {
+        event: userEvents.find(e => e.id === eventId),
+        tickets: [],
+        revenue: 0
+      };
+    }
+    acc[eventId].tickets.push(ticket);
+    acc[eventId].revenue += parseFloat(ticket.amount.toString() || '0');
+    return acc;
+  }, {} as Record<number, { event: Event | undefined, tickets: EventTicket[], revenue: number }>);
 
-  // Format percentage change (dummy for now)
-  const getPercentageChange = () => {
-    return { value: 12.5, increase: true };
-  };
-
-  if (isLoading || !financeData) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex justify-center items-center min-h-[300px]">
-            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const eventRevenue = Object.values(ticketsByEvent)
+    .filter(item => item.event) // Filter out events that might not exist
+    .sort((a, b) => b.revenue - a.revenue); // Sort by revenue (highest first)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Financial Overview</h2>
-        <div className="flex items-center space-x-2">
-          <TabsList>
-            <TabsTrigger 
-              value="all" 
-              onClick={() => setViewPeriod('all')}
-              className={viewPeriod === 'all' ? 'bg-primary text-primary-foreground' : ''}
-            >
-              All Time
-            </TabsTrigger>
-            <TabsTrigger 
-              value="month" 
-              onClick={() => setViewPeriod('month')}
-              className={viewPeriod === 'month' ? 'bg-primary text-primary-foreground' : ''}
-            >
-              This Month
-            </TabsTrigger>
-            <TabsTrigger 
-              value="week" 
-              onClick={() => setViewPeriod('week')}
-              className={viewPeriod === 'week' ? 'bg-primary text-primary-foreground' : ''}
-            >
-              This Week
-            </TabsTrigger>
+      {/* Period selection */}
+      <div className="flex justify-end">
+        <Tabs value={period} onValueChange={setPeriod} className="w-[400px]">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="all">All Time</TabsTrigger>
+            <TabsTrigger value="month">This Month</TabsTrigger>
+            <TabsTrigger value="week">This Week</TabsTrigger>
           </TabsList>
-          <button 
-            onClick={handleRefresh}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            title="Refresh data"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-        </div>
+        </Tabs>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-purple-50 to-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Revenue
-            </CardTitle>
+      {/* Overview cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <DollarSign className="h-5 w-5 text-purple-500 mr-2" />
-                <div className="text-2xl font-bold">{formatCurrency(financeData.totalRevenue)}</div>
-              </div>
-              <div className="flex items-center text-xs">
-                {getPercentageChange().increase ? (
-                  <ArrowUp className="h-3 w-3 text-green-500 mr-1" />
-                ) : (
-                  <ArrowDown className="h-3 w-3 text-red-500 mr-1" />
-                )}
-                <span className={getPercentageChange().increase ? 'text-green-500' : 'text-red-500'}>
-                  {getPercentageChange().value}%
-                </span>
-              </div>
-            </div>
+            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground">
+              From {filteredTickets.length} ticket sales
+            </p>
           </CardContent>
         </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Available for Payout
-            </CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Available for Payout</CardTitle>
+            <Banknote className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <CreditCard className="h-5 w-5 text-green-500 mr-2" />
-                <div className="text-2xl font-bold">{formatCurrency(financeData.pendingPayouts)}</div>
-              </div>
-              <div>
-                <button className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                  Request Payout
-                </button>
-              </div>
-            </div>
+            <div className="text-2xl font-bold">{formatCurrency(totalRevenue * 0.85)}</div>
+            <p className="text-xs text-muted-foreground">
+              After platform fee (15%)
+            </p>
           </CardContent>
         </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Tickets Sold
-            </CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tickets Sold</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <BarChart2 className="h-5 w-5 text-blue-500 mr-2" />
-                <div className="text-2xl font-bold">{financeData.ticketsSold}</div>
-              </div>
-              <div className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                {financeData.events.length} Events
-              </div>
-            </div>
+            <div className="text-2xl font-bold">{filteredTickets.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {Object.keys(ticketsByEvent).length} active events
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Event revenue breakdown */}
+      {/* Revenue by event */}
       <Card>
         <CardHeader>
-          <CardTitle>Event Revenue</CardTitle>
+          <CardTitle>Revenue by Event</CardTitle>
           <CardDescription>
-            Breakdown of revenue by event
+            Breakdown of your event earnings
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {financeData.events.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground">
-              No revenue data available for your events.
-            </div>
+          {eventRevenue.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Tickets Sold</TableHead>
+                  <TableHead>Revenue</TableHead>
+                  <TableHead>After Fees</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {eventRevenue.map(({ event, tickets, revenue }) => (
+                  <TableRow key={event?.id}>
+                    <TableCell className="font-medium">{event?.title}</TableCell>
+                    <TableCell>{tickets.length}</TableCell>
+                    <TableCell>{formatCurrency(revenue)}</TableCell>
+                    <TableCell>{formatCurrency(revenue * 0.85)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
-            <div className="space-y-4">
-              {financeData.events.map((event) => (
-                <div key={event.id} className="flex items-center justify-between pb-4 border-b last:border-b-0">
-                  <div className="space-y-1">
-                    <div className="font-medium">{event.title}</div>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      <span>{formatDate(event.date)}</span>
-                      <span className="mx-2">•</span>
-                      <span>{event.ticketsSold} tickets sold</span>
-                    </div>
-                  </div>
-                  <div className="font-semibold">{formatCurrency(event.revenue)}</div>
-                </div>
-              ))}
+            <div className="text-center py-6">
+              <p className="text-muted-foreground">No revenue data available for this period</p>
             </div>
           )}
         </CardContent>
@@ -328,40 +209,76 @@ export default function FinanceView({ userId }: FinanceViewProps) {
         <CardHeader>
           <CardTitle>Recent Transactions</CardTitle>
           <CardDescription>
-            Your most recent financial transactions
+            Your most recent ticket sales
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {financeData.recentTransactions.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground">
-              No transaction data available yet.
-            </div>
+          {filteredTickets.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTickets
+                  .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                  .slice(0, 10) // Show only 10 most recent transactions
+                  .map(ticket => {
+                    const event = userEvents.find(e => e.id === ticket.eventId);
+                    return (
+                      <TableRow key={ticket.id}>
+                        <TableCell>{formatDate(new Date(ticket.createdAt || ''))}</TableCell>
+                        <TableCell className="font-medium">{event?.title}</TableCell>
+                        <TableCell>{ticket.userEmail}</TableCell>
+                        <TableCell>{formatCurrency(parseFloat(ticket.amount.toString() || '0'))}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <span className={
+                              ticket.status === 'completed' 
+                                ? 'text-green-500 flex items-center' 
+                                : 'text-amber-500 flex items-center'
+                            }>
+                              {ticket.status === 'completed' ? (
+                                <>
+                                  <ArrowUpRight className="mr-1 h-4 w-4" />
+                                  Paid
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="mr-1 h-4 w-4" />
+                                  Pending
+                                </>
+                              )}
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+            </Table>
           ) : (
-            <div className="space-y-4">
-              {financeData.recentTransactions.map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between pb-4 border-b last:border-b-0">
-                  <div className="space-y-1">
-                    <div className="font-medium">{transaction.description}</div>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3 mr-1" />
-                      <span>{formatDate(transaction.date)}</span>
-                      <span className="mx-2">•</span>
-                      <span className={`uppercase ${
-                        transaction.status === 'completed' ? 'text-green-600' : 
-                        transaction.status === 'pending' ? 'text-amber-600' : 'text-red-600'
-                      }`}>
-                        {transaction.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={`font-semibold ${transaction.type === 'sale' ? 'text-green-600' : 'text-blue-600'}`}>
-                    {transaction.type === 'sale' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                  </div>
-                </div>
-              ))}
+            <div className="text-center py-6">
+              <p className="text-muted-foreground">No transactions available for this period</p>
             </div>
           )}
         </CardContent>
+        <CardFooter className="justify-between border-t px-6 py-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {Math.min(filteredTickets.length, 10)} of {filteredTickets.length} transactions
+          </p>
+          {filteredTickets.length > 0 && (
+            <Button variant="outline" size="sm" className="ml-auto">
+              <Download className="mr-2 h-4 w-4" />
+              Download CSV
+            </Button>
+          )}
+        </CardFooter>
       </Card>
     </div>
   );

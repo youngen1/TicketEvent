@@ -14,6 +14,7 @@ import MapPage from "@/pages/MapPage";
 import FavoritesPage from "@/pages/FavoritesPage";
 import PaymentSuccessPage from "@/pages/PaymentSuccessPage";
 import PaymentSettingsPage from "@/pages/PaymentSettingsPage";
+import FinancePage from "@/pages/FinancePage";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useState } from "react";
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/users/:id" component={UserProfilePage} />
       <Route path="/payment/success" component={PaymentSuccessPage} />
       <Route path="/payment/settings" component={PaymentSettingsPage} />
+      <Route path="/finance" component={FinancePage} />
       <Route component={NotFound} />
     </Switch>
   );
