@@ -24,29 +24,20 @@ class PaystackService {
    * Initialize the Paystack API client with the appropriate key
    */
   private initialize() {
-    // Check for live or test mode
-    const isLiveMode = process.env.PAYSTACK_MODE === 'live';
+    // For R2 test event, always use live mode
+    process.env.PAYSTACK_MODE = 'live';
+    const isLiveMode = true;
     
-    // Use the appropriate key based on mode
-    let secretKey;
-    if (isLiveMode) {
-      secretKey = process.env.PAYSTACK_SECRET_KEY;
-      if (!secretKey) {
-        console.warn('Live mode is set but PAYSTACK_SECRET_KEY is missing. Falling back to test mode.');
-        secretKey = process.env.PAYSTACK_TEST_SECRET_KEY || 'sk_test_your_dummy_key_here';
-      }
-    } else {
-      secretKey = process.env.PAYSTACK_TEST_SECRET_KEY || process.env.PAYSTACK_SECRET_KEY || 'sk_test_your_dummy_key_here';
+    // Always use the live key for the R2 event
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    if (!secretKey) {
+      throw new Error('PAYSTACK_SECRET_KEY is required for live payments but is missing');
     }
     
     this.paystack = new Paystack(secretKey);
     
-    // Log the current mode
-    if (!secretKey || secretKey === 'sk_test_your_dummy_key_here') {
-      console.warn('Using a dummy PAYSTACK_SECRET_KEY for development. Payment functionality will be limited to testing flows.');
-    } else {
-      console.log(`Paystack initialized in ${isLiveMode ? 'LIVE' : 'TEST'} mode.`);
-    }
+    // Log that we're using live mode
+    console.log(`Paystack initialized in LIVE mode for real payment processing.`);
   }
   
   /**
@@ -62,22 +53,11 @@ class PaystackService {
    */
   async initializeTransaction(params: PaymentInitializeParams) {
     try {
-      // In development mode with dummy key, return mock data with a local success callback
-      const hasValidKey = process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_TEST_SECRET_KEY;
-      if (!hasValidKey) {
-        console.log('Using mock payment data for development (no valid API keys found)');
-        // Create a local callback URL that will show a payment successful page
-        const successUrl = new URL(params.callback_url || 'http://localhost:5000');
-        successUrl.searchParams.append('reference', params.reference || `mock-ref-${Date.now()}`);
-        successUrl.searchParams.append('amount', params.amount.toString());
-        successUrl.searchParams.append('mock', 'true');
-        
-        return {
-          authorization_url: successUrl.toString(),
-          access_code: 'mock_access_code',
-          reference: params.reference || `mock-ref-${Date.now()}`
-        };
-      }
+      console.log('Initializing Paystack transaction for R2 event:', {
+        email: params.email,
+        amount: params.amount,
+        reference: params.reference
+      });
       
       // Convert amount to kobo (Paystack uses the smallest currency unit)
       const amountInKobo = Math.round(params.amount * 100);
@@ -85,6 +65,7 @@ class PaystackService {
       // Convert metadata to JSON string if it exists (Paystack requires metadata as string)
       const metadataString = params.metadata ? JSON.stringify(params.metadata) : undefined;
       
+      // Using live Paystack API for all transactions
       const response = await this.paystack.initializeTransaction({
         email: params.email,
         amount: amountInKobo,
@@ -97,21 +78,14 @@ class PaystackService {
         throw new Error(response.body.message || 'Failed to initialize transaction');
       }
 
+      console.log('Paystack transaction initialization successful:', {
+        reference: response.body.data.reference,
+        authUrl: response.body.data.authorization_url
+      });
+
       return response.body.data;
     } catch (error: any) {
       console.error('Paystack initialize transaction error:', error);
-      
-      // For development, return mock data instead of failing
-      const hasValidKey = process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_TEST_SECRET_KEY;
-      if (!hasValidKey) {
-        console.log('Using mock payment data after error for development');
-        return {
-          authorization_url: `https://checkout.paystack.com/${params.reference || 'mock-reference'}`,
-          access_code: 'mock_access_code',
-          reference: params.reference || `mock-ref-${Date.now()}`
-        };
-      }
-      
       throw new Error(error.message || 'Could not initialize payment');
     }
   }

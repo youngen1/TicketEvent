@@ -78,26 +78,16 @@ export default function PaystackPaymentButton({
       }
       
       // Add clear logs for debugging
-      console.log('Sending payment request to server:', {
+      console.log('Sending LIVE payment request to server:', {
         amount: numericAmount,
         eventId
       });
       
-      // For very small amounts, let's use the test API endpoint
-      if (numericAmount <= 5) {
-        // Use test endpoint for very small amounts to ensure it works
-        console.log('Using test ticket endpoint for small amount:', numericAmount);
-        return apiRequest('POST', '/api/test/create-ticket', {
-          amount: numericAmount,
-          eventId
-        });
-      } else {
-        // Normal payment flow for larger amounts
-        return apiRequest('POST', '/api/payments/initialize', {
-          amount: numericAmount,
-          eventId
-        });
-      }
+      // Always use the real Paystack integration for all payments
+      return apiRequest('POST', '/api/payments/initialize', {
+        amount: numericAmount,
+        eventId
+      });
     },
     onSuccess: async (response) => {
       console.log('Payment initialization response:', response);
@@ -108,18 +98,13 @@ export default function PaystackPaymentButton({
         // Redirect to Paystack payment page
         toast({
           title: "Redirecting to Payment",
-          description: "You're being redirected to the secure payment page.",
+          description: "You're being redirected to the secure Paystack payment page.",
+          variant: "default"
         });
-        window.location.href = data.paymentUrl;
-      } else if (data.success && data.ticket) {
-        // Test ticket was created successfully
-        toast({
-          title: "Test Ticket Created",
-          description: "A test ticket has been created for this event.",
-        });
-        
-        // Redirect to success page manually since we're not using Paystack for this test
-        window.location.href = '/payment/success';
+        // Add a small delay before redirect to ensure toast shows
+        setTimeout(() => {
+          window.location.href = data.paymentUrl;
+        }, 1000);
       } else {
         toast({
           title: "Payment Error",
