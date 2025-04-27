@@ -182,18 +182,17 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           </span>
         </div>
         
-        {/* Creator profile avatar - with hard-coded fallback */}
+        {/* Creator profile circle with guaranteed visibility */}
         <div className="flex items-center mb-3">
-          <div 
-            className="cursor-pointer flex items-center" 
-            onClick={handleCreatorClick}
-          >
-            {/* Force a visible avatar using a service that generates avatars from initials */}
-            <img 
-              src={`https://ui-avatars.com/api/?name=${event.id}&background=random&color=fff&bold=true&size=32`}
-              alt="Creator"
-              className="h-6 w-6 mr-2 rounded-full border border-gray-200"
-            />
+          <div className="cursor-pointer flex items-center" onClick={handleCreatorClick}>
+            <div
+              className="h-6 w-6 mr-2 rounded-full flex items-center justify-center text-white text-xs font-bold"
+              style={{
+                backgroundColor: `hsl(${(event.id * 40) % 360}, 70%, 50%)`,
+              }}
+            >
+              {event.id}
+            </div>
             <span className="text-xs text-neutral-600">
               by {creator?.displayName || creator?.username || 'Event Creator'}
             </span>
