@@ -39,12 +39,16 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
   const [scheduleItems, setScheduleItems] = useState<{ time: string; title: string; description?: string }[]>([]);
   const imageRef = useRef<HTMLImageElement>(null);
 
+  // State for video display
+  const [showVideo, setShowVideo] = useState(false);
+
   // Parse event data and reset state when event changes
   useEffect(() => {
     if (!event) return;
     
     setActiveImageIndex(0);
     setIsFullscreen(false);
+    setShowVideo(false);
     
     // Parse images
     let images: string[] = [];
@@ -255,15 +259,26 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
           </DialogHeader>
           
           <div className="bg-white">
+            {/* Media Display Area */}
             <div 
               className="relative h-64 sm:h-80 w-full bg-neutral-200"
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-              onKeyDown={handleKeyDown}
+              onTouchStart={!showVideo ? onTouchStart : undefined}
+              onTouchMove={!showVideo ? onTouchMove : undefined}
+              onTouchEnd={!showVideo ? onTouchEnd : undefined}
+              onKeyDown={!showVideo ? handleKeyDown : undefined}
               tabIndex={0}
             >
-              {parsedImages.length > 0 ? (
+              {/* Video Player */}
+              {event.video && showVideo ? (
+                <div className="w-full h-full flex items-center justify-center bg-black">
+                  <video 
+                    src={event.video} 
+                    controls 
+                    className="max-h-full max-w-full"
+                    autoPlay 
+                  />
+                </div>
+              ) : parsedImages.length > 0 ? (
                 <>
                   <img 
                     src={getFullImageUrl(parsedImages[activeImageIndex])} 
@@ -272,6 +287,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                     onClick={toggleFullscreen}
                   />
                   
+                  {/* Fullscreen button */}
                   <button
                     className="absolute bottom-2 right-2 bg-black/40 text-white rounded-full p-1.5 hover:bg-black/60 z-10"
                     onClick={toggleFullscreen}
@@ -280,6 +296,22 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                     <Maximize size={18} />
                   </button>
                   
+                  {/* Video toggle button if video exists */}
+                  {event.video && (
+                    <button
+                      className="absolute bottom-2 left-2 bg-black/40 text-white rounded-full p-1.5 hover:bg-black/60 z-10 flex items-center"
+                      onClick={() => setShowVideo(true)}
+                      aria-label="Show video"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide-video">
+                        <path d="m22 8-6 4 6 4V8Z"/>
+                        <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+                      </svg>
+                      <span className="ml-1 text-xs">Play Video</span>
+                    </button>
+                  )}
+                  
+                  {/* Image navigation */}
                   {parsedImages.length > 1 && (
                     <>
                       <button 
@@ -315,6 +347,18 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                 <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-neutral-500">
                   No Media Available
                 </div>
+              )}
+
+              {/* Back to Image button when video is showing */}
+              {showVideo && event.video && (
+                <button
+                  className="absolute top-2 left-2 bg-black/40 text-white rounded-full p-1.5 hover:bg-black/60 z-10 flex items-center"
+                  onClick={() => setShowVideo(false)}
+                  aria-label="Back to images"
+                >
+                  <ChevronLeft size={18} />
+                  <span className="ml-1 text-xs">Back to Images</span>
+                </button>
               )}
             </div>
 
