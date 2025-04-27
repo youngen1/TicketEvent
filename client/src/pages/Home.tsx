@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
 import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Share2 } from "lucide-react";
+import { Search, Plus, Share2, User, Ticket, DollarSign, KeyRound, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
 
 // Category options based on the EventCircle.site
@@ -46,9 +46,12 @@ export default function Home() {
   const [dateFilter, setDateFilter] = useState<string>("Upcoming");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isFilterVisible, setIsFilterVisible] = useState(true);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const [location, navigate] = useLocation();
 
   // Force a fresh fetch of events when the page loads
   useEffect(() => {
