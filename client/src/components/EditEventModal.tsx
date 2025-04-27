@@ -91,7 +91,6 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
         location: event.location,
         image: event.image || "",
         video: event.video || "",
-        thumbnail: event.thumbnail || "",
         schedule: event.schedule || "",
       });
       
@@ -101,8 +100,8 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
         setImagePreview(null);
       }
 
-      if (event.thumbnail) {
-        setVideoPreview(event.thumbnail);
+      if (event.video) {
+        setVideoPreview(event.video);
       } else {
         setVideoPreview(null);
       }
@@ -265,16 +264,15 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
       const data = response as any;
       console.log('Video upload successful:', data);
       
-      // Set the video and thumbnail URLs
+      // Set the video URL
       form.setValue('video', data.videoPath);
-      form.setValue('thumbnail', data.thumbnailPath);
       
       // Set the preview with the full URL for local display
-      const thumbnailUrl = data.thumbnailPath.startsWith('/uploads') 
-        ? `http://localhost:5000${data.thumbnailPath}` 
-        : data.thumbnailPath;
+      const videoUrl = data.videoPath.startsWith('/uploads') 
+        ? `http://localhost:5000${data.videoPath}` 
+        : data.videoPath;
       
-      setVideoPreview(thumbnailUrl);
+      setVideoPreview(videoUrl);
       
       // Check if it's still processing in the background
       if (data.processing) {
@@ -439,7 +437,7 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
                 <div className="space-y-1 text-center">
                   {videoPreview ? (
                     <div className="mb-4">
-                      <img src={videoPreview} alt="Video Thumbnail" className="h-32 mx-auto rounded" />
+                      <img src={videoPreview} alt="Video Preview" className="h-32 mx-auto rounded" />
                     </div>
                   ) : (
                     <div className="flex-shrink-0 h-12 w-12 flex items-center justify-center mx-auto text-neutral-400">
