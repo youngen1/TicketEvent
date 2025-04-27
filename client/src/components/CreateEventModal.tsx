@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image, Upload } from "lucide-react";
+import { Image } from "lucide-react";
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -91,6 +91,10 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
   });
 
   const onSubmit = (data: FormValues) => {
+    // Add the user ID to the event data
+    if (user) {
+      data.createdById = user.id;
+    }
     createEventMutation.mutate(data);
   };
 
@@ -109,6 +113,171 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
     reader.readAsDataURL(file);
   };
 
+  // Content for when user is not logged in
+  const unauthenticatedContent = (
+    <div className="flex flex-col items-center justify-center py-6 space-y-4">
+      <p className="text-center text-neutral-600">
+        You need to be logged in to create an event.
+      </p>
+      <Button
+        onClick={onClose}
+        className="bg-primary hover:bg-blue-700 text-white w-full"
+      >
+        Go back and log in
+      </Button>
+    </div>
+  );
+
+  // Form content when user is logged in
+  const eventForm = (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Event Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter event name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Category</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Technology">Technology</SelectItem>
+                  <SelectItem value="Business">Business</SelectItem>
+                  <SelectItem value="Music">Music</SelectItem>
+                  <SelectItem value="Art">Art</SelectItem>
+                  <SelectItem value="Education">Education</SelectItem>
+                  <SelectItem value="Sports">Sports</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="time"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Time</FormLabel>
+                <FormControl>
+                  <Input type="time" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="location"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Location</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter location" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Enter event description" rows={3} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div>
+          <FormLabel className="block text-sm font-medium text-neutral-700">Event Image</FormLabel>
+          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-neutral-300 border-dashed rounded-md">
+            <div className="space-y-1 text-center">
+              {imagePreview ? (
+                <div className="mb-4">
+                  <img src={imagePreview} alt="Preview" className="h-32 mx-auto rounded" />
+                </div>
+              ) : (
+                <Image className="h-12 w-12 mx-auto text-neutral-400" />
+              )}
+              <div className="flex text-sm text-neutral-600 justify-center">
+                <label htmlFor="event-image" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-blue-500">
+                  <span>Upload a file</span>
+                  <input
+                    id="event-image"
+                    name="event-image"
+                    type="file"
+                    className="sr-only"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                  />
+                </label>
+                <p className="pl-1">or drag and drop</p>
+              </div>
+              <p className="text-xs text-neutral-500">
+                PNG, JPG, GIF up to 10MB
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className="bg-primary hover:bg-blue-700 text-white"
+            disabled={createEventMutation.isPending}
+          >
+            {createEventMutation.isPending ? "Creating..." : "Create Event"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg">
@@ -117,152 +286,8 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
             Create New Event
           </DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Event Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter event name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Technology">Technology</SelectItem>
-                      <SelectItem value="Business">Business</SelectItem>
-                      <SelectItem value="Music">Music</SelectItem>
-                      <SelectItem value="Art">Art</SelectItem>
-                      <SelectItem value="Education">Education</SelectItem>
-                      <SelectItem value="Sports">Sports</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="time"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Time</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Location</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter location" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Enter event description" rows={3} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div>
-              <FormLabel className="block text-sm font-medium text-neutral-700">Event Image</FormLabel>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-neutral-300 border-dashed rounded-md">
-                <div className="space-y-1 text-center">
-                  {imagePreview ? (
-                    <div className="mb-4">
-                      <img src={imagePreview} alt="Preview" className="h-32 mx-auto rounded" />
-                    </div>
-                  ) : (
-                    <Image className="h-12 w-12 mx-auto text-neutral-400" />
-                  )}
-                  <div className="flex text-sm text-neutral-600 justify-center">
-                    <label htmlFor="event-image" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-blue-500">
-                      <span>Upload a file</span>
-                      <input
-                        id="event-image"
-                        name="event-image"
-                        type="file"
-                        className="sr-only"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                      />
-                    </label>
-                    <p className="pl-1">or drag and drop</p>
-                  </div>
-                  <p className="text-xs text-neutral-500">
-                    PNG, JPG, GIF up to 10MB
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="bg-primary hover:bg-blue-700 text-white"
-                disabled={createEventMutation.isPending}
-              >
-                {createEventMutation.isPending ? "Creating..." : "Create Event"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        
+        {!user ? unauthenticatedContent : eventForm}
       </DialogContent>
     </Dialog>
   );
