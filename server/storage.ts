@@ -75,7 +75,7 @@ export class MemStorage implements IStorage {
       displayName: "Demo User",
       avatar: null,
       bio: null,
-      email: null,
+      email: "demo@example.com", // Added email for payment processing
       preferences: null
     });
     

@@ -64,9 +64,10 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
     
     // Parse schedule data
     let schedule: { time: string; title: string; description?: string }[] = [];
-    if (event.schedule) {
+    const eventSchedule = (event as any).schedule;
+    if (eventSchedule) {
       try {
-        schedule = JSON.parse(event.schedule);
+        schedule = JSON.parse(eventSchedule);
       } catch (e) {
         console.error("Failed to parse schedule:", e);
       }
@@ -342,8 +343,8 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
             <div className="px-4 pt-5 pb-4 sm:p-6" id="event-details-description">
               <div className="flex justify-between items-start">
                 <div>
-                  <Badge className={`${getCategoryStyles(event.category)}`}>
-                    {event.category}
+                  <Badge className={`${getCategoryStyles(event.category || '')}`}>
+                    {event.category || 'General'}
                   </Badge>
                   <h3 className="mt-2 text-2xl font-bold text-neutral-900 font-heading">
                     {event.title}
@@ -354,7 +355,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                   onClick={() => toggleFavoriteMutation.mutate()}
                   disabled={toggleFavoriteMutation.isPending}
                 >
-                  <Heart className={event.isFavorite ? "text-red-500 fill-red-500" : ""} size={20} />
+                  <Heart className={(event as any).isFavorite ? "text-red-500 fill-red-500" : ""} size={20} />
                 </button>
               </div>
               

@@ -266,7 +266,14 @@ export default function Home() {
               {event.price && (
                 <div className="mt-3 text-right">
                   <span className="text-purple-700 font-bold">
-                    {typeof event.price === 'number' ? `R${event.price.toFixed(2)}` : event.price.startsWith('R') ? event.price : `R${event.price}`}
+                    {(() => {
+                      const price = typeof event.price === 'string' ? parseFloat(event.price) : event.price;
+                      if (!isNaN(price)) {
+                        return `R${price.toFixed(2)}`;
+                      } else {
+                        return event.price.toString().startsWith('R') ? event.price : `R${event.price}`;
+                      }
+                    })()}
                   </span>
                 </div>
               )}
