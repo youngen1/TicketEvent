@@ -31,7 +31,6 @@ try {
 
 export interface VideoProcessingResult {
   videoPath: string;
-  thumbnailPath: string;
   duration: number;
   processing?: boolean; // Flag to indicate if video is still being processed in background
 }
@@ -43,22 +42,18 @@ export async function processVideo(
     // Generate unique filenames
     const timestamp = Date.now();
     const videoFileName = `video_${timestamp}${path.extname(videoFile.originalname)}`;
-    const thumbnailFileName = `thumbnail_${timestamp}.jpg`;
     
     const videoPath = path.join(videosDir, videoFileName);
-    const thumbnailPath = path.join(thumbnailsDir, thumbnailFileName);
     const tempFilePath = videoFile.path; // The temporary file path from multer disk storage
     
     console.log('Processing video:', videoFile.originalname);
     console.log('Temp file path:', tempFilePath);
     console.log('Final video will be saved at:', videoPath);
-    console.log('Thumbnail will be saved at:', thumbnailPath);
     
     // Handle file from multer memory storage
     try {
       // Make sure directories exist
       fs.ensureDirSync(videosDir);
-      fs.ensureDirSync(thumbnailsDir);
       
       // Write buffer to disk since we're using memory storage
       if (videoFile.buffer) {
@@ -96,80 +91,17 @@ export async function processVideo(
         return;
       }
       
-      // Optimize video for web and generate thumbnail in parallel for speed
-      console.log('Optimizing video and generating thumbnail in parallel...');
-      
-      let thumbnailGenerated = false;
-      let optimizedVideoPath: string | null = null;
-      let thumbnailUrl: string | null = null;
-      
-      // First, initiate thumbnail generation with faster settings
-      ffmpeg(videoPath)
-        .screenshots({
-          timestamps: ['50%'],
-          filename: thumbnailFileName,
-          folder: thumbnailsDir,
-          size: '320x240',
-          fastSeek: true // Use fast seek for thumbnails
-        })
-        .outputOptions(['-preset ultrafast', '-threads 4']) // Use ultrafast preset and multithreading
-        .on('end', () => {
-          console.log('Thumbnail generated successfully');
-          thumbnailGenerated = true;
-          thumbnailUrl = `/uploads/thumbnails/${thumbnailFileName}`;
-          
-          // If both tasks are complete, resolve the promise
-          if (optimizedVideoPath) {
-            console.log('Both optimization and thumbnail generation complete');
-            resolve({
-              videoPath: optimizedVideoPath,
-              thumbnailPath: thumbnailUrl,
-              duration
-            });
-          }
-        })
-        .on('error', (err) => {
-          console.error('Failed to generate thumbnail:', err.message);
-          fs.unlinkSync(videoPath); // Delete the uploaded video on error
-          reject(new Error(`Failed to generate thumbnail: ${err.message}`));
-        });
-      
       // Ultra-Fast path ALL videos for immediate response
       // Prioritize rapid response for better user experience
-      console.log('Hyper-fast-tracking video response');
+      console.log('Fast-tracking video response');
       const videoUrl = `/uploads/videos/${videoFileName}`;
-      optimizedVideoPath = videoUrl;
       
-      // Check if thumbnail already completed (rare but possible for small videos)
-      if (thumbnailGenerated && thumbnailUrl) {
-        console.log('Thumbnail already generated, using it for immediate response');
-        resolve({
-          videoPath: optimizedVideoPath,
-          thumbnailPath: thumbnailUrl,
-          duration,
-          processing: false
-        });
-      } else {
-        // Maximum speed optimization: Return immediately with placeholder
-        // Don't wait for anything - file is already saved
-        console.log('Returning immediate response for maximum speed');
-        
-        // Set a short timeout to allow for very fast thumbnails
-        setTimeout(() => {
-          if (!thumbnailGenerated) {
-            resolve({
-              videoPath: optimizedVideoPath,
-              thumbnailPath: `/uploads/thumbnails/default_processing.jpg`,
-              duration,
-              processing: true
-            });
-          }
-        }, 100); // Short timeout to see if thumbnail completes super fast
-        
-        // Continue thumbnail generation in the background
-        // This happens after the response is already sent back
-        console.log('Continuing processing in background for better user experience');
-      }
+      // Return immediately, video is ready to serve
+      resolve({
+        videoPath: videoUrl,
+        duration,
+        processing: false
+      });
     });
   });
 }
