@@ -403,8 +403,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log('Paystack verification successful, updating ticket status');
             
             // Update ticket status to completed
-            existingTicket.paymentStatus = "completed";
-            existingTicket.updatedAt = new Date();
+            await storage.updateTicket(existingTicket.id, {
+              paymentStatus: "completed",
+              updatedAt: new Date()
+            });
             
             // Return success with ticket info
             return res.json({
@@ -416,11 +418,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           } else {
             console.log('Paystack verification failed:', verification.status);
+            
+            // Update ticket to failed since payment was declined
+            await storage.updateTicket(existingTicket.id, {
+              paymentStatus: "failed",
+              updatedAt: new Date()
+            });
+            
             return res.json({
               success: false,
               data: {
                 verification,
-                ticket: existingTicket
+                ticket: {
+                  ...existingTicket,
+                  paymentStatus: "failed"
+                }
               }
             });
           }
@@ -432,8 +444,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log('Marking test ticket as completed without Paystack verification');
             
             // Update ticket status to completed
-            existingTicket.paymentStatus = "completed";
-            existingTicket.updatedAt = new Date();
+            await storage.updateTicket(existingTicket.id, {
+              paymentStatus: "completed",
+              updatedAt: new Date()
+            });
             
             return res.json({
               success: true,

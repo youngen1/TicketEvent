@@ -52,6 +52,7 @@ export interface IStorage {
   // Ticket methods
   getUserTickets(userId: number): Promise<EventTicket[]>;
   createTicket(ticket: InsertEventTicket): Promise<EventTicket>;
+  updateTicket(id: number, updates: Partial<EventTicket>): Promise<EventTicket>;
   getEventTickets(eventId: number): Promise<EventTicket[]>;
   getTicket(ticketId: number): Promise<EventTicket | undefined>;
   getTicketByReference(reference: string): Promise<EventTicket | undefined>;
@@ -581,7 +582,10 @@ export class MemStorage implements IStorage {
   // Ticket methods
   async getUserTickets(userId: number): Promise<EventTicket[]> {
     return this.tickets
-      .filter(ticket => ticket.userId === userId)
+      .filter(ticket => 
+        ticket.userId === userId && 
+        ticket.paymentStatus === "completed"
+      )
       .sort((a, b) => {
         const dateA = new Date(a.purchaseDate || 0);
         const dateB = new Date(b.purchaseDate || 0);
@@ -612,6 +616,23 @@ export class MemStorage implements IStorage {
 
   async getTicketByReference(reference: string): Promise<EventTicket | undefined> {
     return this.tickets.find(ticket => ticket.paymentReference === reference);
+  }
+
+  async updateTicket(id: number, updates: Partial<EventTicket>): Promise<EventTicket> {
+    const index = this.tickets.findIndex(ticket => ticket.id === id);
+    
+    if (index === -1) {
+      throw new Error(`Ticket with id ${id} not found`);
+    }
+    
+    // Update ticket with new values
+    this.tickets[index] = {
+      ...this.tickets[index],
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    return this.tickets[index];
   }
 
   // Extra properties to make TypeScript happy
