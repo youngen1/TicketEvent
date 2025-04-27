@@ -848,12 +848,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.id);
       const followers = await storage.getUserFollowers(userId);
+      const currentUserId = req.session.userId;
       
-      // Don't return passwords
-      const sanitizedFollowers = followers.map(follower => {
+      // Don't return passwords and add youFollow and followsYou properties
+      const sanitizedFollowers = await Promise.all(followers.map(async follower => {
         const { password, ...followerWithoutPassword } = follower;
-        return followerWithoutPassword;
-      });
+        
+        // Check if the current user follows this follower
+        const youFollow = currentUserId ? await storage.isFollowing(currentUserId, follower.id) : false;
+        
+        // Check if this follower follows the current user (for mutual follows)
+        const followsYou = currentUserId ? await storage.isFollowing(follower.id, currentUserId) : false;
+        
+        return {
+          ...followerWithoutPassword,
+          youFollow,
+          followsYou
+        };
+      }));
       
       res.json(sanitizedFollowers);
     } catch (error: any) {
@@ -867,12 +879,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.id);
       const following = await storage.getUserFollowing(userId);
+      const currentUserId = req.session.userId;
       
-      // Don't return passwords
-      const sanitizedFollowing = following.map(user => {
+      // Don't return passwords and add youFollow and followsYou properties
+      const sanitizedFollowing = await Promise.all(following.map(async user => {
         const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      });
+        
+        // Check if the current user follows this user (should always be true for following)
+        const youFollow = currentUserId ? await storage.isFollowing(currentUserId, user.id) : false;
+        
+        // Check if this user follows the current user (for mutual follows)
+        const followsYou = currentUserId ? await storage.isFollowing(user.id, currentUserId) : false;
+        
+        return {
+          ...userWithoutPassword,
+          youFollow,
+          followsYou
+        };
+      }));
       
       res.json(sanitizedFollowing);
     } catch (error: any) {
