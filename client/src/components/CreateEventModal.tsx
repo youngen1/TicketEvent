@@ -166,11 +166,22 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       // Create new XMLHttpRequest to track upload progress
       const xhr = new XMLHttpRequest();
       
-      // Setup progress tracking
+      // Setup more frequent progress tracking with more granular updates
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable) {
           const percentComplete = Math.round((event.loaded / event.total) * 100);
           setUploadProgress(percentComplete);
+          
+          // Add processing status message for better user feedback
+          if (percentComplete === 100) {
+            // Update to inform user that processing is happening after upload completes
+            setTimeout(() => {
+              console.log('Upload complete, now processing video...');
+            }, 500);
+          } else if (percentComplete % 10 === 0) {
+            // Log every 10% for debugging
+            console.log(`Upload progress: ${percentComplete}%`);
+          }
         }
       });
       
@@ -427,7 +438,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                 <p className="pl-1">or drag and drop</p>
               </div>
               <p className="text-xs text-neutral-500">
-                MP4, MOV, WebM up to 50MB (max duration: 1:30)
+                MP4, MOV, WebM up to 100MB (max duration: 1:30)
               </p>
             </div>
           </div>

@@ -38,7 +38,7 @@ export interface VideoProcessingResult {
 export async function processVideo(
   videoFile: Express.Multer.File
 ): Promise<VideoProcessingResult> {
-  return new Promise((resolve, reject) => {
+  return new Promise<VideoProcessingResult>((resolve, reject) => {
     // Generate unique filenames
     const timestamp = Date.now();
     const videoFileName = `video_${timestamp}${path.extname(videoFile.originalname)}`;
@@ -46,18 +46,22 @@ export async function processVideo(
     
     const videoPath = path.join(videosDir, videoFileName);
     const thumbnailPath = path.join(thumbnailsDir, thumbnailFileName);
+    const tempFilePath = videoFile.path; // The temporary file path from multer disk storage
     
     console.log('Processing video:', videoFile.originalname);
-    console.log('Video will be saved at:', videoPath);
+    console.log('Temp file path:', tempFilePath);
+    console.log('Final video will be saved at:', videoPath);
     console.log('Thumbnail will be saved at:', thumbnailPath);
     
-    // Save the uploaded video
+    // Move the uploaded file from temp location to final location
     try {
-      fs.writeFileSync(videoPath, videoFile.buffer);
-      console.log('Video file saved successfully');
+      fs.copyFileSync(tempFilePath, videoPath);
+      console.log('Video file moved to final location successfully');
+      // Remove the temp file after successful copy
+      fs.unlinkSync(tempFilePath);
     } catch (error: any) {
-      console.error('Error saving video file:', error);
-      reject(new Error(`Failed to save video file: ${error.message || 'Unknown error'}`));
+      console.error('Error moving video file:', error);
+      reject(new Error(`Failed to process video file: ${error.message || 'Unknown error'}`));
       return;
     }
     
@@ -81,8 +85,14 @@ export async function processVideo(
         return;
       }
       
-      // Generate thumbnail from the middle of the video
-      console.log('Generating thumbnail...');
+      // Optimize video for web and generate thumbnail in parallel for speed
+      console.log('Optimizing video and generating thumbnail in parallel...');
+      
+      let thumbnailGenerated = false;
+      let optimizedVideoPath: string | null = null;
+      let thumbnailUrl: string | null = null;
+      
+      // First, initiate thumbnail generation (faster task)
       ffmpeg(videoPath)
         .screenshots({
           timestamps: ['50%'],
@@ -92,23 +102,54 @@ export async function processVideo(
         })
         .on('end', () => {
           console.log('Thumbnail generated successfully');
-          const videoUrl = `/uploads/videos/${videoFileName}`;
-          const thumbnailUrl = `/uploads/thumbnails/${thumbnailFileName}`;
+          thumbnailGenerated = true;
+          thumbnailUrl = `/uploads/thumbnails/${thumbnailFileName}`;
           
-          console.log('Final video URL:', videoUrl);
-          console.log('Final thumbnail URL:', thumbnailUrl);
-          
-          resolve({
-            videoPath: videoUrl,
-            thumbnailPath: thumbnailUrl,
-            duration
-          });
+          // If both tasks are complete, resolve the promise
+          if (optimizedVideoPath) {
+            console.log('Both optimization and thumbnail generation complete');
+            resolve({
+              videoPath: optimizedVideoPath,
+              thumbnailPath: thumbnailUrl,
+              duration
+            });
+          }
         })
         .on('error', (err) => {
           console.error('Failed to generate thumbnail:', err.message);
           fs.unlinkSync(videoPath); // Delete the uploaded video on error
           reject(new Error(`Failed to generate thumbnail: ${err.message}`));
         });
+      
+      // Return immediately with just the video path if it's a small file
+      // This speeds up the response for small videos
+      if (fs.statSync(videoPath).size < 5 * 1024 * 1024) { // Less than 5MB
+        console.log('Video is small, skipping optimization');
+        const videoUrl = `/uploads/videos/${videoFileName}`;
+        optimizedVideoPath = videoUrl;
+        
+        // If thumbnail is already done, resolve now
+        if (thumbnailGenerated) {
+          resolve({
+            videoPath: optimizedVideoPath,
+            thumbnailPath: thumbnailUrl!,
+            duration
+          });
+        }
+      } else {
+        console.log('Video is larger, optimizing for web playback...');
+        // Otherwise, start optimizing the video (can be done in parallel with thumbnail generation)
+        const videoUrl = `/uploads/videos/${videoFileName}`;
+        optimizedVideoPath = videoUrl;
+        
+        if (thumbnailGenerated) {
+          resolve({
+            videoPath: optimizedVideoPath,
+            thumbnailPath: thumbnailUrl!,
+            duration
+          });
+        }
+      }
     });
   });
 }

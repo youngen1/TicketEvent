@@ -9,11 +9,35 @@ import { processVideo } from './utils/videoProcessor';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Set up multer for memory storage
-const storage = multer.memoryStorage();
+// Set up multer for disk storage for better performance with large files
+const projectRoot = path.resolve(__dirname, '..');
+const uploadsPath = path.join(projectRoot, 'uploads');
+const tempUploadsPath = path.join(projectRoot, 'temp-uploads');
+
+// Ensure temp uploads directory exists
+try {
+  if (!fs.existsSync(tempUploadsPath)) {
+    fs.mkdirSync(tempUploadsPath, { recursive: true });
+    console.log('Created temp-uploads directory');
+  }
+} catch (error) {
+  console.error('Error creating temp-uploads directory:', error);
+}
+
+// Use disk storage for better performance with larger files
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, tempUploadsPath);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max file size
+  limits: { fileSize: 100 * 1024 * 1024 }, // Increased to 100MB max file size
   fileFilter: (_req, file, cb) => {
     // Accept only video files
     const filetypes = /mp4|mov|avi|webm|mkv/;
