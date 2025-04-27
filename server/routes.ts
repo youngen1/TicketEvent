@@ -148,9 +148,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/events", async (req, res) => {
     try {
       const category = req.query.category as string | undefined;
-      const events = await storage.getAllEvents(category);
-      res.json(events);
+      const tags = req.query.tags as string | undefined;
+      const featured = req.query.featured === 'true' ? true : undefined;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 7; // Default 7 events per page
+      const offset = (page - 1) * limit;
+      
+      // Get total count for pagination
+      const allEvents = await storage.getAllEvents(category, tags, featured);
+      const totalCount = allEvents.length;
+      const totalPages = Math.ceil(totalCount / limit);
+      
+      // Get paginated events
+      const events = allEvents.slice(offset, offset + limit);
+      
+      res.json({
+        events,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages,
+          hasMore: page < totalPages
+        }
+      });
     } catch (error) {
+      console.error('Error fetching events:', error);
       res.status(500).json({ message: "Error fetching events" });
     }
   });
@@ -711,6 +734,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error updating user profile:', error);
       res.status(500).json({ message: error.message || "Error updating user profile" });
+    }
+  });
+
+  // User follow routes
+  // Get users to follow (all users except the current user)
+  app.get("/api/users", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      // Get all users
+      const allUsers = await Promise.all((await storage.getUsersToFollow()).map(async (user) => {
+        // Don't return passwords
+        const { password, ...userWithoutPassword } = user;
+        
+        // Check if current user is following this user
+        const isFollowing = await storage.isFollowing(req.session.userId, user.id);
+        
+        return {
+          ...userWithoutPassword,
+          isFollowing
+        };
+      }));
+      
+      // Filter out the current user
+      const users = allUsers.filter(user => user.id !== req.session.userId);
+      
+      res.json(users);
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ message: error.message || "Error fetching users" });
+    }
+  });
+  
+  // Get user followers
+  app.get("/api/users/:id/followers", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const followers = await storage.getUserFollowers(userId);
+      
+      // Don't return passwords
+      const sanitizedFollowers = followers.map(follower => {
+        const { password, ...followerWithoutPassword } = follower;
+        return followerWithoutPassword;
+      });
+      
+      res.json(sanitizedFollowers);
+    } catch (error: any) {
+      console.error('Error fetching followers:', error);
+      res.status(500).json({ message: error.message || "Error fetching followers" });
+    }
+  });
+  
+  // Get user following
+  app.get("/api/users/:id/following", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const following = await storage.getUserFollowing(userId);
+      
+      // Don't return passwords
+      const sanitizedFollowing = following.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json(sanitizedFollowing);
+    } catch (error: any) {
+      console.error('Error fetching following:', error);
+      res.status(500).json({ message: error.message || "Error fetching following" });
+    }
+  });
+  
+  // Follow a user
+  app.post("/api/users/:id/follow", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const followingId = parseInt(req.params.id);
+      
+      // Check if user is trying to follow themselves
+      if (req.session.userId === followingId) {
+        return res.status(400).json({ message: "Cannot follow yourself" });
+      }
+      
+      // Check if user to follow exists
+      const userToFollow = await storage.getUser(followingId);
+      if (!userToFollow) {
+        return res.status(404).json({ message: "User to follow not found" });
+      }
+      
+      // Follow the user
+      await storage.followUser(req.session.userId, followingId);
+      
+      res.json({ success: true, message: "User followed successfully" });
+    } catch (error: any) {
+      console.error('Error following user:', error);
+      res.status(500).json({ message: error.message || "Error following user" });
+    }
+  });
+  
+  // Unfollow a user
+  app.delete("/api/users/:id/follow", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const followingId = parseInt(req.params.id);
+      
+      // Check if user to unfollow exists
+      const userToUnfollow = await storage.getUser(followingId);
+      if (!userToUnfollow) {
+        return res.status(404).json({ message: "User to unfollow not found" });
+      }
+      
+      // Unfollow the user
+      await storage.unfollowUser(req.session.userId, followingId);
+      
+      res.json({ success: true, message: "User unfollowed successfully" });
+    } catch (error: any) {
+      console.error('Error unfollowing user:', error);
+      res.status(500).json({ message: error.message || "Error unfollowing user" });
     }
   });
 

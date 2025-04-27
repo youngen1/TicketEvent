@@ -64,6 +64,7 @@ export interface IStorage {
   followUser(followerId: number, followingId: number): Promise<UserFollow>;
   unfollowUser(followerId: number, followingId: number): Promise<void>;
   isFollowing(followerId: number, followingId: number): Promise<boolean>;
+  getUsersToFollow(): Promise<User[]>;
 }
 
 // A simple in-memory storage implementation that can be used when database has issues
@@ -794,6 +795,11 @@ export class MemStorage implements IStorage {
     }
   }
 
+  // Get all users for the follow feature
+  async getUsersToFollow(): Promise<User[]> {
+    return this.users;
+  }
+  
   // Extra properties to make TypeScript happy
   async seedEvents(): Promise<void> {
     // Already done in constructor
@@ -819,6 +825,10 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+  
+  async getUsersToFollow(): Promise<User[]> {
+    return db.select().from(users).limit(20);
   }
   
   async updateUser(id: number, userData: Partial<InsertUser>): Promise<User> {

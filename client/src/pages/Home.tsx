@@ -71,13 +71,23 @@ export default function Home() {
     queryClient.invalidateQueries({ queryKey: ["/api/events"] });
   }, [queryClient]);
 
-  const { data: allEvents, isLoading, error } = useQuery({
-    queryKey: ["/api/events"],
+  const [currentPage, setCurrentPage] = useState(1);
+  const eventsPerPage = 7;
+  
+  const { data: eventsData, isLoading, error } = useQuery({
+    queryKey: ["/api/events", { page: currentPage, limit: eventsPerPage }],
     staleTime: 0, // Always consider the data stale to force refetch
   });
 
   // Convert data to typed array
-  const events: Event[] = allEvents as Event[] || [];
+  const events: Event[] = eventsData?.events || [];
+  const pagination = eventsData?.pagination || { 
+    page: 1, 
+    totalPages: 1, 
+    hasMore: false,
+    totalCount: 0,
+    limit: eventsPerPage
+  };
   
   // Log for debugging
   useEffect(() => {
@@ -115,8 +125,9 @@ export default function Home() {
     }
   };
 
-  // Filter events based on all selected filters
-  const filteredEvents = events.filter((event) => {    
+  // Apply filters only on the events loaded on the current page
+  // When filters change, we'll stay on the same page but show filtered results
+  const filteredEvents = Array.isArray(events) ? events.filter((event) => {    
     // Search query filter
     const matchesSearch = !searchQuery 
       ? true
@@ -145,7 +156,7 @@ export default function Home() {
     }
 
     return matchesSearch && matchesLocation && matchesCategory && matchesDateFilter;
-  });
+  }) : [];
 
   // Sort events by date (upcoming first)
   const sortedEvents = [...filteredEvents].sort((a, b) => {
@@ -222,98 +233,153 @@ export default function Home() {
     );
   };
 
+  // Pagination navigation
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    // Scroll to top when changing pages
+    window.scrollTo(0, 0);
+  };
+  
+  // Render pagination controls
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    
+    return (
+      <div className="flex justify-center items-center mt-6 space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="px-3 py-1"
+        >
+          Previous
+        </Button>
+        
+        {/* Page numbers */}
+        <div className="flex space-x-1">
+          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(page => (
+            <Button
+              key={page}
+              variant={currentPage === page ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePageChange(page)}
+              className={`px-3 py-1 ${currentPage === page ? 'bg-purple-600' : ''}`}
+            >
+              {page}
+            </Button>
+          ))}
+        </div>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === pagination.totalPages}
+          className="px-3 py-1"
+        >
+          Next
+        </Button>
+      </div>
+    );
+  };
+
   // Event list rendering
   const renderEventList = () => {
     if (isLoading) return renderEventSkeletons();
     if (sortedEvents.length === 0) return renderEmptyState();
 
     return (
-      <div className="space-y-4">
-        {sortedEvents.map(event => (
-          <div 
-            key={event.id} 
-            className="bg-white rounded-lg shadow overflow-hidden"
-            onClick={() => handleShowDetails(event)}
-          >
-            <div className="relative">
-              <img
-                src={event.image || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80'}
-                alt={event.title}
-                className="w-full h-48 object-cover"
-              />
-              {/* Profile circle in top right corner */}
-              <div className="absolute top-2 right-2">
-                <div className="w-8 h-8 bg-gray-300 rounded-full overflow-hidden border-2 border-white">
-                  <img 
-                    src={getUserAvatar(event.userId, event.category || "Event")} 
-                    alt="Organizer" 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-              {/* Category badge */}
-              <div className="absolute top-4 right-12">
-                <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200">
-                  {event.category || "Event"}
-                </Badge>
-              </div>
-              {/* Removed R1, R2 code badges as requested */}
-            </div>
-            <div className="p-4">
-              <div className="text-sm text-gray-500">
-                {event.date && (
-                  <div>
-                    {format(new Date(event.date), "dd MMM yyyy")} {event.time}
+      <div>
+        <div className="space-y-4">
+          {sortedEvents.map(event => (
+            <div 
+              key={event.id} 
+              className="bg-white rounded-lg shadow overflow-hidden"
+              onClick={() => handleShowDetails(event)}
+            >
+              <div className="relative">
+                <img
+                  src={event.image || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80'}
+                  alt={event.title}
+                  className="w-full h-48 object-cover"
+                />
+                {/* Profile circle in top right corner */}
+                <div className="absolute top-2 right-2">
+                  <div className="w-8 h-8 bg-gray-300 rounded-full overflow-hidden border-2 border-white">
+                    <img 
+                      src={getUserAvatar(event.userId, event.category || "Event")} 
+                      alt="Organizer" 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                )}
-              </div>
-              <h3 className="text-lg font-bold mt-1">{event.title}</h3>
-              <p className="text-gray-600 text-sm mt-1">
-                {event.location || "Location not specified"}
-              </p>
-              <p className="text-gray-600 text-sm mt-2 line-clamp-2">
-                {event.description}
-              </p>
-              
-              {/* Price display in right corner - in Rands */}
-              {event.price && (
-                <div className="mt-3 text-right">
-                  <span className="text-purple-700 font-bold">
-                    {(() => {
-                      const price = typeof event.price === 'string' ? parseFloat(event.price) : event.price;
-                      if (!isNaN(price)) {
-                        return `R${price.toFixed(2)}`;
-                      } else {
-                        return event.price.toString().startsWith('R') ? event.price : `R${event.price}`;
-                      }
-                    })()}
-                  </span>
                 </div>
-              )}
-              
-              <div className="mt-2 flex items-center justify-between">
+                {/* Category badge */}
+                <div className="absolute top-4 right-12">
+                  <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200">
+                    {event.category || "Event"}
+                  </Badge>
+                </div>
+              </div>
+              <div className="p-4">
                 <div className="text-sm text-gray-500">
-                  {event.attendees ? (
-                    `${event.attendees} ${event.attendees === 1 ? 'person' : 'people'} joined`
-                  ) : (
-                    "No one has joined yet"
+                  {event.date && (
+                    <div>
+                      {format(new Date(event.date), "dd MMM yyyy")} {event.time}
+                    </div>
                   )}
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-purple-600 border-none"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Share functionality would go here
-                  }}
-                >
-                  <Share2 className="h-4 w-4" />
-                </Button>
+                <h3 className="text-lg font-bold mt-1">{event.title}</h3>
+                <p className="text-gray-600 text-sm mt-1">
+                  {event.location || "Location not specified"}
+                </p>
+                <p className="text-gray-600 text-sm mt-2 line-clamp-2">
+                  {event.description}
+                </p>
+                
+                {/* Price display in right corner - in Rands */}
+                {event.price && (
+                  <div className="mt-3 text-right">
+                    <span className="text-purple-700 font-bold">
+                      {(() => {
+                        const price = typeof event.price === 'string' ? parseFloat(event.price) : event.price;
+                        if (!isNaN(price)) {
+                          return `R${price.toFixed(2)}`;
+                        } else {
+                          return event.price.toString().startsWith('R') ? event.price : `R${event.price}`;
+                        }
+                      })()}
+                    </span>
+                  </div>
+                )}
+                
+                <div className="mt-2 flex items-center justify-between">
+                  <div className="text-sm text-gray-500">
+                    {event.attendees ? (
+                      `${event.attendees} ${event.attendees === 1 ? 'person' : 'people'} joined`
+                    ) : (
+                      "No one has joined yet"
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-purple-600 border-none"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Share functionality would go here
+                    }}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+        
+        {/* Pagination */}
+        {renderPagination()}
       </div>
     );
   };
