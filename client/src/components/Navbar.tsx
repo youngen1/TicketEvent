@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, User, Plus, LogIn, LogOut, Heart, Bell, Calendar } from "lucide-react";
+import { Menu, X, User, Plus, LogIn, LogOut, Heart, Bell, Calendar, CreditCard, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -97,32 +97,35 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>
-                      {user?.username || 'User'}
-                    </DropdownMenuLabel>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="px-4 py-3">
+                      <p className="text-sm font-medium leading-none">{user?.displayName || user?.username || 'Admin'}</p>
+                      <p className="text-xs leading-none text-muted-foreground mt-1">{user?.username || 'admin'}</p>
+                    </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/profile">
-                        <User className="h-4 w-4 mr-2" /> Profile
+                      <Link href="/profile" className="w-full">
+                        <User className="h-4 w-4 mr-2" /> Your Profile
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/favorites">
-                        <Heart className="h-4 w-4 mr-2" /> Saved Events
+                      <Link href="/tickets" className="w-full">
+                        <Calendar className="h-4 w-4 mr-2" /> My Tickets
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/profile">
-                        My Events
+                      <Link href="/finance" className="w-full">
+                        <CreditCard className="h-4 w-4 mr-2" /> Finance
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      Settings
+                    <DropdownMenuItem asChild>
+                      <Link href="/change-password" className="w-full">
+                        <Lock className="h-4 w-4 mr-2" /> Change Password
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout} className="text-red-600">
-                      <LogOut className="h-4 w-4 mr-2" /> Logout
+                    <DropdownMenuItem onClick={logout} className="text-red-600 w-full">
+                      <LogOut className="h-4 w-4 mr-2" /> Log out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -187,7 +190,8 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
                 </div>
               </div>
               <div className="ml-3">
-                <div className="text-base font-medium text-neutral-800">{user?.username || 'User'}</div>
+                <div className="text-base font-medium text-neutral-800">{user?.displayName || user?.username || 'Admin'}</div>
+                <div className="text-sm text-neutral-500">{user?.username || 'admin'}</div>
               </div>
             </div>
             <div className="mt-3 space-y-1">
@@ -195,7 +199,7 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
                 className="block w-full text-left px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100"
                 onClick={onNewEventClick}
               >
-                New Event
+                <Plus className="h-4 w-4 inline mr-2" /> New Event
               </button>
               <Link 
                 href="/profile" 
@@ -203,33 +207,41 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <div className="flex items-center">
-                  <User className="h-4 w-4 mr-2" /> Profile
+                  <User className="h-4 w-4 mr-2" /> Your Profile
                 </div>
               </Link>
               <Link 
-                href="/favorites" 
+                href="/tickets" 
                 className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <div className="flex items-center">
-                  <Heart className="h-4 w-4 mr-2" /> Saved Events
+                  <Calendar className="h-4 w-4 mr-2" /> My Tickets
                 </div>
               </Link>
               <Link 
-                href="/profile" 
+                href="/finance" 
                 className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                My Events
+                <div className="flex items-center">
+                  <CreditCard className="h-4 w-4 mr-2" /> Finance
+                </div>
               </Link>
-              <a href="#" className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100">
-                Settings
-              </a>
+              <Link 
+                href="/change-password" 
+                className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <div className="flex items-center">
+                  <Lock className="h-4 w-4 mr-2" /> Change Password
+                </div>
+              </Link>
               <button 
                 className="block w-full text-left px-4 py-2 text-base font-medium text-red-600 hover:bg-neutral-100"
                 onClick={logout}
               >
-                Log out
+                <LogOut className="h-4 w-4 inline mr-2" /> Log out
               </button>
             </div>
           </div>
