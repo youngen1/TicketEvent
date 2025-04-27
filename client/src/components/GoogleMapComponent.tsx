@@ -26,7 +26,7 @@ interface GoogleMapComponentProps {
   onEventSelect?: (event: Event) => void;
   events?: Event[];
   height?: string;
-  address?: string;
+  address: string; // Make address required but it can be an empty string
   onAddressSelect?: (place: google.maps.places.PlaceResult) => void;
   isSelectable?: boolean;
 }

@@ -52,6 +52,8 @@ const formSchema = insertEventSchema.extend({
   genderRestriction: z.string().default(GENDER_RESTRICTION.NONE),
   ageRestriction: z.number().nullable().default(null),
   id: z.number().optional(),
+  image: z.string().optional(),
+  video: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;

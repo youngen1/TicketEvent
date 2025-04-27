@@ -3,8 +3,9 @@ import { Event } from "@shared/schema";
 import { 
   Heart, Calendar, MapPin, Users, X, ChevronLeft, ChevronRight, 
   Maximize, ArrowLeft, ArrowRight, Star, Clock,
-  CreditCard
+  CreditCard, Map
 } from "lucide-react";
+import GoogleMapComponent from "@/components/GoogleMapComponent";
 import {
   Dialog,
   DialogContent,
@@ -442,6 +443,23 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                 </div>
               </div>
               
+              {/* Location Map */}
+              <div className="mt-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-medium text-neutral-900 font-heading">Location</h4>
+                  <div className="flex items-center text-primary text-sm">
+                    <Map size={16} className="mr-1" />
+                    <span>Map View</span>
+                  </div>
+                </div>
+                <div className="mt-2 rounded-lg overflow-hidden border border-neutral-200 h-48">
+                  <GoogleMapComponent 
+                    height="100%"
+                    address={event.location || ''}
+                  />
+                </div>
+              </div>
+
               <div className="mt-6">
                 <h4 className="text-lg font-medium text-neutral-900 font-heading">About The Event</h4>
                 <p className="mt-2 text-neutral-600 whitespace-pre-line mobile-text">
