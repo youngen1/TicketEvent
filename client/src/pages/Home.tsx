@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
@@ -16,19 +16,28 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const eventsPerPage = 8;
 
-  const { data: events = [], isLoading } = useQuery({
+  const { data: events = [], isLoading, refetch } = useQuery<Event[]>({
     queryKey: ["/api/events"],
   });
+  
+  // Refetch events when component mounts
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const handleShowDetails = (event: Event) => {
     setSelectedEvent(event);
     setIsDetailsModalOpen(true);
   };
 
-  const filteredEvents = events.filter((event: Event) => {
-    const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          event.location.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredEvents = events.filter((event) => {
+    // Skip events with empty titles or categories
+    if (!event.title || !event.category) return false;
+    
+    const matchesSearch = 
+      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      event.location.toLowerCase().includes(searchQuery.toLowerCase());
     
     // In a real app, we would have date filtering logic here
     // For now, let's just return all events for the 'upcoming' tab
