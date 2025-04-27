@@ -26,7 +26,6 @@ class PaystackService {
   private initialize() {
     // For R2 test event, always use live mode
     process.env.PAYSTACK_MODE = 'live';
-    const isLiveMode = true;
     
     // Always use the live key for the R2 event
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
@@ -34,10 +33,15 @@ class PaystackService {
       throw new Error('PAYSTACK_SECRET_KEY is required for live payments but is missing');
     }
     
-    this.paystack = new Paystack(secretKey);
+    // Per Paystack-Node documentation, we need to pass environment as the second parameter
+    // Using 'production' to ensure live mode
+    this.paystack = new Paystack(secretKey, 'production');
     
     // Log that we're using live mode
-    console.log(`Paystack initialized in LIVE mode for real payment processing.`);
+    console.log(`Paystack initialized in LIVE mode with correct environment settings.`);
+    
+    // Debug to check the Paystack client was created properly
+    console.log(`Paystack client initialized: ${!!this.paystack}`);
   }
   
   /**
