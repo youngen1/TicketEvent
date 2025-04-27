@@ -151,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tags = req.query.tags as string | undefined;
       const featured = req.query.featured === 'true' ? true : undefined;
       const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 3; // Reduced to 3 for testing
+      const limit = parseInt(req.query.limit as string) || 7; // Default 7 events per page
       const offset = (page - 1) * limit;
       
       // Get total count for pagination
@@ -734,6 +734,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error updating user profile:', error);
       res.status(500).json({ message: error.message || "Error updating user profile" });
+    }
+  });
+
+  // Get a specific user profile by ID
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get followers and following counts
+      const followers = await storage.getUserFollowers(userId);
+      const following = await storage.getUserFollowing(userId);
+      
+      // Check if current user is following this user (if authenticated)
+      let isFollowing = false;
+      if (req.session.userId) {
+        isFollowing = await storage.isFollowing(req.session.userId, userId);
+      }
+      
+      // Remove sensitive information
+      const { password, ...userWithoutPassword } = user;
+      
+      // Return user with additional info
+      res.json({
+        ...userWithoutPassword,
+        followersCount: followers.length,
+        followingCount: following.length,
+        isFollowing
+      });
+    } catch (error: any) {
+      console.error('Error fetching user profile:', error);
+      res.status(500).json({ message: error.message || "Error fetching user profile" });
     }
   });
 

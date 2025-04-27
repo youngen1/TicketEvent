@@ -68,7 +68,7 @@ export default function Home() {
 
   // Force a fresh fetch of events when the page loads
   const [currentPage, setCurrentPage] = useState(1);
-  const eventsPerPage = 3; // Reduced to 3 for testing
+  const eventsPerPage = 7; // Default 7 events per page
   
   // Reset to first page when filters change
   useEffect(() => {
