@@ -4,7 +4,10 @@ import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
 import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Share2, User, Ticket, DollarSign, KeyRound, LogOut } from "lucide-react";
+import { 
+  Search, Plus, Share2, User, Calendar, CreditCard, 
+  Lock, LogOut 
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -16,8 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Category options based on the EventCircle.site
 const CATEGORIES = [
@@ -48,6 +59,7 @@ export default function Home() {
   const [isFilterVisible, setIsFilterVisible] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -310,16 +322,51 @@ export default function Home() {
       {/* User info and header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <div className="w-10 h-10 bg-gray-800 rounded-full overflow-hidden mr-3">
-            <img 
-              src={getUserAvatar(1, "Your Profile")} 
-              alt="Your Profile" 
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="w-10 h-10 bg-gray-800 rounded-full overflow-hidden mr-3 cursor-pointer">
+                <img 
+                  src={getUserAvatar(user?.id || 1, user?.displayName || user?.username || "Your Profile")} 
+                  alt="Your Profile" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <div className="px-4 py-3">
+                <p className="text-sm font-medium leading-none">{user?.displayName || user?.username || 'Admin'}</p>
+                <p className="text-xs leading-none text-muted-foreground mt-1">{user?.username || 'admin'}</p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/profile" className="w-full">
+                  <User className="h-4 w-4 mr-2" /> Your Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/tickets" className="w-full">
+                  <Calendar className="h-4 w-4 mr-2" /> My Tickets
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/finance" className="w-full">
+                  <CreditCard className="h-4 w-4 mr-2" /> Finance
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/change-password" className="w-full">
+                  <Lock className="h-4 w-4 mr-2" /> Change Password
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout} className="text-red-600 w-full">
+                <LogOut className="h-4 w-4 mr-2" /> Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Your Name</h2>
-            <p className="text-sm text-gray-600">username</p>
+            <h2 className="text-lg font-bold text-gray-900">{user?.displayName || user?.username || "Your Name"}</h2>
+            <p className="text-sm text-gray-600">{user?.username || "username"}</p>
           </div>
         </div>
       </div>
