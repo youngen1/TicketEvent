@@ -17,6 +17,8 @@ export const users = pgTable("users", {
   preferences: text("preferences"),
   followersCount: integer("followers_count").default(0),
   followingCount: integer("following_count").default(0),
+  isAdmin: boolean("is_admin").default(false),
+  platformBalance: text("platform_balance").default("0"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
