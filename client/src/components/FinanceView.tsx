@@ -8,7 +8,7 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Button } from '@/components/ui/button';
 import { 
   Table, 
@@ -19,6 +19,13 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -93,9 +100,19 @@ interface FinanceViewProps {
 }
 
 export default function FinanceView({ userId }: FinanceViewProps) {
-  const [period, setPeriod] = useState('all'); // 'all', 'month', 'week'
   const [isWithdrawalDialogOpen, setIsWithdrawalDialogOpen] = useState(false);
   const { toast } = useToast();
+  
+  // Fetch bank list from Paystack
+  const { data: banks = [], isLoading: isLoadingBanks } = useQuery({
+    queryKey: ['/api/finance/banks'],
+    queryFn: async () => {
+      const response = await fetch('/api/finance/banks');
+      if (!response.ok) throw new Error('Failed to fetch banks');
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+  });
 
   // Fetch user's events
   const { data: userEvents = [] } = useQuery<Event[]>({
@@ -123,28 +140,8 @@ export default function FinanceView({ userId }: FinanceViewProps) {
     userEvents.some(event => event.id === ticket.eventId)
   );
 
-  // Filter based on period
-  const getPeriodDate = () => {
-    const now = new Date();
-    if (period === 'week') {
-      const weekAgo = new Date();
-      weekAgo.setDate(now.getDate() - 7);
-      return weekAgo;
-    } else if (period === 'month') {
-      const monthAgo = new Date();
-      monthAgo.setMonth(now.getMonth() - 1);
-      return monthAgo;
-    }
-    return new Date(0); // Beginning of time for 'all'
-  };
-
-  const periodDate = getPeriodDate();
-  
-  const filteredTickets = completedTickets.filter(ticket => {
-    if (period === 'all') return true;
-    const ticketDate = new Date(ticket.updatedAt || ticket.createdAt);
-    return ticketDate >= periodDate;
-  });
+  // Use all completed tickets
+  const filteredTickets = completedTickets;
 
   // Calculate revenue statistics
   const totalRevenue = filteredTickets.reduce(
@@ -264,7 +261,7 @@ export default function FinanceView({ userId }: FinanceViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Period selection and withdrawal request button */}
+      {/* Withdrawal request button */}
       <div className="flex justify-between items-center">
         <Button 
           onClick={() => setIsWithdrawalDialogOpen(true)} 
@@ -273,13 +270,9 @@ export default function FinanceView({ userId }: FinanceViewProps) {
           <Banknote className="mr-2 h-4 w-4" /> Request Withdrawal
         </Button>
         
-        <Tabs value={period} onValueChange={setPeriod} className="w-[400px]">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="all">All Time</TabsTrigger>
-            <TabsTrigger value="month">This Month</TabsTrigger>
-            <TabsTrigger value="week">This Week</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="text-lg font-semibold text-primary">
+          Financial Overview
+        </div>
       </div>
 
       {/* Overview cards */}
@@ -550,7 +543,33 @@ export default function FinanceView({ userId }: FinanceViewProps) {
                   <FormItem>
                     <FormLabel>Bank Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your bank name" {...field} />
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select your bank" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[200px] overflow-y-auto">
+                          {isLoadingBanks ? (
+                            <div className="flex items-center justify-center py-2">
+                              <span className="animate-spin mr-2">○</span> Loading banks...
+                            </div>
+                          ) : banks.length > 0 ? (
+                            banks
+                              .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                              .map((bank: any) => (
+                                <SelectItem key={bank.id} value={bank.name}>
+                                  {bank.name}
+                                </SelectItem>
+                              ))
+                          ) : (
+                            <div className="p-2 text-center text-muted-foreground">
+                              No banks available. Please try again later.
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

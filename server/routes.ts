@@ -925,6 +925,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Finance and withdrawal routes
+  app.get("/api/finance/banks", async (req, res) => {
+    try {
+      // Get the list of banks from Paystack
+      const banks = await paystackService.getPaymentChannels();
+      
+      if (!banks) {
+        return res.status(500).json({ message: "Failed to fetch banks from Paystack" });
+      }
+      
+      // Format the response
+      const formattedBanks = banks.map((bank: any) => ({
+        id: bank.id,
+        name: bank.name,
+        slug: bank.slug
+      }));
+      
+      res.json(formattedBanks);
+    } catch (error: any) {
+      console.error('Error fetching banks:', error);
+      res.status(500).json({ message: error.message || "Error fetching banks" });
+    }
+  });
+  
   app.post("/api/finance/withdraw", isAuthenticated, async (req, res) => {
     try {
       const { amount, accountName, accountNumber, bankName } = req.body;
