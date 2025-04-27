@@ -11,17 +11,14 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '../..');
 const uploadsDir = path.join(projectRoot, 'uploads');
 const videosDir = path.join(uploadsDir, 'videos');
-const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
 
 console.log('Project root directory:', projectRoot);
 console.log('Uploads directory:', uploadsDir);
 console.log('Videos directory:', videosDir);
-console.log('Thumbnails directory:', thumbnailsDir);
 
 try {
   fs.ensureDirSync(uploadsDir);
   fs.ensureDirSync(videosDir);
-  fs.ensureDirSync(thumbnailsDir);
   console.log('Successfully ensured all directories exist');
   fs.writeFileSync(path.join(uploadsDir, 'test.txt'), 'This is a test file to verify write permissions');
   console.log('Successfully wrote test file to uploads directory');

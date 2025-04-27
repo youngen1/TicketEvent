@@ -255,9 +255,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Video upload received with event:', req.file.originalname);
         const videoResult = await processVideo(req.file);
         
-        // Add video and thumbnail paths to event data
+        // Add video path to event data
         eventData.video = videoResult.videoPath;
-        eventData.thumbnail = videoResult.thumbnailPath;
       }
       
       const validation = insertEventSchema.safeParse(eventData);
@@ -300,9 +299,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Video upload received for update:', req.file.originalname);
         const videoResult = await processVideo(req.file);
         
-        // Add video and thumbnail paths to event data
+        // Add video path to event data
         updateData.video = videoResult.videoPath;
-        updateData.thumbnail = videoResult.thumbnailPath;
       }
       
       // Update event
