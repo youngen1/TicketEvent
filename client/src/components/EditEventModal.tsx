@@ -74,7 +74,6 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
       location: "",
       image: "",
       video: "",
-      thumbnail: "",
       schedule: "",
     },
   });
