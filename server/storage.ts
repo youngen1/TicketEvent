@@ -15,6 +15,7 @@ export interface IStorage {
   getAllEvents(category?: string): Promise<Event[]>;
   getEvent(id: number): Promise<Event | undefined>;
   createEvent(event: InsertEvent): Promise<Event>;
+  updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event>;
   toggleFavorite(id: number): Promise<Event>;
 }
 

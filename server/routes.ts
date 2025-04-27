@@ -6,6 +6,9 @@ import * as bcrypt from 'bcrypt';
 import session from 'express-session';
 import { db } from "./db";
 import pgSession from 'connect-pg-simple';
+import multer from 'multer';
+import path from 'path';
+import { processVideo } from "./utils/videoProcessor";
 
 // Add userId to session
 declare module 'express-session' {
@@ -166,11 +169,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events", isAuthenticated, async (req, res) => {
-    // Add user ID from session to the event
-    req.body.createdById = req.session.userId;
+  // Set up multer for video upload
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max file size
+    fileFilter: (_req, file, cb) => {
+      // Accept only video files
+      const filetypes = /mp4|mov|avi|webm|mkv/;
+      const mimetype = filetypes.test(file.mimetype);
+      const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+      
+      if (mimetype && extname) {
+        return cb(null, true);
+      }
+      
+      cb(new Error('Only video files are allowed'));
+    }
+  });
+
+  // Event creation with video upload
+  app.post("/api/events", isAuthenticated, upload.single('video'), async (req, res) => {
     try {
-      const validation = insertEventSchema.safeParse(req.body);
+      // Add user ID from session to the event
+      const eventData = { ...req.body, createdById: req.session.userId };
+      
+      // Process video if uploaded
+      if (req.file) {
+        console.log('Video upload received with event:', req.file.originalname);
+        const videoResult = await processVideo(req.file);
+        
+        // Add video and thumbnail paths to event data
+        eventData.video = videoResult.videoPath;
+        eventData.thumbnail = videoResult.thumbnailPath;
+      }
+      
+      const validation = insertEventSchema.safeParse(eventData);
       
       if (!validation.success) {
         return res.status(400).json({ 
@@ -181,8 +214,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const event = await storage.createEvent(validation.data);
       res.status(201).json(event);
-    } catch (error) {
-      res.status(500).json({ message: "Error creating event" });
+    } catch (error: any) {
+      console.error('Error creating event:', error);
+      res.status(500).json({ message: error.message || "Error creating event" });
+    }
+  });
+
+  // Update event with video upload support
+  app.put("/api/events/:id", isAuthenticated, upload.single('video'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const event = await storage.getEvent(id);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // Check if user has permission (created the event)
+      if (event.createdById !== req.session.userId) {
+        return res.status(403).json({ message: "You do not have permission to update this event" });
+      }
+      
+      // Prepare update data
+      const updateData = { ...req.body };
+      
+      // Process video if uploaded
+      if (req.file) {
+        console.log('Video upload received for update:', req.file.originalname);
+        const videoResult = await processVideo(req.file);
+        
+        // Add video and thumbnail paths to event data
+        updateData.video = videoResult.videoPath;
+        updateData.thumbnail = videoResult.thumbnailPath;
+      }
+      
+      // Update event
+      const updatedEvent = await storage.updateEvent(id, updateData);
+      res.json(updatedEvent);
+    } catch (error: any) {
+      console.error('Error updating event:', error);
+      res.status(500).json({ message: error.message || "Error updating event" });
     }
   });
 
