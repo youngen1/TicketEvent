@@ -156,6 +156,26 @@ const initDatabase = async () => {
         tags: "test,payment,R2,budget"
       });
       
+      // R3 Live Payment Test Event
+      await storage.createEvent({
+        title: "R3 Live Payment Test Event",
+        description: "A test event that costs exactly R3 to test the live payment system",
+        date: "2025-05-10",
+        time: "18:00",
+        location: "Cape Town",
+        category: "Testing",
+        image: "https://images.unsplash.com/photo-1560439514-4e9645039924?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1560439514-4e9645039924?auto=format&fit=crop&w=800&q=80"
+        ]),
+        userId: 1,
+        featured: false,
+        maxAttendees: 100,
+        isFree: false,
+        price: "3",
+        tags: "test,payment,R3,live"
+      });
+      
       log('Mock events added successfully', 'database');
     }
   } catch (error) {
