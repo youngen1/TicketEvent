@@ -29,6 +29,7 @@ export default function ProfilePage() {
   const [, setLocation] = useLocation();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showFollowersDialog, setShowFollowersDialog] = useState(false);
   const [showFollowingDialog, setShowFollowingDialog] = useState(false);
@@ -317,7 +318,12 @@ export default function ProfilePage() {
                 </div>
                 <Separator className="my-4" />
                 <div className="flex flex-col space-y-2">
-                  <Button variant="outline" className="justify-start" size="sm">
+                  <Button 
+                    variant="outline" 
+                    className="justify-start" 
+                    size="sm"
+                    onClick={() => setIsEditProfileModalOpen(true)}
+                  >
                     <User className="mr-2 h-4 w-4" />
                     Edit Profile
                   </Button>
@@ -793,6 +799,12 @@ export default function ProfilePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        isOpen={isEditProfileModalOpen}
+        onClose={() => setIsEditProfileModalOpen(false)}
+      />
     </div>
   );
 }
