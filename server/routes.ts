@@ -302,11 +302,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate a unique reference
       const reference = `${eventId}-${Date.now()}-${req.session.userId}`;
       
+      // Create a callback URL (both for real Paystack and our mock)
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers.host;
+      const callbackUrl = `${protocol}://${host}/payment/success`;
+      
       // Initialize transaction with Paystack
       const transaction = await paystackService.initializeTransaction({
         email: user.email,
         amount: parseFloat(amount),
         reference,
+        callback_url: callbackUrl,
         metadata: {
           eventId,
           userId: req.session.userId,

@@ -32,11 +32,16 @@ class PaystackService {
    */
   async initializeTransaction(params: PaymentInitializeParams) {
     try {
-      // In development mode with dummy key, return mock data
+      // In development mode with dummy key, return mock data with a local success callback
       if (!process.env.PAYSTACK_SECRET_KEY) {
         console.log('Using mock payment data for development');
+        // Create a local callback URL that will show a payment successful page
+        const successUrl = new URL(params.callback_url || 'http://localhost:5000');
+        successUrl.searchParams.append('reference', params.reference || `mock-ref-${Date.now()}`);
+        successUrl.searchParams.append('mock', 'true');
+        
         return {
-          authorization_url: `https://checkout.paystack.com/${params.reference || 'mock-reference'}`,
+          authorization_url: successUrl.toString(),
           access_code: 'mock_access_code',
           reference: params.reference || `mock-ref-${Date.now()}`
         };
