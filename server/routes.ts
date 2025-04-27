@@ -848,6 +848,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get user events (events created by a specific user)
+  app.get("/api/users/:id/events", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Verify user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get events created by the user
+      const events = await storage.getUserEvents(userId);
+      
+      res.json(events);
+    } catch (error: any) {
+      console.error('Error fetching user events:', error);
+      res.status(500).json({ message: error.message || "Error fetching user events" });
+    }
+  });
+  
   // Follow a user
   app.post("/api/users/:id/follow", isAuthenticated, async (req, res) => {
     try {

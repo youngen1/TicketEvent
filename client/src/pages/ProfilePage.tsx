@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   CalendarDays, User, Settings, Star, Calendar, 
-  Clock, MapPin, Upload, Camera, Loader2, Ticket, CreditCard
+  Clock, MapPin, Upload, Camera, Loader2, Ticket, CreditCard,
+  Users, UserPlus, UserMinus
 } from "lucide-react";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
@@ -25,6 +27,8 @@ export default function ProfilePage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [showFollowersDialog, setShowFollowersDialog] = useState(false);
+  const [showFollowingDialog, setShowFollowingDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -95,6 +99,18 @@ export default function ProfilePage() {
   // Get user's purchased tickets
   const { data: userTickets = [], isLoading: userTicketsLoading } = useQuery({
     queryKey: ["/api/users/tickets"],
+  });
+  
+  // Get user's followers
+  const { data: followers = [], isLoading: followersLoading } = useQuery({
+    queryKey: [`/api/users/${user?.id}/followers`],
+    enabled: !!user?.id
+  });
+  
+  // Get users followed by the user
+  const { data: following = [], isLoading: followingLoading } = useQuery({
+    queryKey: [`/api/users/${user?.id}/following`],
+    enabled: !!user?.id
   });
 
   const handleShowDetails = (event: Event, openFullscreen = false) => {
@@ -205,6 +221,38 @@ export default function ProfilePage() {
                     <span>Upcoming Events</span>
                   </div>
                   <Badge variant="secondary">{upcomingEvents.length}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div 
+                    className="flex items-center text-sm hover:underline cursor-pointer"
+                    onClick={() => setShowFollowersDialog(true)}
+                  >
+                    <Users className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>Followers</span>
+                  </div>
+                  <Badge 
+                    variant="secondary" 
+                    className="cursor-pointer"
+                    onClick={() => setShowFollowersDialog(true)}
+                  >
+                    {followers?.length || 0}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div 
+                    className="flex items-center text-sm hover:underline cursor-pointer"
+                    onClick={() => setShowFollowingDialog(true)}
+                  >
+                    <UserPlus className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>Following</span>
+                  </div>
+                  <Badge 
+                    variant="secondary"
+                    className="cursor-pointer"
+                    onClick={() => setShowFollowingDialog(true)}
+                  >
+                    {following?.length || 0}
+                  </Badge>
                 </div>
                 <Separator className="my-4" />
                 <div className="flex flex-col space-y-2">
