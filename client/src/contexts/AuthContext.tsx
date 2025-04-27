@@ -5,6 +5,13 @@ import { useToast } from "@/hooks/use-toast";
 interface User {
   id: number;
   username: string;
+  displayName: string | null;
+  email: string | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+  bio: string | null;
+  avatar: string | null;
+  preferences: string | null;
 }
 
 interface AuthContextType {
