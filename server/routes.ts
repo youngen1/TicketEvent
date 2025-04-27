@@ -232,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user has permission (created the event)
-      if (event.createdById !== req.session.userId) {
+      if (event.userId !== req.session.userId) {
         return res.status(403).json({ message: "You do not have permission to update this event" });
       }
       
@@ -284,6 +284,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get user for email
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
       const user = await storage.getUser(req.session.userId);
       if (!user || !user.email) {
         return res.status(400).json({ message: "User email not found" });

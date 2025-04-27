@@ -20,6 +20,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import CommentSection from "./CommentSection";
 import EventRating from "./EventRating";
 import EventAttendance from "./EventAttendance";
+import PaymentButton from "./PaymentButton";
 
 interface EventDetailsModalProps {
   event: Event | null;
@@ -446,7 +447,16 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                 </TabsContent>
               </Tabs>
             </div>
-            <DialogFooter className="bg-neutral-50 px-4 py-3">
+            <DialogFooter className="bg-neutral-50 px-4 py-3 flex flex-row justify-between">
+              <div className="flex items-center">
+                {event.price && parseFloat(event.price) > 0 && (
+                  <PaymentButton 
+                    eventId={event.id} 
+                    amount={event.price} 
+                    buttonText={`Book for R${parseFloat(event.price).toFixed(2)}`}
+                  />
+                )}
+              </div>
               <Button type="button" variant="outline" onClick={onClose}>
                 Close
               </Button>
