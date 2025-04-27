@@ -59,7 +59,8 @@ import {
   DollarSign,
   Users,
   LineChart,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Event, EventTicket } from '@shared/schema';

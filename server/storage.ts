@@ -100,11 +100,33 @@ export class MemStorage implements IStorage {
       email: "demo@example.com", // Added email for payment processing
       preferences: null,
       followersCount: 0,
-      followingCount: 0
+      followingCount: 0,
+      isAdmin: false,
+      platformBalance: "0"
     });
     
+    // Create admin account
+    this.users.push({
+      id: this.nextUserId++,
+      username: "admin",
+      password: "$2a$10$JdP6aRBl9m4OFlniT/GGy.DeN9/LZhW1UcRTHFCZ7K5y1ivAbU.sG", // "password"
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      displayName: "System Admin",
+      avatar: "https://ui-avatars.com/api/?name=System+Admin&background=random",
+      bio: "System administrator account that collects platform fees",
+      email: "admin@eventsystem.com",
+      preferences: null,
+      followersCount: 0,
+      followingCount: 0,
+      isAdmin: true,
+      platformBalance: "0"
+    });
+    
+    console.log("Created admin account with username: admin and password: password");
+    
     // Create some sample users to follow
-    for (let i = 2; i <= 5; i++) {
+    for (let i = 3; i <= 5; i++) {
       this.users.push({
         id: this.nextUserId++,
         username: `user${i}`,
@@ -117,7 +139,9 @@ export class MemStorage implements IStorage {
         email: `user${i}@example.com`,
         preferences: null,
         followersCount: 0,
-        followingCount: 0
+        followingCount: 0,
+        isAdmin: false,
+        platformBalance: "0"
       });
     }
     
@@ -661,7 +685,40 @@ export class MemStorage implements IStorage {
     };
     
     this.tickets.push(newTicket);
+    
+    // Only process platform fee for completed tickets
+    if (newTicket.paymentStatus === 'completed') {
+      await this.processPlatformFee(newTicket);
+    }
+    
     return newTicket;
+  }
+  
+  // Process the 15% platform fee and credit it to the admin account
+  private async processPlatformFee(ticket: EventTicket): Promise<void> {
+    try {
+      // Find the admin account
+      const adminUser = this.users.find(user => user.isAdmin === true);
+      if (!adminUser) {
+        console.error('No admin account found to credit platform fee');
+        return;
+      }
+      
+      // Calculate the platform fee (15% of the ticket price)
+      const ticketAmount = parseFloat(ticket.totalAmount?.toString() || '0');
+      const platformFee = ticketAmount * 0.15;
+      
+      // Update the admin's platform balance
+      const currentBalance = parseFloat(adminUser.platformBalance || "0");
+      const newBalance = currentBalance + platformFee;
+      
+      // Update the admin user with the new balance
+      adminUser.platformBalance = newBalance.toString();
+      
+      console.log(`Credited R${platformFee.toFixed(2)} platform fee to admin account. New balance: R${newBalance.toFixed(2)}`);
+    } catch (error) {
+      console.error('Error processing platform fee:', error);
+    }
   }
 
   async getEventTickets(eventId: number): Promise<EventTicket[]> {
@@ -683,6 +740,8 @@ export class MemStorage implements IStorage {
       throw new Error(`Ticket with id ${id} not found`);
     }
     
+    const oldTicket = this.tickets[index];
+    
     // Update ticket with new values
     this.tickets[index] = {
       ...this.tickets[index],
@@ -690,7 +749,18 @@ export class MemStorage implements IStorage {
       updatedAt: new Date()
     };
     
-    return this.tickets[index];
+    const updatedTicket = this.tickets[index];
+    
+    // If ticket status is being updated from something else to 'completed'
+    // then process the platform fee
+    if (
+      oldTicket.paymentStatus !== 'completed' && 
+      updatedTicket.paymentStatus === 'completed'
+    ) {
+      await this.processPlatformFee(updatedTicket);
+    }
+    
+    return updatedTicket;
   }
   
   // User follow methods
