@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertEventSchema, insertUserSchema } from "@shared/schema";
+import { insertEventSchema, insertUserSchema, type InsertEventTicket } from "@shared/schema";
 import * as bcrypt from 'bcrypt';
 import session from 'express-session';
 import { db } from "./db";

@@ -11,7 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
   CalendarDays, User, Settings, Star, Calendar, 
-  Clock, MapPin, Upload, Camera, Loader2 
+  Clock, MapPin, Upload, Camera, Loader2, Ticket, CreditCard
 } from "lucide-react";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
@@ -90,6 +90,11 @@ export default function ProfilePage() {
   // Get user's upcoming events (events they're attending)
   const { data: upcomingEvents = [], isLoading: upcomingEventsLoading } = useQuery({
     queryKey: ["/api/users", user?.id, "upcoming-events"],
+  });
+  
+  // Get user's purchased tickets
+  const { data: userTickets = [], isLoading: userTicketsLoading } = useQuery({
+    queryKey: ["/api/users/tickets"],
   });
 
   const handleShowDetails = (event: Event, openFullscreen = false) => {
@@ -239,9 +244,10 @@ export default function ProfilePage() {
         {/* User content */}
         <div className="md:col-span-2">
           <Tabs defaultValue="my-events" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="my-events">My Events</TabsTrigger>
               <TabsTrigger value="attending">Attending</TabsTrigger>
+              <TabsTrigger value="tickets">My Tickets</TabsTrigger>
             </TabsList>
             
             <TabsContent value="my-events" className="mt-6">
@@ -336,6 +342,106 @@ export default function ProfilePage() {
                             <Button variant="outline" size="sm" onClick={() => handleShowDetails(event)}>
                               View Details
                             </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="tickets" className="mt-6">
+              <h2 className="text-xl font-semibold mb-4">Your Purchased Tickets</h2>
+              {userTicketsLoading ? (
+                <div className="text-center py-10">
+                  <p className="text-muted-foreground">Loading tickets...</p>
+                </div>
+              ) : userTickets.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-10">
+                    <Ticket className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-medium">No tickets purchased</h3>
+                    <p className="text-muted-foreground text-center mt-1 max-w-md">
+                      You haven't purchased any tickets yet. Browse events and buy tickets to see them here.
+                    </p>
+                    <Button className="mt-4" onClick={() => setLocation("/events")}>
+                      Browse Events
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {userTickets.map((ticket: any) => (
+                    <Card key={ticket.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                      <div className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 items-start">
+                        {ticket.event && (
+                          <div 
+                            className="w-full sm:w-24 h-24 bg-muted rounded-md flex-shrink-0 bg-cover bg-center"
+                            style={{ 
+                              backgroundImage: `url(${
+                                ticket.event.image || 
+                                (ticket.event.images ? JSON.parse(ticket.event.images)[0] : '/placeholder-event.jpg')
+                              })` 
+                            }}
+                            onClick={() => ticket.event && handleShowDetails(ticket.event, true)}
+                          />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 
+                                className="font-medium text-lg hover:text-primary cursor-pointer" 
+                                onClick={() => ticket.event && handleShowDetails(ticket.event)}
+                              >
+                                {ticket.event ? ticket.event.title : "Event unavailable"}
+                              </h3>
+                              <div className="flex flex-wrap gap-y-1 gap-x-4 text-sm text-muted-foreground mt-1">
+                                {ticket.event && (
+                                  <>
+                                    <div className="flex items-center">
+                                      <Calendar className="mr-1 h-4 w-4" />
+                                      <span>{new Date(ticket.event.date).toLocaleDateString()}</span>
+                                    </div>
+                                    {ticket.event.time && (
+                                      <div className="flex items-center">
+                                        <Clock className="mr-1 h-4 w-4" />
+                                        <span>{ticket.event.time}</span>
+                                      </div>
+                                    )}
+                                    {ticket.event.location && (
+                                      <div className="flex items-center">
+                                        <MapPin className="mr-1 h-4 w-4" />
+                                        <span>{ticket.event.location}</span>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                                <div className="flex items-center mt-1">
+                                  <CreditCard className="mr-1 h-4 w-4" />
+                                  <span>Purchase: {new Date(ticket.purchaseDate).toLocaleDateString()}</span>
+                                </div>
+                                <div className="flex items-center mt-1">
+                                  <Ticket className="mr-1 h-4 w-4" />
+                                  <span>Quantity: {ticket.quantity || 1}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <Badge>{ticket.paymentStatus || "completed"}</Badge>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {ticket.event && (
+                              <Button variant="outline" size="sm" onClick={() => handleShowDetails(ticket.event)}>
+                                View Event
+                              </Button>
+                            )}
+                            <Badge variant="outline" className="px-3 py-1 flex items-center gap-1">
+                              <CreditCard className="h-3 w-3" />
+                              ${ticket.totalAmount}
+                            </Badge>
+                            <Badge variant="secondary" className="px-3 py-1">
+                              Ref: {ticket.paymentReference.substring(0, 10)}...
+                            </Badge>
                           </div>
                         </div>
                       </div>
