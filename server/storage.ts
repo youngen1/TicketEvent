@@ -91,7 +91,7 @@ export class MemStorage implements IStorage {
     
     // Create a default user
     this.users.push({
-      id: 1,
+      id: this.nextUserId++, // Will be 1
       username: "demo",
       password: "$2a$10$JdP6aRBl9m4OFlniT/GGy.DeN9/LZhW1UcRTHFCZ7K5y1ivAbU.sG", // "password"
       createdAt: new Date(),
@@ -109,7 +109,7 @@ export class MemStorage implements IStorage {
     
     // Create admin account
     this.users.push({
-      id: this.nextUserId++,
+      id: this.nextUserId++, // Will be 2
       username: "admin",
       password: "$2a$10$JdP6aRBl9m4OFlniT/GGy.DeN9/LZhW1UcRTHFCZ7K5y1ivAbU.sG", // "password"
       createdAt: new Date(),
