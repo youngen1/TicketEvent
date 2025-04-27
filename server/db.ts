@@ -11,5 +11,8 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
+// Set payment mode to live for real payment processing
+process.env.PAYSTACK_MODE = 'live';
+
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema });

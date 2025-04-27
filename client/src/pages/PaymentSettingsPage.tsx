@@ -17,7 +17,7 @@ export default function PaymentSettingsPage() {
   const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [liveMode, setLiveMode] = useState(false);
+  const [liveMode, setLiveMode] = useState(true);
 
   // Redirect non-authenticated users
   if (!isAuthenticated) {

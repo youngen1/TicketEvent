@@ -482,10 +482,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For now, we'll return the masked settings
       const settings = {
         liveMode: process.env.PAYSTACK_MODE === 'live',
-        liveSecretKey: process.env.PAYSTACK_SECRET_KEY ? true : false,
-        livePublicKey: process.env.VITE_PAYSTACK_PUBLIC_KEY || '',
-        testSecretKey: process.env.PAYSTACK_TEST_SECRET_KEY ? true : false,
-        testPublicKey: process.env.VITE_PAYSTACK_TEST_PUBLIC_KEY || ''
+        liveSecretKey: process.env.PAYSTACK_SECRET_KEY ? '••••••••••••••••••••••••••' : undefined,
+        livePublicKey: process.env.VITE_PAYSTACK_PUBLIC_KEY ? 
+          `${process.env.VITE_PAYSTACK_PUBLIC_KEY.substring(0, 8)}...` : undefined,
+        testSecretKey: process.env.PAYSTACK_TEST_SECRET_KEY ? '••••••••••••••••••••••••••' : undefined,
+        testPublicKey: process.env.VITE_PAYSTACK_TEST_PUBLIC_KEY ? 
+          `${process.env.VITE_PAYSTACK_TEST_PUBLIC_KEY.substring(0, 8)}...` : undefined
       };
       
       res.json(settings);
