@@ -1,12 +1,8 @@
 import { Heart, Image as ImageIcon, User } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Event } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useState, useEffect } from "react";
 
 interface EventCardProps {
   event: Event;
@@ -15,90 +11,9 @@ interface EventCardProps {
 
 export default function EventCard({ event, onShowDetails }: EventCardProps) {
   const [, navigate] = useLocation();
-  // Open the event details directly in fullscreen mode when clicking on the image
-  const handleImageClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Pass true as second argument to enable fullscreen mode
-    onShowDetails(event, true);
-  };
   const queryClient = useQueryClient();
-  
-  // State to hold creator data
-  const [creator, setCreator] = useState<any>(null);
-  
-  // Debug logs
-  console.log('Event:', event.id, 'Title:', event.title, 'UserId:', event.userId);
-  
-  // Directly fetch creator information on component mount
-  useEffect(() => {
-    async function fetchCreator() {
-      if (!event.userId) {
-        console.log('No userId for event:', event.id);
-        return;
-      }
-      
-      console.log('EVENT CARD: Directly fetching creator info for userId:', event.userId);
-      try {
-        console.log(`Attempting to fetch user data for ID: ${event.userId}`);
-        
-        // Force a more explicit URL construction
-        const baseUrl = window.location.origin;
-        const apiUrl = `${baseUrl}/api/users/${event.userId}`;
-        console.log('Complete API URL:', apiUrl);
-        
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-        
-        console.log(`API Response for user ${event.userId} - Status:`, response.status);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Creator data directly fetched:', data);
-          setCreator(data);
-        } else {
-          console.error('Error fetching creator:', response.status, await response.text());
-        }
-      } catch (error) {
-        console.error('Exception fetching creator:', error);
-      }
-    }
-    
-    // Add a slight delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      fetchCreator();
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [event.userId]);
 
-  const toggleFavoriteMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("PUT", `/api/events/${event.id}/favorite`, null);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-    }
-  });
-
-  const handleFavoriteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleFavoriteMutation.mutate();
-  };
-  
-  const handleCreatorClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (creator?.username) {
-      navigate(`/users/${creator.username}`);
-    }
-  };
-
-  // Get the first image from the images array if available
+  // Get image data
   let firstImage = event.image || '';
   let totalImages = 0;
   
@@ -114,129 +29,186 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     }
   }
 
-  // Function to format image URL
+  // Mutation for favorites
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("PUT", `/api/events/${event.id}/favorite`, null);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+    }
+  });
+
+  // Click handlers
+  const handleImageClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onShowDetails(event, true);
+  };
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavoriteMutation.mutate();
+  };
+  
+  const handleCreatorClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (event.userId) {
+      navigate(`/users/${event.userId}`);
+    }
+  };
+
+  // Format image URL
   const getFormattedImageUrl = (url: string) => {
     if (!url) return '';
     
-    // Handle relative URLs
     if (url.startsWith('/uploads')) {
-      // Use window.location to get current host for correct URL in all environments
-      const baseUrl = `${window.location.protocol}//${window.location.host}`;
-      return `${baseUrl}${url}`;
+      return `${window.location.origin}${url}`;
     }
     
-    // Handle full URLs
     return url;
   };
 
+  // Generate creator initials for avatar
+  const getCreatorInitial = () => {
+    return `U${event.userId || ''}`;
+  };
+
+  // Generate creator color based on userId
+  const getCreatorColor = () => {
+    const colors = [
+      '#FF5733', '#33FF57', '#3357FF', '#F033FF', '#FF33F0',
+      '#33FFF0', '#F0FF33', '#FF3333', '#33FF33', '#3333FF'
+    ];
+    
+    if (!event.userId) return colors[0];
+    return colors[event.userId % colors.length];
+  };
+
   return (
-    <Card 
-      className="bg-white overflow-hidden shadow-sm rounded-lg hover:shadow-md transition-shadow duration-300"
+    <div 
       onClick={() => onShowDetails(event)}
+      className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transition-all hover:shadow-lg"
     >
-      <div className="h-40 bg-neutral-200 relative cursor-pointer" onClick={(e) => {
-          e.stopPropagation();
-          handleImageClick(e);
-        }}>
-        {firstImage && firstImage.length > 0 ? (
-          <div className="w-full h-full">
-            <img 
-              src={getFormattedImageUrl(firstImage)}
-              alt={event.title} 
-              className="w-full h-full object-cover" 
-            />
-            {totalImages > 1 && (
-              <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white rounded-full px-2 py-1 text-xs flex items-center">
-                <ImageIcon size={12} className="mr-1" />
-                <span>{totalImages}</span>
-              </div>
-            )}
-          </div>
+      {/* Image Section */}
+      <div 
+        className="h-40 bg-neutral-200 relative" 
+        onClick={handleImageClick}
+      >
+        {firstImage ? (
+          <img 
+            src={getFormattedImageUrl(firstImage)} 
+            alt={event.title}
+            className="w-full h-full object-cover"
+          />
         ) : (
-          <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-neutral-500">
-            <ImageIcon size={36} />
+          <div className="w-full h-full flex items-center justify-center">
+            <ImageIcon size={40} className="text-gray-400" />
           </div>
         )}
-        <div className="absolute top-0 right-0 mt-2 mr-2">
-          <button 
-            className="bg-white rounded-full p-1.5 text-neutral-500 hover:text-red-500 focus:outline-none"
-            onClick={handleFavoriteClick}
-            disabled={toggleFavoriteMutation.isPending}
-          >
-            <Heart className={false ? "text-red-500 fill-red-500" : ""} />
-          </button>
-        </div>
+        
+        {/* Multiple images indicator */}
+        {totalImages > 1 && (
+          <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center">
+            <ImageIcon size={12} className="mr-1" />
+            <span>{totalImages}</span>
+          </div>
+        )}
+        
+        {/* Favorite button */}
+        <button
+          onClick={handleFavoriteClick}
+          className="absolute top-2 right-2 bg-white p-1.5 rounded-full shadow hover:bg-gray-100"
+        >
+          <Heart size={18} />
+        </button>
       </div>
+      
+      {/* Content Section */}
       <div className="p-4">
-        <div className="flex items-center mb-2">
-          <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getCategoryStyles(event.category || '')}`}>
+        {/* Category and Attendees Row */}
+        <div className="flex justify-between items-center mb-3">
+          <span className={`text-xs px-2 py-1 rounded-full font-medium ${getCategoryStyles(event.category || '')}`}>
             {event.category || 'General'}
           </span>
-          <span className="ml-auto text-sm text-neutral-500">
-            <span className="inline-flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              {event.attendees}
-            </span>
+          
+          <span className="text-xs text-gray-500 flex items-center">
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            {event.attendees || 0}
           </span>
         </div>
         
-        {/* Creator profile circle with guaranteed visibility */}
+        {/* Creator Row - SIMPLIFIED AND GUARANTEED TO SHOW */}
         <div className="flex items-center mb-3">
-          <div className="cursor-pointer flex items-center" onClick={handleCreatorClick}>
-            <div
-              className="h-6 w-6 mr-2 rounded-full flex items-center justify-center text-white text-xs font-bold"
-              style={{
-                backgroundColor: `hsl(${(event.id * 40) % 360}, 70%, 50%)`,
-              }}
+          <div 
+            onClick={handleCreatorClick} 
+            className="flex items-center cursor-pointer"
+          >
+            <div 
+              style={{backgroundColor: getCreatorColor()}}
+              className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2"
             >
-              {event.id}
+              {getCreatorInitial()}
             </div>
-            <span className="text-xs text-neutral-600">
-              by {creator?.displayName || creator?.username || 'Event Creator'}
+            <span className="text-xs text-gray-600">
+              by Event Creator {event.userId}
             </span>
           </div>
         </div>
-        <h3 className="text-lg font-medium text-neutral-900 mb-1 font-heading">{event.title}</h3>
-        <p className="text-sm text-neutral-600 mb-3 line-clamp-2">{event.description}</p>
-        <div className="flex items-center text-sm text-neutral-500 mb-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        
+        {/* Event Title */}
+        <h3 className="font-bold text-gray-800 mb-1">
+          {event.title}
+        </h3>
+        
+        {/* Event Description */}
+        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+          {event.description}
+        </p>
+        
+        {/* Date */}
+        <div className="flex items-center text-sm text-gray-500 mb-2">
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span>{event.date}</span>
+          {event.date}
         </div>
-        <div className="flex items-center text-sm text-neutral-500 mb-3">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        
+        {/* Location */}
+        <div className="flex items-center text-sm text-gray-500 mb-3">
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <span>{event.location}</span>
+          {event.location}
         </div>
-        <div className="mt-4 flex justify-between">
-          <Button 
-            variant="ghost" 
-            className="inline-flex items-center px-3 py-1.5 text-sm text-primary hover:bg-blue-50"
+        
+        {/* Buttons */}
+        <div className="flex justify-between pt-2 border-t border-gray-100">
+          <button 
             onClick={(e) => {
               e.stopPropagation();
               onShowDetails(event);
             }}
+            className="text-blue-600 text-sm font-medium flex items-center hover:text-blue-800"
           >
-            Details 
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            Details
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="inline-flex items-center px-3 py-1.5 border border-primary text-sm text-primary hover:bg-blue-50"
+          </button>
+          
+          <button 
             onClick={(e) => e.stopPropagation()}
+            className="border border-blue-600 text-blue-600 px-3 py-1 rounded text-sm font-medium hover:bg-blue-50"
           >
             Register
-          </Button>
+          </button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
