@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   followingCount: integer("following_count").default(0),
   isAdmin: boolean("is_admin").default(false),
   platformBalance: text("platform_balance").default("0"),
+  isBanned: boolean("is_banned").default(false),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -29,6 +30,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   bio: true,
   avatar: true,
   preferences: true,
+  isBanned: true,
 });
 
 // Events table

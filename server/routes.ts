@@ -1138,6 +1138,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Error fetching admin transactions' });
     }
   });
+  
+  // User management endpoints
+  app.get('/api/admin/users', isAdmin, async (req, res) => {
+    try {
+      // Get query parameters
+      const searchQuery = req.query.search as string || '';
+      
+      // Get all users
+      const allUsers = await storage.getAllUsers();
+      
+      // Filter users based on search query if provided
+      let filteredUsers = allUsers;
+      if (searchQuery) {
+        const lowerCaseQuery = searchQuery.toLowerCase();
+        filteredUsers = allUsers.filter(user => 
+          user.username.toLowerCase().includes(lowerCaseQuery) || 
+          (user.displayName && user.displayName.toLowerCase().includes(lowerCaseQuery))
+        );
+      }
+      
+      // Map users to include only necessary info and exclude sensitive data like passwords
+      const safeUsers = filteredUsers.map(user => ({
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName || user.username,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        createdAt: user.createdAt,
+        followersCount: user.followersCount,
+        followingCount: user.followingCount,
+        avatar: user.avatar,
+        isBanned: user.isBanned || false
+      }));
+      
+      res.json(safeUsers);
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+      res.status(500).json({ message: 'Error fetching users' });
+    }
+  });
+  
+  // Ban/unban a user
+  app.post('/api/admin/users/:userId/toggle-ban', isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      // Ensure user isn't trying to ban themselves
+      if (userId === req.session.userId) {
+        return res.status(400).json({ message: 'You cannot ban your own account' });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Toggle ban status
+      const isBanned = user.isBanned || false;
+      const updatedUser = await storage.updateUser(userId, { 
+        isBanned: !isBanned
+      });
+      
+      res.json({ 
+        id: updatedUser.id,
+        username: updatedUser.username,
+        isBanned: updatedUser.isBanned || false
+      });
+    } catch (error) {
+      console.error('Error toggling user ban status:', error);
+      res.status(500).json({ message: 'Error updating user ban status' });
+    }
+  });
 
   const httpServer = createServer(app);
 

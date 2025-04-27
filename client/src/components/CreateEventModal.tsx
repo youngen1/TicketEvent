@@ -18,6 +18,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -27,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -48,6 +50,8 @@ const formSchema = insertEventSchema.extend({
   date: z.string().min(1, { message: "Date is required" }),
   time: z.string().min(1, { message: "Time is required" }),
   location: z.string().min(1, { message: "Location is required" }),
+  isFree: z.boolean().default(true),
+  price: z.string().default("0"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -62,7 +66,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
   const [uploadError, setUploadError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const [isFreeEvent, setIsFreeEvent] = useState(false);
+  const [isFreeEvent, setIsFreeEvent] = useState(true);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -75,7 +79,6 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       location: "",
       images: "",
       image: "",
-      schedule: "",
       isFree: true,
       price: "0",
     },
@@ -234,7 +237,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
     
     // Add the user ID to the event data
     if (user) {
-      data.createdById = user.id;
+      data.userId = user.id;
     }
     
     createEventMutation.mutate(data);
