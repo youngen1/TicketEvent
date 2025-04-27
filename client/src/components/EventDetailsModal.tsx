@@ -82,7 +82,17 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
   };
 
   const getFullImageUrl = (url: string) => {
-    return url.startsWith('/uploads') ? `http://localhost:5000${url}` : url;
+    if (!url) return '';
+    
+    // Handle relative URLs
+    if (url.startsWith('/uploads')) {
+      // Use window.location to get current host for correct URL in all environments
+      const baseUrl = `${window.location.protocol}//${window.location.host}`;
+      return `${baseUrl}${url}`;
+    }
+    
+    // Handle full URLs
+    return url;
   };
 
   const toggleFullscreen = () => {
