@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { Redirect } from "wouter";
+import { Redirect, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -274,9 +274,11 @@ export default function AdminPage() {
             <Database className="mr-2 h-4 w-4" />
             Database Backup
           </Button>
-          <Button className="flex items-center" variant="outline">
-            <Users className="mr-2 h-4 w-4" />
-            Manage Users
+          <Button className="flex items-center" variant="outline" asChild>
+            <Link href="/admin/users">
+              <Users className="mr-2 h-4 w-4" />
+              Manage Users
+            </Link>
           </Button>
           <Button className="flex items-center" variant="outline">
             <Calendar className="mr-2 h-4 w-4" />

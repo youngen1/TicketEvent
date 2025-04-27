@@ -16,6 +16,7 @@ import PaymentSuccessPage from "@/pages/PaymentSuccessPage";
 import PaymentSettingsPage from "@/pages/PaymentSettingsPage";
 import FinancePage from "@/pages/FinancePage";
 import AdminPage from "@/pages/AdminPage";
+import UserManagementPage from "@/pages/UserManagementPage";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useState } from "react";
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/payment/settings" component={PaymentSettingsPage} />
       <Route path="/finance" component={FinancePage} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/admin/users" component={UserManagementPage} />
       <Route component={NotFound} />
     </Switch>
   );
