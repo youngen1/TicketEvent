@@ -206,6 +206,16 @@ export class MemStorage implements IStorage {
   private seedEvents() {
     console.log("Running seedEvents function...");
     
+    // Import events from our seed data file
+    const { createSeedEvents } = require('./data/seedEvents');
+    const sampleEvents: Event[] = createSeedEvents(() => this.nextEventId++);
+    
+    // Add events to the in-memory storage
+    this.events = sampleEvents;
+  }
+  
+  // Original events definition for reference
+  private originalSeedEvents() {
     // Create sample events that match our schema
     const sampleEvents: Event[] = [
       {
