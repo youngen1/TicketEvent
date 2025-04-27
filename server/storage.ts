@@ -85,6 +85,9 @@ export class MemStorage implements IStorage {
   }
 
   private seedEvents() {
+    console.log("Running seedEvents function...");
+    
+    // Create sample events that match our schema
     const sampleEvents: Event[] = [
       {
         id: this.nextEventId++,
@@ -94,61 +97,111 @@ export class MemStorage implements IStorage {
         time: "09:00",
         location: "San Francisco, CA",
         category: "Technology",
-        image: null,
-        images: JSON.stringify(["uploads/images/tech-conference.jpg"]),
+        image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1576124886577-6e4890d6d4dd?auto=format&fit=crop&w=800&q=80"
+        ]),
         userId: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
-        views: 0,
-        attendees: 0,
+        views: 120,
+        attendees: 75,
         maxAttendees: 200,
         featured: true,
         video: null,
         tags: "tech,conference,networking",
+        price: 299.99,
+        isFree: false,
+        rating: 4.8,
+        ratingCount: 45
       },
       {
         id: this.nextEventId++,
         title: "Summer Music Festival",
-        description: "A weekend of music and fun under the sun",
+        description: "A weekend of music and fun under the sun with live performances from top artists",
         date: "2025-06-22",
         time: "12:00",
         location: "Austin, TX",
         category: "Music",
-        image: null,
-        images: JSON.stringify(["uploads/images/music-festival.jpg"]),
+        image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=800&q=80"
+        ]),
         userId: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
-        views: 0,
-        attendees: 0,
+        views: 950,
+        attendees: 1250,
         maxAttendees: 5000,
         featured: true,
         video: null,
         tags: "music,festival,summer",
+        price: 149.99,
+        isFree: false,
+        rating: 4.9,
+        ratingCount: 320
       },
       {
         id: this.nextEventId++,
         title: "Art Exhibition Opening",
-        description: "Opening night of our latest art exhibition",
+        description: "Opening night of our latest art exhibition featuring contemporary artists",
         date: "2025-04-30",
         time: "18:00",
         location: "New York, NY",
         category: "Art",
-        image: null,
-        images: JSON.stringify(["uploads/images/art-exhibition.jpg"]),
+        image: "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1501699169021-3759ee435d66?auto=format&fit=crop&w=800&q=80"
+        ]),
         userId: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
-        views: 0,
-        attendees: 0,
+        views: 250,
+        attendees: 45,
         maxAttendees: 100,
         featured: false,
         video: null,
         tags: "art,exhibition,culture",
+        price: 25,
+        isFree: false,
+        rating: 4.2,
+        ratingCount: 18
+      },
+      {
+        id: this.nextEventId++,
+        title: "Free Community Workshop",
+        description: "Learn new skills at our community workshop - open to all",
+        date: "2025-05-15",
+        time: "10:00",
+        location: "Chicago, IL",
+        category: "Education",
+        image: "https://images.unsplash.com/photo-1544531585-9847b68c8c86?auto=format&fit=crop&w=800&q=80",
+        images: JSON.stringify([
+          "https://images.unsplash.com/photo-1544531585-9847b68c8c86?auto=format&fit=crop&w=800&q=80"
+        ]),
+        userId: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        views: 85,
+        attendees: 24,
+        maxAttendees: 50,
+        featured: false,
+        video: null,
+        tags: "education,workshop,community",
+        price: 0,
+        isFree: true,
+        rating: 4.5,
+        ratingCount: 12
       }
     ];
     
+    // Assign events to the class property
     this.events = sampleEvents;
+    
+    console.log(`Successfully seeded ${this.events.length} events to memory storage`);
   }
   
   // User methods
