@@ -151,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tags = req.query.tags as string | undefined;
       const featured = req.query.featured === 'true' ? true : undefined;
       const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 7; // Default 7 events per page
+      const limit = parseInt(req.query.limit as string) || 3; // Reduced to 3 for testing
       const offset = (page - 1) * limit;
       
       // Get total count for pagination
