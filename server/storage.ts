@@ -63,6 +63,8 @@ export class MemStorage implements IStorage {
   private nextAttendeeId = 1;
 
   constructor() {
+    console.log("Initializing MemStorage...");
+    
     // Create a default user
     this.users.push({
       id: 1,
@@ -72,11 +74,14 @@ export class MemStorage implements IStorage {
       updatedAt: new Date(),
       displayName: "Demo User",
       avatar: null,
-      bio: null
+      bio: null,
+      email: null,
+      preferences: null
     });
     
     // Seed some events
     this.seedEvents();
+    console.log(`Seeded ${this.events.length} events in memory storage`);
   }
 
   private seedEvents() {
@@ -190,6 +195,9 @@ export class MemStorage implements IStorage {
 
   // Event methods
   async getAllEvents(category?: string, tags?: string, featured?: boolean): Promise<Event[]> {
+    console.log(`Getting all events. Total events in memory: ${this.events.length}`);
+    console.log(`Events: ${JSON.stringify(this.events.map(e => ({ id: e.id, title: e.title })))}`);
+    
     let filteredEvents = [...this.events];
     
     if (category) {
@@ -205,6 +213,7 @@ export class MemStorage implements IStorage {
       filteredEvents = filteredEvents.filter(event => event.featured === true);
     }
     
+    console.log(`Returning ${filteredEvents.length} events`);
     return filteredEvents;
   }
 
