@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
+import FinanceView from "@/components/FinanceView";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -292,10 +293,11 @@ export default function ProfilePage() {
         {/* User content */}
         <div className="md:col-span-2">
           <Tabs defaultValue="my-events" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="my-events">My Events</TabsTrigger>
               <TabsTrigger value="attending">Attending</TabsTrigger>
               <TabsTrigger value="tickets">My Tickets</TabsTrigger>
+              <TabsTrigger value="finance">Finance</TabsTrigger>
             </TabsList>
             
             <TabsContent value="my-events" className="mt-6">
@@ -495,6 +497,17 @@ export default function ProfilePage() {
                       </div>
                     </Card>
                   ))}
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="finance" className="mt-6">
+              <h2 className="text-xl font-semibold mb-4">Financial Overview</h2>
+              {user?.id ? (
+                <FinanceView userId={user.id} />
+              ) : (
+                <div className="text-center py-10">
+                  <p className="text-muted-foreground">Unable to load financial data.</p>
                 </div>
               )}
             </TabsContent>
