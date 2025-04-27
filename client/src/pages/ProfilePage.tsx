@@ -147,12 +147,36 @@ export default function ProfilePage() {
         <div className="md:col-span-1">
           <Card>
             <CardHeader className="pb-4">
-              <div className="flex justify-center mb-4">
-                <Avatar className="h-24 w-24">
+              <div className="flex justify-center mb-4 relative group">
+                <Avatar className="h-24 w-24 relative">
+                  {user?.avatar ? (
+                    <AvatarImage src={user.avatar} alt={user?.username || "User"} />
+                  ) : null}
                   <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
                     {user?.username ? getInitials(user.username) : "U"}
                   </AvatarFallback>
+                  
+                  {/* Upload overlay */}
+                  <div 
+                    className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    onClick={handlePhotoUploadClick}
+                  >
+                    {isUploadingPhoto ? (
+                      <Loader2 className="h-6 w-6 text-white animate-spin" />
+                    ) : (
+                      <Camera className="h-6 w-6 text-white" />
+                    )}
+                  </div>
                 </Avatar>
+                
+                {/* Hidden file input */}
+                <input 
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                />
               </div>
               <CardTitle className="text-center text-xl">
                 {user?.displayName || user?.username}
@@ -278,7 +302,7 @@ export default function ProfilePage() {
                       <div className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 items-start">
                         <div 
                           className="w-full sm:w-24 h-24 bg-muted rounded-md flex-shrink-0 bg-cover bg-center"
-                          style={{ backgroundImage: `url(${event.imageUrls?.[0] || '/placeholder-event.jpg'})` }}
+                          style={{ backgroundImage: `url(${event.image || (event.images ? JSON.parse(event.images)[0] : '/placeholder-event.jpg')})` }}
                           onClick={() => handleShowDetails(event, true)}
                         />
                         <div className="flex-1">
