@@ -116,6 +116,62 @@ export default function ProfilePage() {
     queryKey: [`/api/users/${user?.id}/following`],
     enabled: !!user?.id
   });
+  
+  // Mutation for following a user
+  const followUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiRequest("POST", `/api/users/follow/${userId}`);
+      if (!res.ok) {
+        throw new Error("Failed to follow user");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      // Invalidate followers and following queries to refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/followers`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/following`] });
+      
+      toast({
+        title: "Success",
+        description: "You are now following this user",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to follow user",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Mutation for unfollowing a user
+  const unfollowUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiRequest("DELETE", `/api/users/follow/${userId}`);
+      if (!res.ok) {
+        throw new Error("Failed to unfollow user");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      // Invalidate followers and following queries to refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/followers`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/following`] });
+      
+      toast({
+        title: "Success",
+        description: "You have unfollowed this user",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to unfollow user",
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleShowDetails = (event: Event, openFullscreen = false) => {
     setSelectedEvent(event);
@@ -587,10 +643,18 @@ export default function ProfilePage() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              // Unfollow logic would go here
+                              unfollowUserMutation.mutate(follower.id);
                             }}
+                            disabled={unfollowUserMutation.isPending}
                           >
-                            Following
+                            {unfollowUserMutation.isPending && unfollowUserMutation.variables === follower.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                Unfollowing...
+                              </>
+                            ) : (
+                              "Following"
+                            )}
                           </Button>
                         ) : (
                           <Button 
@@ -598,10 +662,18 @@ export default function ProfilePage() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              // Follow logic would go here
+                              followUserMutation.mutate(follower.id);
                             }}
+                            disabled={followUserMutation.isPending}
                           >
-                            Follow
+                            {followUserMutation.isPending && followUserMutation.variables === follower.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                Following...
+                              </>
+                            ) : (
+                              "Follow"
+                            )}
                           </Button>
                         )}
                         <Button 
@@ -687,10 +759,18 @@ export default function ProfilePage() {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            // Unfollow logic would go here
+                            unfollowUserMutation.mutate(followedUser.id);
                           }}
+                          disabled={unfollowUserMutation.isPending}
                         >
-                          Following
+                          {unfollowUserMutation.isPending && unfollowUserMutation.variables === followedUser.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                              Unfollowing...
+                            </>
+                          ) : (
+                            "Following"
+                          )}
                         </Button>
                         <Button 
                           size="sm" 
