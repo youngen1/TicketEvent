@@ -79,8 +79,39 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
 
   const createEventMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      const res = await apiRequest("POST", "/api/events", data);
-      return res.json();
+      // If we have a video file, use FormData to upload directly 
+      if (videoFile) {
+        // Create form data with all event fields plus the video file
+        const formData = new FormData();
+        
+        // Add all form fields to FormData
+        Object.entries(data).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            formData.append(key, value.toString());
+          }
+        });
+        
+        // Add the video file
+        formData.append('video', videoFile);
+        
+        // Use fetch directly for multipart FormData
+        const response = await fetch('/api/events', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create event');
+        }
+        
+        return response.json();
+      } else {
+        // Regular JSON submission if no video file
+        const res = await apiRequest("POST", "/api/events", data);
+        return res.json();
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
@@ -96,10 +127,10 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       setIsVideoProcessing(false);
       setVideoError(null);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to create event. Please try again.",
+        description: error.message || "Failed to create event. Please try again.",
         variant: "destructive",
       });
     },

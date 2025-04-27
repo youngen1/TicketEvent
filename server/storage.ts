@@ -64,6 +64,20 @@ export class DatabaseStorage implements IStorage {
     return event;
   }
   
+  async updateEvent(id: number, eventData: Partial<InsertEvent>): Promise<Event> {
+    const [updatedEvent] = await db
+      .update(events)
+      .set(eventData)
+      .where(eq(events.id, id))
+      .returning();
+    
+    if (!updatedEvent) {
+      throw new Error(`Event with id ${id} not found`);
+    }
+    
+    return updatedEvent;
+  }
+  
   async toggleFavorite(id: number): Promise<Event> {
     const [event] = await db
       .select()

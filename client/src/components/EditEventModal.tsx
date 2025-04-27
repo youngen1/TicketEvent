@@ -111,8 +111,40 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
   const updateEventMutation = useMutation({
     mutationFn: async (data: FormValues) => {
       if (!event) return null;
-      const res = await apiRequest("PUT", `/api/events/${event.id}`, data);
-      return res.json();
+      
+      // If we have a video file, use FormData to upload directly
+      if (videoFile) {
+        // Create form data with all event fields plus the video file
+        const formData = new FormData();
+        
+        // Add all form fields to FormData
+        Object.entries(data).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            formData.append(key, value.toString());
+          }
+        });
+        
+        // Add the video file
+        formData.append('video', videoFile);
+        
+        // Use fetch directly for multipart FormData
+        const response = await fetch(`/api/events/${event.id}`, {
+          method: 'PUT',
+          body: formData,
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update event');
+        }
+        
+        return response.json();
+      } else {
+        // Regular JSON submission if no video file
+        const res = await apiRequest("PUT", `/api/events/${event.id}`, data);
+        return res.json();
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
@@ -126,10 +158,10 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
       setIsVideoProcessing(false);
       setVideoError(null);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to update event. Please try again.",
+        description: error.message || "Failed to update event. Please try again.",
         variant: "destructive",
       });
     },
