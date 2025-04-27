@@ -9,6 +9,7 @@ import pgSession from 'connect-pg-simple';
 import multer from 'multer';
 import path from 'path';
 import { processVideo } from "./utils/videoProcessor";
+import paystackService from './services/paystackService';
 
 // Add userId to session
 declare module 'express-session' {
@@ -270,6 +271,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedEvent);
     } catch (error) {
       res.status(500).json({ message: "Error updating favorite status" });
+    }
+  });
+  
+  // Payment routes
+  app.post("/api/payments/initialize", isAuthenticated, async (req, res) => {
+    try {
+      const { amount, eventId } = req.body;
+      
+      if (!amount || !eventId) {
+        return res.status(400).json({ message: "Amount and event ID are required" });
+      }
+      
+      // Get user for email
+      const user = await storage.getUser(req.session.userId);
+      if (!user || !user.email) {
+        return res.status(400).json({ message: "User email not found" });
+      }
+      
+      // Get event details
+      const event = await storage.getEvent(parseInt(eventId));
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // Generate a unique reference
+      const reference = `${eventId}-${Date.now()}-${req.session.userId}`;
+      
+      // Initialize transaction with Paystack
+      const transaction = await paystackService.initializeTransaction({
+        email: user.email,
+        amount: parseFloat(amount),
+        reference,
+        metadata: {
+          eventId,
+          userId: req.session.userId,
+          eventTitle: event.title
+        }
+      });
+      
+      res.json({
+        paymentUrl: transaction.authorization_url,
+        reference: transaction.reference
+      });
+    } catch (error: any) {
+      console.error('Payment initialization error:', error);
+      res.status(500).json({ message: error.message || "Error initializing payment" });
+    }
+  });
+  
+  app.get("/api/payments/verify/:reference", isAuthenticated, async (req, res) => {
+    try {
+      const { reference } = req.params;
+      
+      if (!reference) {
+        return res.status(400).json({ message: "Payment reference is required" });
+      }
+      
+      // Verify the transaction
+      const verification = await paystackService.verifyPayment({ reference });
+      
+      if (verification.status === "success") {
+        // Payment successful, you could update an order, ticket, or attendance record here
+        res.json({
+          success: true,
+          data: verification
+        });
+      } else {
+        res.json({
+          success: false,
+          data: verification
+        });
+      }
+    } catch (error: any) {
+      console.error('Payment verification error:', error);
+      res.status(500).json({ message: error.message || "Error verifying payment" });
+    }
+  });
+  
+  // Get payment channels
+  app.get("/api/payments/channels", async (req, res) => {
+    try {
+      const channels = await paystackService.getPaymentChannels();
+      res.json(channels);
+    } catch (error: any) {
+      console.error('Error fetching payment channels:', error);
+      res.status(500).json({ message: error.message || "Error fetching payment channels" });
     }
   });
 
