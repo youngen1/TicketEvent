@@ -1,9 +1,11 @@
-import { Heart, Image as ImageIcon } from "lucide-react";
+import { Heart, Image as ImageIcon, User } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Event } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 
 interface EventCardProps {
   event: Event;
@@ -11,6 +13,7 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, onShowDetails }: EventCardProps) {
+  const navigate = useNavigate();
   // Open the event details directly in fullscreen mode when clicking on the image
   const handleImageClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -18,6 +21,17 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
     onShowDetails(event, true);
   };
   const queryClient = useQueryClient();
+  
+  // Fetch creator information
+  const { data: creator } = useQuery({
+    queryKey: [`/api/users/${event.userId}`],
+    queryFn: async () => {
+      if (!event.userId) return null;
+      const response = await apiRequest("GET", `/api/users/${event.userId}`, null);
+      return response.json();
+    },
+    enabled: !!event.userId,
+  });
 
   const toggleFavoriteMutation = useMutation({
     mutationFn: async () => {
@@ -32,6 +46,13 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleFavoriteMutation.mutate();
+  };
+  
+  const handleCreatorClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (creator?.username) {
+      navigate(`/users/${creator.username}`);
+    }
   };
 
   // Get the first image from the images array if available
