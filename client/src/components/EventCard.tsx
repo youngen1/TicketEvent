@@ -32,12 +32,26 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
   // Directly fetch creator information on component mount
   useEffect(() => {
     async function fetchCreator() {
-      if (!event.userId) return;
+      if (!event.userId) {
+        console.log('No userId for event:', event.id);
+        return;
+      }
       
-      console.log('Directly fetching creator info for userId:', event.userId);
+      console.log('EVENT CARD: Directly fetching creator info for userId:', event.userId);
       try {
-        const response = await fetch(`/api/users/${event.userId}`, {
-          credentials: 'include'
+        console.log(`Attempting to fetch user data for ID: ${event.userId}`);
+        
+        // Force a more explicit URL construction
+        const baseUrl = window.location.origin;
+        const apiUrl = `${baseUrl}/api/users/${event.userId}`;
+        console.log('Complete API URL:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json'
+          }
         });
         
         console.log(`API Response for user ${event.userId} - Status:`, response.status);
@@ -47,14 +61,19 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           console.log('Creator data directly fetched:', data);
           setCreator(data);
         } else {
-          console.error('Error fetching creator:', response.status);
+          console.error('Error fetching creator:', response.status, await response.text());
         }
       } catch (error) {
         console.error('Exception fetching creator:', error);
       }
     }
     
-    fetchCreator();
+    // Add a slight delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      fetchCreator();
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [event.userId]);
 
   const toggleFavoriteMutation = useMutation({
