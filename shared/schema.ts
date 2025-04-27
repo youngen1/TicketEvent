@@ -235,7 +235,8 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   }),
   comments: many(comments),
   ratings: many(eventRatings),
-  attendees: many(eventAttendees)
+  attendees: many(eventAttendees),
+  tickets: many(eventTickets)
 }));
 
 export const commentsRelations = relations(comments, ({ one }) => ({
@@ -267,6 +268,17 @@ export const eventAttendeesRelations = relations(eventAttendees, ({ one }) => ({
   }),
   event: one(events, {
     fields: [eventAttendees.eventId],
+    references: [events.id],
+  }),
+}));
+
+export const eventTicketsRelations = relations(eventTickets, ({ one }) => ({
+  user: one(users, {
+    fields: [eventTickets.userId],
+    references: [users.id],
+  }),
+  event: one(events, {
+    fields: [eventTickets.eventId],
     references: [events.id],
   }),
 }));

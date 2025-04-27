@@ -1,10 +1,11 @@
 import { 
-  users, events, comments, eventRatings, eventAttendees,
+  users, events, comments, eventRatings, eventAttendees, eventTickets,
   type User, type InsertUser, 
   type Event, type InsertEvent,
   type Comment, type InsertComment,
   type EventRating, type InsertEventRating,
   type EventAttendee, type InsertEventAttendee,
+  type EventTicket, type InsertEventTicket,
   ATTENDANCE_STATUS
 } from "@shared/schema";
 import { db } from "./db";
@@ -47,6 +48,13 @@ export interface IStorage {
   getUserAttendance(userId: number, eventId: number): Promise<EventAttendee | undefined>;
   createOrUpdateAttendance(attendance: InsertEventAttendee): Promise<EventAttendee>;
   getUpcomingUserEvents(userId: number): Promise<Event[]>;
+  
+  // Ticket methods
+  getUserTickets(userId: number): Promise<EventTicket[]>;
+  createTicket(ticket: InsertEventTicket): Promise<EventTicket>;
+  getEventTickets(eventId: number): Promise<EventTicket[]>;
+  getTicket(ticketId: number): Promise<EventTicket | undefined>;
+  getTicketByReference(reference: string): Promise<EventTicket | undefined>;
 }
 
 // A simple in-memory storage implementation that can be used when database has issues
@@ -56,11 +64,13 @@ export class MemStorage implements IStorage {
   private comments: Comment[] = [];
   private ratings: EventRating[] = [];
   private attendees: EventAttendee[] = [];
+  private tickets: EventTicket[] = [];
   private nextUserId = 1;
   private nextEventId = 1;
   private nextCommentId = 1;
   private nextRatingId = 1;
   private nextAttendeeId = 1;
+  private nextTicketId = 1;
 
   constructor() {
     console.log("Initializing MemStorage...");
@@ -568,6 +578,42 @@ export class MemStorage implements IStorage {
     }
   }
   
+  // Ticket methods
+  async getUserTickets(userId: number): Promise<EventTicket[]> {
+    return this.tickets
+      .filter(ticket => ticket.userId === userId)
+      .sort((a, b) => {
+        const dateA = new Date(a.purchaseDate || 0);
+        const dateB = new Date(b.purchaseDate || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
+  }
+
+  async createTicket(ticket: InsertEventTicket): Promise<EventTicket> {
+    const newTicket: EventTicket = {
+      id: this.nextTicketId++,
+      ...ticket,
+      purchaseDate: new Date(),
+      createdAt: new Date(),
+      updatedAt: null
+    };
+    
+    this.tickets.push(newTicket);
+    return newTicket;
+  }
+
+  async getEventTickets(eventId: number): Promise<EventTicket[]> {
+    return this.tickets.filter(ticket => ticket.eventId === eventId);
+  }
+
+  async getTicket(ticketId: number): Promise<EventTicket | undefined> {
+    return this.tickets.find(ticket => ticket.id === ticketId);
+  }
+
+  async getTicketByReference(reference: string): Promise<EventTicket | undefined> {
+    return this.tickets.find(ticket => ticket.paymentReference === reference);
+  }
+
   // Extra properties to make TypeScript happy
   async seedEvents(): Promise<void> {
     // Already done in constructor
