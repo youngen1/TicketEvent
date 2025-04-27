@@ -1210,6 +1210,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Error updating user ban status' });
     }
   });
+  
+  // Admin endpoint to update a user's profile
+  app.patch('/api/admin/users/:userId', isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { username, displayName } = req.body;
+      
+      if (!username && !displayName) {
+        return res.status(400).json({ message: 'No update data provided' });
+      }
+      
+      // Validate the username if provided
+      if (username) {
+        // Check if username is already taken by another user
+        const existingUser = await storage.getUserByUsername(username);
+        if (existingUser && existingUser.id !== userId) {
+          return res.status(400).json({ message: 'Username is already taken' });
+        }
+      }
+      
+      // Update the user
+      const updateData: Partial<InsertUser> = {};
+      if (username) updateData.username = username;
+      if (displayName) updateData.displayName = displayName;
+      
+      const updatedUser = await storage.updateUser(userId, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      res.json({
+        id: updatedUser.id,
+        username: updatedUser.username,
+        displayName: updatedUser.displayName
+      });
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ message: 'Error updating user profile' });
+    }
+  });
+  
+  // User endpoint to update their own profile
+  app.patch('/api/users/profile', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const { username, displayName } = req.body;
+      
+      if (!username && !displayName) {
+        return res.status(400).json({ message: 'No update data provided' });
+      }
+      
+      // Validate the username if provided
+      if (username) {
+        // Check if username is already taken by another user
+        const existingUser = await storage.getUserByUsername(username);
+        if (existingUser && existingUser.id !== userId) {
+          return res.status(400).json({ message: 'Username is already taken' });
+        }
+      }
+      
+      // Update the user
+      const updateData: Partial<InsertUser> = {};
+      if (username) updateData.username = username;
+      if (displayName) updateData.displayName = displayName;
+      
+      const updatedUser = await storage.updateUser(userId, updateData);
+      
+      // Update the session with the new username if it changed
+      if (username && req.session.user) {
+        req.session.user.username = username;
+      }
+      
+      res.json({
+        id: updatedUser.id,
+        username: updatedUser.username,
+        displayName: updatedUser.displayName
+      });
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ message: 'Error updating user profile' });
+    }
+  });
 
   const httpServer = createServer(app);
 

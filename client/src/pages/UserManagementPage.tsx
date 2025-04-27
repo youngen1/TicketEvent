@@ -23,10 +23,18 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Users, Search, Ban, CheckCircle, User, ArrowLeft } from "lucide-react";
+import { Loader2, Users, Search, Ban, CheckCircle, User, ArrowLeft, Edit, MoreHorizontal } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import EditUserModal from "@/components/EditUserModal";
 
 interface UserData {
   id: number;
@@ -47,6 +55,8 @@ export default function UserManagementPage() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{id: number; username: string; displayName: string} | null>(null);
   
   // Set up debounce effect for search
   useEffect(() => {
@@ -211,28 +221,48 @@ export default function UserManagementPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {userData.isAdmin ? (
-                          <Button variant="ghost" disabled className="text-neutral-400">
-                            <User className="h-4 w-4 mr-1" />
-                            Admin
-                          </Button>
-                        ) : (
+                        <div className="flex items-center gap-2">
+                          {/* Edit Button */}
                           <Button 
-                            variant={userData.isBanned ? "outline" : "destructive"} 
-                            size="sm"
-                            onClick={() => toggleBanMutation.mutate(userData.id)}
-                            disabled={toggleBanMutation.isPending}
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              setSelectedUser({
+                                id: userData.id,
+                                username: userData.username,
+                                displayName: userData.displayName
+                              });
+                              setIsEditModalOpen(true);
+                            }}
                           >
-                            {toggleBanMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                            ) : userData.isBanned ? (
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                            ) : (
-                              <Ban className="h-4 w-4 mr-1" />
-                            )}
-                            {userData.isBanned ? "Unban User" : "Ban User"}
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
                           </Button>
-                        )}
+                          
+                          {/* Ban/Unban Button */}
+                          {userData.isAdmin ? (
+                            <Button variant="ghost" disabled className="text-neutral-400">
+                              <User className="h-4 w-4 mr-1" />
+                              Admin
+                            </Button>
+                          ) : (
+                            <Button 
+                              variant={userData.isBanned ? "outline" : "destructive"} 
+                              size="sm"
+                              onClick={() => toggleBanMutation.mutate(userData.id)}
+                              disabled={toggleBanMutation.isPending}
+                            >
+                              {toggleBanMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                              ) : userData.isBanned ? (
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                              ) : (
+                                <Ban className="h-4 w-4 mr-1" />
+                              )}
+                              {userData.isBanned ? "Unban" : "Ban"}
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -242,6 +272,14 @@ export default function UserManagementPage() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Edit User Modal */}
+      <EditUserModal 
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        user={selectedUser}
+        isAdmin={true}
+      />
     </div>
   );
 }
