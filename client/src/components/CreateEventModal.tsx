@@ -62,6 +62,8 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
   const [uploadError, setUploadError] = useState<string | null>(null);
   const { user } = useAuth();
 
+  const [isFreeEvent, setIsFreeEvent] = useState(false);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -74,6 +76,8 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       images: "",
       image: "",
       schedule: "",
+      isFree: true,
+      price: "0",
     },
   });
 
@@ -352,6 +356,62 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
             </FormItem>
           )}
         />
+        
+        {/* Pricing section */}
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="isFree"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="space-y-0.5">
+                  <FormLabel>Free Event</FormLabel>
+                  <FormDescription>
+                    Toggle if this is a free event (R0 ticket price)
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      setIsFreeEvent(checked);
+                      // Reset price to 0 when marked as free
+                      if (checked) {
+                        form.setValue("price", "0");
+                      }
+                    }}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          
+          {!isFreeEvent && (
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ticket Price (R)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      step="0.01" 
+                      placeholder="Enter price in Rands" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Enter the ticket price in Rands (e.g., 250 for R250.00)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </div>
 
         <div>
           <FormLabel className="block text-sm font-medium text-neutral-700">Event Images (1-30)</FormLabel>
