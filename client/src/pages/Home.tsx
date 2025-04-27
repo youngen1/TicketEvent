@@ -241,12 +241,7 @@ export default function Home() {
                   {event.category || "Event"}
                 </Badge>
               </div>
-              {/* Event code badge in top left */}
-              <div className="absolute top-4 left-4">
-                <Badge className="bg-purple-500 text-white hover:bg-purple-600">
-                  {`R${event.id}`}
-                </Badge>
-              </div>
+              {/* Removed R1, R2 code badges as requested */}
             </div>
             <div className="p-4">
               <div className="text-sm text-gray-500">
@@ -264,11 +259,11 @@ export default function Home() {
                 {event.description}
               </p>
               
-              {/* Price display in right corner */}
+              {/* Price display in right corner - in Rands */}
               {event.price && (
                 <div className="mt-3 text-right">
                   <span className="text-purple-700 font-bold">
-                    {event.price}
+                    {typeof event.price === 'number' ? `R${event.price.toFixed(2)}` : event.price.startsWith('R') ? event.price : `R${event.price}`}
                   </span>
                 </div>
               )}
