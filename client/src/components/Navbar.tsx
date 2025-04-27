@@ -81,11 +81,15 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
                     {user?.username || 'User'}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    Profile
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">
+                      <User className="h-4 w-4 mr-2" /> Profile
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    My Events
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">
+                      My Events
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     Settings
@@ -166,12 +170,22 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
               >
                 New Event
               </button>
-              <a href="#" className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100">
-                Profile
-              </a>
-              <a href="#" className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100">
+              <Link 
+                href="/profile" 
+                className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <div className="flex items-center">
+                  <User className="h-4 w-4 mr-2" /> Profile
+                </div>
+              </Link>
+              <Link 
+                href="/profile" 
+                className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
                 My Events
-              </a>
+              </Link>
               <a href="#" className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100">
                 Settings
               </a>
