@@ -94,7 +94,7 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
         category: event.category,
         date: event.date || "",
         time: event.time || "",
-        location: event.location || "",
+        location: event.location || "",  // This is always a string, never null
         image: event.image || "",
         video: event.video || "",
         genderRestriction: event.genderRestriction || GENDER_RESTRICTION.NONE,
