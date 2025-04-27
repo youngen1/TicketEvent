@@ -67,15 +67,24 @@ export default function Home() {
   const [location, navigate] = useLocation();
 
   // Force a fresh fetch of events when the page loads
-  useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-  }, [queryClient]);
-
   const [currentPage, setCurrentPage] = useState(1);
   const eventsPerPage = 7;
   
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, locationFilter, selectedCategories, dateFilter]);
+  
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+  }, [queryClient]);
+  
   const { data: eventsData, isLoading, error } = useQuery({
-    queryKey: ["/api/events", { page: currentPage, limit: eventsPerPage }],
+    queryKey: ["/api/events", { 
+      page: currentPage, 
+      limit: eventsPerPage,
+      category: selectedCategories.length === 1 ? selectedCategories[0] : undefined
+    }],
     staleTime: 0, // Always consider the data stale to force refetch
   });
 
@@ -245,41 +254,48 @@ export default function Home() {
     if (!pagination || pagination.totalPages <= 1) return null;
     
     return (
-      <div className="flex justify-center items-center mt-6 space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1"
-        >
-          Previous
-        </Button>
-        
-        {/* Page numbers */}
-        <div className="flex space-x-1">
-          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(page => (
-            <Button
-              key={page}
-              variant={currentPage === page ? "default" : "outline"}
-              size="sm"
-              onClick={() => handlePageChange(page)}
-              className={`px-3 py-1 ${currentPage === page ? 'bg-purple-600' : ''}`}
-            >
-              {page}
-            </Button>
-          ))}
+      <div className="mt-6">
+        <div className="flex justify-center items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-1"
+          >
+            Previous
+          </Button>
+          
+          {/* Page numbers */}
+          <div className="flex space-x-1">
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(page => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => handlePageChange(page)}
+                className={`px-3 py-1 ${currentPage === page ? 'bg-purple-600' : ''}`}
+              >
+                {page}
+              </Button>
+            ))}
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === pagination.totalPages}
+            className="px-3 py-1"
+          >
+            Next
+          </Button>
         </div>
         
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === pagination.totalPages}
-          className="px-3 py-1"
-        >
-          Next
-        </Button>
+        {/* Page info */}
+        <div className="text-center text-sm text-gray-500 mt-2">
+          Showing {events.length} of {pagination.totalCount} events
+        </div>
       </div>
     );
   };
