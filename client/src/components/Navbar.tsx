@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, User, Plus, LogIn, LogOut } from "lucide-react";
+import { Menu, X, User, Plus, LogIn, LogOut, Heart, Bell, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import NotificationCenter from "@/components/NotificationCenter";
 
 interface NavbarProps {
   onNewEventClick: () => void;
@@ -68,39 +69,64 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
             </Button>
 
             {isAuthenticated ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="bg-white rounded-full flex text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                    <span className="sr-only">Open user menu</span>
-                    <div className="h-8 w-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-700">
-                      <User className="h-5 w-5" />
-                    </div>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>
-                    {user?.username || 'User'}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile">
-                      <User className="h-4 w-4 mr-2" /> Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile">
-                      My Events
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="text-red-600">
-                    <LogOut className="h-4 w-4 mr-2" /> Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex items-center space-x-1">
+                {/* Notification center */}
+                <NotificationCenter />
+                
+                {/* Favorites link */}
+                <Link href="/favorites">
+                  <Button variant="ghost" size="icon" title="Saved Events">
+                    <Heart className="h-5 w-5" />
+                  </Button>
+                </Link>
+                
+                {/* Calendar link */}
+                <Link href="/calendar">
+                  <Button variant="ghost" size="icon" title="My Calendar">
+                    <Calendar className="h-5 w-5" />
+                  </Button>
+                </Link>
+                
+                {/* User dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <span className="sr-only">Open user menu</span>
+                      <div className="h-8 w-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-700">
+                        <User className="h-5 w-5" />
+                      </div>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>
+                      {user?.username || 'User'}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile">
+                        <User className="h-4 w-4 mr-2" /> Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/favorites">
+                        <Heart className="h-4 w-4 mr-2" /> Saved Events
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile">
+                        My Events
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={logout} className="text-red-600">
+                      <LogOut className="h-4 w-4 mr-2" /> Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             ) : (
               <div className="flex items-center space-x-2">
                 <Button
@@ -178,6 +204,15 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
               >
                 <div className="flex items-center">
                   <User className="h-4 w-4 mr-2" /> Profile
+                </div>
+              </Link>
+              <Link 
+                href="/favorites" 
+                className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <div className="flex items-center">
+                  <Heart className="h-4 w-4 mr-2" /> Saved Events
                 </div>
               </Link>
               <Link 

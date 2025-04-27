@@ -1,78 +1,82 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar, primaryKey } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import { pgTable, serial, text, timestamp, integer, boolean, pgEnum } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
-// User schema
+// Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   displayName: text("display_name"),
-  avatar: text("avatar"),
-  bio: text("bio"),
   email: text("email"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  bio: text("bio"),
+  avatar: text("avatar"),
+  preferences: text("preferences"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   displayName: true,
-  avatar: true,
-  bio: true,
   email: true,
+  bio: true,
+  avatar: true,
+  preferences: true,
 });
 
-// Events schema
+// Events table
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  category: text("category").notNull(),
   date: text("date").notNull(),
-  time: text("time").notNull(),
-  location: text("location").notNull(),
-  attendees: integer("attendees").default(0),
-  image: text("image"), // Keep original image field for backward compatibility
-  images: text("images"), // Stores JSON array of image URLs
-  video: text("video"), // Keep for backward compatibility 
-  thumbnail: text("thumbnail"), // Keep for backward compatibility
-  createdById: integer("created_by_id").references(() => users.id),
-  isFavorite: boolean("is_favorite").default(false),
-  schedule: text("schedule"),
+  time: text("time"),
+  location: text("location"),
+  userId: integer("user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
-  isFeatured: boolean("is_featured").default(false),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  image: text("image"),
+  images: text("images"),
+  video: text("video"),
+  featured: boolean("featured").default(false),
   views: integer("views").default(0),
-  rating: integer("rating").default(0),
-  ratingCount: integer("rating_count").default(0),
+  category: text("category"),
+  attendees: integer("attendees").default(0),
+  maxAttendees: integer("max_attendees"),
+  isFree: boolean("is_free").default(true),
+  price: text("price"),
   tags: text("tags"),
 });
 
 export const insertEventSchema = createInsertSchema(events).pick({
   title: true,
   description: true,
-  category: true,
   date: true,
   time: true,
   location: true,
+  userId: true,
   image: true,
   images: true,
   video: true,
-  thumbnail: true,
-  schedule: true,
-  createdById: true,
-  isFeatured: true,
+  featured: true,
+  category: true,
+  maxAttendees: true,
+  isFree: true,
+  price: true,
   tags: true,
 });
 
-// Comments schema
+// Comments table
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
   content: text("content").notNull(),
   userId: integer("user_id").notNull().references(() => users.id),
   eventId: integer("event_id").notNull().references(() => events.id),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertCommentSchema = createInsertSchema(comments).pick({
@@ -81,37 +85,99 @@ export const insertCommentSchema = createInsertSchema(comments).pick({
   eventId: true,
 });
 
-// Event Ratings schema
+// Event ratings
 export const eventRatings = pgTable("event_ratings", {
   id: serial("id").primaryKey(),
-  rating: integer("rating").notNull(),
-  userId: integer("user_id").notNull().references(() => users.id),
   eventId: integer("event_id").notNull().references(() => events.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  rating: integer("rating").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertEventRatingSchema = createInsertSchema(eventRatings).pick({
-  rating: true,
-  userId: true,
   eventId: true,
+  userId: true,
+  rating: true,
 });
 
-// Event Attendees schema
+// Attendance status enum
+export const ATTENDANCE_STATUS = {
+  GOING: "going",
+  INTERESTED: "interested",
+  NOT_GOING: "not_going",
+} as const;
+
+// Event attendees
 export const eventAttendees = pgTable("event_attendees", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
   eventId: integer("event_id").notNull().references(() => events.id),
-  status: text("status").default("attending").notNull(), // attending, interested, not attending
+  userId: integer("user_id").notNull().references(() => users.id),
+  status: text("status").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertEventAttendeeSchema = createInsertSchema(eventAttendees).pick({
-  userId: true,
   eventId: true,
+  userId: true,
   status: true,
 });
 
-// Types
+// Keep these as type definitions for future implementation
+// These won't affect the database schema since we're not using these in our routes yet
+
+// User Favorites (Bookmarks) - Type Definitions
+export type UserFavorite = {
+  id: number;
+  userId: number;
+  eventId: number;
+  createdAt: Date | null;
+};
+
+export type InsertUserFavorite = {
+  userId: number;
+  eventId: number;
+};
+
+// Notification types enum
+export const NOTIFICATION_TYPE = {
+  EVENT_REMINDER: "event_reminder",
+  EVENT_UPDATE: "event_update",
+  EVENT_CANCELED: "event_canceled",
+  NEW_COMMENT: "new_comment",
+  ATTENDANCE_UPDATE: "attendance_update",
+  ADMIN_MESSAGE: "admin_message",
+} as const;
+
+// Notifications - Type Definitions
+export type Notification = {
+  id: number;
+  userId: number;
+  type: string;
+  title: string;
+  message: string;
+  eventId: number | null;
+  isRead: boolean | null;
+  createdAt: Date | null;
+};
+
+export type InsertNotification = {
+  userId: number;
+  type: string;
+  title: string;
+  message: string;
+  eventId?: number;
+};
+
+// Session table for PostgreSQL
+export const session = pgTable("session", {
+  sid: text("sid").primaryKey(),
+  sess: text("sess").notNull(),
+  expire: timestamp("expire").notNull(),
+});
+
+// Define core type exports
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
@@ -127,9 +193,53 @@ export type EventRating = typeof eventRatings.$inferSelect;
 export type InsertEventAttendee = z.infer<typeof insertEventAttendeeSchema>;
 export type EventAttendee = typeof eventAttendees.$inferSelect;
 
-// Session table for express-session
-export const session = pgTable("session", {
-  sid: varchar("sid").primaryKey(),
-  sess: text("sess").notNull(),
-  expire: timestamp("expire", { mode: 'date' }).notNull(),
-});
+// Define relations
+export const usersRelations = relations(users, ({ many }) => ({
+  events: many(events),
+  comments: many(comments),
+  ratings: many(eventRatings),
+  attendees: many(eventAttendees)
+}));
+
+export const eventsRelations = relations(events, ({ one, many }) => ({
+  user: one(users, {
+    fields: [events.userId],
+    references: [users.id],
+  }),
+  comments: many(comments),
+  ratings: many(eventRatings),
+  attendees: many(eventAttendees)
+}));
+
+export const commentsRelations = relations(comments, ({ one }) => ({
+  user: one(users, {
+    fields: [comments.userId],
+    references: [users.id],
+  }),
+  event: one(events, {
+    fields: [comments.eventId],
+    references: [events.id],
+  }),
+}));
+
+export const eventRatingsRelations = relations(eventRatings, ({ one }) => ({
+  user: one(users, {
+    fields: [eventRatings.userId],
+    references: [users.id],
+  }),
+  event: one(events, {
+    fields: [eventRatings.eventId],
+    references: [events.id],
+  }),
+}));
+
+export const eventAttendeesRelations = relations(eventAttendees, ({ one }) => ({
+  user: one(users, {
+    fields: [eventAttendees.userId],
+    references: [users.id],
+  }),
+  event: one(events, {
+    fields: [eventAttendees.eventId],
+    references: [events.id],
+  }),
+}));

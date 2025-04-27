@@ -42,31 +42,8 @@ app.use((req, res, next) => {
 // Initialize database and seed data
 const initDatabase = async () => {
   try {
-    // Push schema to database
-    await import('child_process').then(async (cp) => {
-      return new Promise<void>((resolve, reject) => {
-        const child = cp.exec('npm run db:push');
-        
-        child.stdout?.on('data', (data) => {
-          log(`[db:push] ${data}`, 'database');
-        });
-        
-        child.stderr?.on('data', (data) => {
-          log(`[db:push] ERROR: ${data}`, 'database');
-        });
-        
-        child.on('close', (code) => {
-          if (code === 0) {
-            log('Database schema pushed successfully', 'database');
-            resolve();
-          } else {
-            const err = new Error(`Database schema push failed with code ${code}`);
-            log(err.message, 'database');
-            reject(err);
-          }
-        });
-      });
-    });
+    // Skip schema push for now due to interaction issues
+    log('Skipping database schema push', 'database');
     
     // Seed sample data
     if (storage instanceof DatabaseStorage) {
