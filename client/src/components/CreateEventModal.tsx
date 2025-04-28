@@ -130,7 +130,12 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
         
         // Append all the form data fields
         Object.entries(data).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
+          if (key === 'ticketTypes') {
+            // Handle ticket types separately
+            if (data.hasMultipleTicketTypes && Array.isArray(value)) {
+              formData.append('ticketTypes', JSON.stringify(value));
+            }
+          } else if (value !== undefined && value !== null) {
             formData.append(key, value.toString());
           }
         });
