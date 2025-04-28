@@ -1572,6 +1572,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Admin routes - require admin authentication
+  
+  // Create new sample events (admin only)
+  app.post('/api/admin/events/sample', isAdmin, async (req, res) => {
+    try {
+      console.log('Creating sample events');
+      
+      // Create South African themed events
+      const sampleEvents = [
+        {
+          title: "Cape Town Jazz Festival 2025",
+          description: "South Africa's premier jazz event featuring top local and international artists at the Cape Town International Convention Centre",
+          date: "2025-03-27",
+          time: "18:00",
+          location: "Cape Town, South Africa",
+          category: "Music",
+          image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80",
+          images: JSON.stringify([
+            "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&w=800&q=80"
+          ]),
+          userId: 2, // Admin user
+          maxAttendees: 5000,
+          isFree: false,
+          price: "850",
+          tags: "jazz,music,festival,cape town",
+          latitude: "-33.9155",
+          longitude: "18.4239",
+          featured: true
+        },
+        {
+          title: "Soweto Wine & Lifestyle Festival",
+          description: "Experience the finest South African wines paired with local cuisine and live entertainment celebrating township culture",
+          date: "2025-05-15",
+          time: "12:00",
+          location: "Soweto, Johannesburg, South Africa",
+          category: "Food & Drink",
+          image: "https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=800&q=80",
+          images: JSON.stringify([
+            "https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1567072379576-a0f6e3ef2101?auto=format&fit=crop&w=800&q=80"
+          ]),
+          userId: 2, // Admin user
+          maxAttendees: 2000,
+          isFree: false,
+          price: "350",
+          tags: "wine,food,lifestyle,soweto,johannesburg",
+          latitude: "-26.2485",
+          longitude: "27.8540",
+          featured: true
+        },
+        {
+          title: "Durban International Film Festival",
+          description: "South Africa's longest-running film festival showcasing the best in African and international cinema",
+          date: "2025-07-20",
+          time: "10:00",
+          location: "Durban, South Africa",
+          category: "Film",
+          image: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=800&q=80",
+          images: JSON.stringify([
+            "https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?auto=format&fit=crop&w=800&q=80"
+          ]),
+          userId: 1, // Demo user
+          maxAttendees: 3000,
+          isFree: false,
+          price: "200",
+          tags: "film,cinema,festival,durban",
+          latitude: "-29.8587",
+          longitude: "31.0218",
+          featured: false
+        },
+        {
+          title: "Karoo Mighty Men Conference",
+          description: "A spiritual gathering for men focused on faith, leadership and community in the stunning Karoo landscape",
+          date: "2025-09-12",
+          time: "08:00",
+          location: "Middelburg, Eastern Cape, South Africa",
+          category: "Community",
+          image: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=800&q=80",
+          images: JSON.stringify([
+            "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1520642413789-2bd6770d59e3?auto=format&fit=crop&w=800&q=80"
+          ]),
+          userId: 1, // Demo user
+          maxAttendees: 10000,
+          isFree: false,
+          price: "450",
+          tags: "faith,community,men,karoo,eastern cape",
+          latitude: "-31.4965",
+          longitude: "25.0124",
+          featured: false
+        },
+        {
+          title: "Cape Town Tech Summit",
+          description: "The premier technology conference in Africa featuring keynotes from industry leaders, workshops and networking opportunities",
+          date: "2025-11-05",
+          time: "09:00",
+          location: "Century City, Cape Town, South Africa",
+          category: "Technology",
+          image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80",
+          images: JSON.stringify([
+            "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1591115765373-5207764f72e7?auto=format&fit=crop&w=800&q=80"
+          ]),
+          userId: 2, // Admin user
+          maxAttendees: 1500,
+          isFree: false,
+          price: "1200",
+          tags: "tech,summit,innovation,cape town",
+          latitude: "-33.8869",
+          longitude: "18.5030",
+          featured: true
+        }
+      ];
+      
+      // Add events to the database
+      for (const eventData of sampleEvents) {
+        await storage.createEvent(eventData);
+      }
+      
+      console.log(`Created ${sampleEvents.length} sample events successfully`);
+      
+      res.json({ 
+        success: true, 
+        message: `Created ${sampleEvents.length} sample events successfully`,
+        count: sampleEvents.length
+      });
+    } catch (error: any) {
+      console.error('Error creating sample events:', error);
+      res.status(500).json({ message: error.message || 'Error creating sample events' });
+    }
+  });
+  
+  // Delete all events (admin only)
+  app.delete('/api/admin/events/all', isAdmin, async (req, res) => {
+    try {
+      const events = await storage.getAllEvents();
+      console.log(`Deleting all ${events.length} events`);
+      
+      for (const event of events) {
+        await storage.deleteEvent(event.id);
+      }
+      
+      console.log('All events deleted successfully');
+      res.json({ success: true, message: 'All events deleted successfully' });
+    } catch (error: any) {
+      console.error('Error deleting all events:', error);
+      res.status(500).json({ message: error.message || 'Error deleting all events' });
+    }
+  });
+  
   app.get('/api/admin/stats', isAdmin, async (req, res) => {
     try {
       // Get total users count

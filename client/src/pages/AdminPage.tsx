@@ -280,10 +280,76 @@ export default function AdminPage() {
               Manage Users
             </Link>
           </Button>
-          <Button className="flex items-center" variant="outline">
-            <Calendar className="mr-2 h-4 w-4" />
-            Event Controls
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button 
+              className="flex items-center" 
+              variant="outline"
+              onClick={async () => {
+                if (window.confirm("Are you sure you want to delete ALL events? This action cannot be undone.")) {
+                  try {
+                    const res = await fetch("/api/admin/events/all", {
+                      method: "DELETE"
+                    });
+                    
+                    if (res.ok) {
+                      toast({
+                        title: "Success",
+                        description: "All events have been deleted successfully",
+                      });
+                      
+                      // Refresh stats
+                      refetchStats();
+                    } else {
+                      throw new Error("Failed to delete events");
+                    }
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description: "Failed to delete events",
+                      variant: "destructive"
+                    });
+                  }
+                }
+              }}
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              Delete All Events
+            </Button>
+            
+            <Button 
+              className="flex items-center" 
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const res = await fetch("/api/admin/events/sample", {
+                    method: "POST"
+                  });
+                  
+                  if (res.ok) {
+                    const data = await res.json();
+                    toast({
+                      title: "Success",
+                      description: `Created ${data.count} South African sample events successfully`,
+                    });
+                    
+                    // Refresh stats
+                    refetchStats();
+                  } else {
+                    throw new Error("Failed to create sample events");
+                  }
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to create sample events",
+                    variant: "destructive"
+                  });
+                }
+              }}
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              Create Sample Events
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

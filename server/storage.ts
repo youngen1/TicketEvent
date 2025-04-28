@@ -31,6 +31,7 @@ export interface IStorage {
   getEvent(id: number): Promise<Event | undefined>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event>;
+  deleteEvent(id: number): Promise<void>;
   toggleFavorite(id: number): Promise<Event>;
   incrementEventViews(id: number): Promise<void>;
   getFeaturedEvents(limit?: number): Promise<Event[]>;
@@ -625,6 +626,27 @@ export class MemStorage implements IStorage {
     };
     
     return this.events[index];
+  }
+  
+  async deleteEvent(id: number): Promise<void> {
+    console.log(`Deleting event with ID: ${id}`);
+    const eventIndex = this.events.findIndex(event => event.id === id);
+    
+    if (eventIndex === -1) {
+      throw new Error(`Event with id ${id} not found`);
+    }
+    
+    // Delete the event from the array
+    this.events.splice(eventIndex, 1);
+    console.log(`Event with ID ${id} deleted successfully`);
+    
+    // In a real app, you would also delete related data (comments, tickets, etc.)
+    // For now, we'll just delete what we can
+    this.comments = this.comments.filter(comment => comment.eventId !== id);
+    this.attendees = this.attendees.filter(attendee => attendee.eventId !== id);
+    this.tickets = this.tickets.filter(ticket => ticket.eventId !== id);
+    this.ratings = this.ratings.filter(rating => rating.eventId !== id);
+    this.ticketTypes = this.ticketTypes.filter(ticketType => ticketType.eventId !== id);
   }
 
   async toggleFavorite(id: number): Promise<Event> {
