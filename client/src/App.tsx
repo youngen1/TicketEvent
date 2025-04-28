@@ -38,6 +38,7 @@ function Router() {
       <Route path="/about" component={AboutPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/users" component={UserListingPage} />
+      <Route path="/community" component={UserListingPage} />
       <Route path="/users/:id" component={UserProfilePage} />
       <Route path="/payment/success" component={PaymentSuccessPage} />
       <Route path="/payment/settings" component={PaymentSettingsPage} />
