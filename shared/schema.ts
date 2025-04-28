@@ -48,6 +48,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
   bio: text("bio"),
   avatar: text("avatar"),
+  interests: text("interests"), // Store user interests as comma-separated text
   preferences: text("preferences"),
   followersCount: integer("followers_count").default(0),
   followingCount: integer("following_count").default(0),
@@ -65,6 +66,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   dateOfBirth: true,
   bio: true,
   avatar: true,
+  interests: true,
   preferences: true,
   isBanned: true,
 });

@@ -20,6 +20,7 @@ import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
 import FinanceView from "@/components/FinanceView";
 import EditProfileModal from "@/components/EditProfileModal";
+import UserProfileSummary from "@/components/UserProfileSummary";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -358,13 +359,40 @@ export default function ProfilePage() {
         
         {/* User content */}
         <div className="md:col-span-2">
-          <Tabs defaultValue="my-events" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue="about" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="about">About</TabsTrigger>
               <TabsTrigger value="my-events">My Events</TabsTrigger>
               <TabsTrigger value="attending">Attending</TabsTrigger>
               <TabsTrigger value="tickets">My Tickets</TabsTrigger>
               <TabsTrigger value="finance">Finance</TabsTrigger>
             </TabsList>
+            
+            <TabsContent value="about" className="mt-6">
+              {user && (
+                <div className="space-y-6">
+                  <UserProfileSummary 
+                    user={user}
+                    stats={{
+                      eventsCreated: userEvents?.length || 0,
+                      eventsAttended: upcomingEvents?.length || 0,
+                      averageRating: 4.5 // This would come from an API call in production
+                    }}
+                  />
+                  
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditProfileModalOpen(true)}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      Edit Profile
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
             
             <TabsContent value="my-events" className="mt-6">
               <h2 className="text-xl font-semibold mb-4">Events You've Created</h2>
