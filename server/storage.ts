@@ -163,8 +163,20 @@ export class MemStorage implements IStorage {
     
     console.log("Created admin account with username: admin and password: password");
     
-    // Create some sample users to follow
+    // Create some sample users to follow with location data
+    const locations = [
+      { city: "Durban, South Africa", lat: -29.8587, lng: 31.0218 },
+      { city: "Pretoria, South Africa", lat: -25.7479, lng: 28.2293 },
+      { city: "Port Elizabeth, South Africa", lat: -33.7139, lng: 25.5207 },
+      { city: "Bloemfontein, South Africa", lat: -29.0852, lng: 26.1596 },
+      { city: "East London, South Africa", lat: -33.0292, lng: 27.8546 },
+      { city: "Kimberley, South Africa", lat: -28.7282, lng: 24.7499 },
+      { city: "Polokwane, South Africa", lat: -23.9045, lng: 29.4688 },
+      { city: "Nelspruit, South Africa", lat: -25.4753, lng: 30.9694 }
+    ];
+    
     for (let i = 3; i <= 10; i++) {
+      const locationIndex = i - 3;
       this.users.push({
         id: this.nextUserId++,
         username: `user${i}`,
@@ -179,7 +191,14 @@ export class MemStorage implements IStorage {
         followersCount: 0,
         followingCount: 0,
         isAdmin: false,
-        platformBalance: "0"
+        platformBalance: "0",
+        location: locations[locationIndex].city,
+        latitude: locations[locationIndex].lat,
+        longitude: locations[locationIndex].lng,
+        gender: "other",
+        dateOfBirth: "1990-01-01",
+        interests: null,
+        isBanned: false
       });
     }
     
@@ -1088,9 +1107,37 @@ export class MemStorage implements IStorage {
   }
   
   async searchUsers(query: string, locationQuery?: string, maxDistance?: number): Promise<User[]> {
-    // Search by username, displayName, bio, email
+    // If no query and no location query, return empty array
+    if (!query && !locationQuery) {
+      return [];
+    }
+    
+    // If only locationQuery is provided, search only by location
+    if (!query && locationQuery) {
+      return this.users.filter(user => {
+        if (user.location) {
+          return user.location.toLowerCase().includes(locationQuery.toLowerCase());
+        }
+        return false;
+      });
+    }
+    
+    // If only query is provided (no location), search by name, email, etc.
+    if (query && !locationQuery) {
+      const lowerCaseQuery = query.toLowerCase();
+      return this.users.filter(user => {
+        return (
+          user.username.toLowerCase().includes(lowerCaseQuery) ||
+          (user.displayName && user.displayName.toLowerCase().includes(lowerCaseQuery)) ||
+          (user.bio && user.bio.toLowerCase().includes(lowerCaseQuery)) ||
+          (user.email && user.email.toLowerCase().includes(lowerCaseQuery))
+        );
+      });
+    }
+    
+    // If both query and locationQuery are provided, search by both
     const lowerCaseQuery = query.toLowerCase();
-    const filteredUsers = this.users.filter(user => {
+    const textFilteredUsers = this.users.filter(user => {
       return (
         user.username.toLowerCase().includes(lowerCaseQuery) ||
         (user.displayName && user.displayName.toLowerCase().includes(lowerCaseQuery)) ||
@@ -1099,16 +1146,10 @@ export class MemStorage implements IStorage {
       );
     });
     
-    // If no location query, return the text search results
-    if (!locationQuery) {
-      return filteredUsers;
-    }
-    
-    // Filter by location if provided
-    return filteredUsers.filter(user => {
-      // If user has location information
+    // Add location filter
+    return textFilteredUsers.filter(user => {
       if (user.location) {
-        return user.location.toLowerCase().includes(locationQuery.toLowerCase());
+        return user.location.toLowerCase().includes(locationQuery!.toLowerCase());
       }
       return false;
     });

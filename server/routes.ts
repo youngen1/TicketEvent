@@ -1133,22 +1133,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const query = req.query.query as string || '';
       const locationQuery = req.query.location as string || '';
+      const maxDistance = req.query.maxDistance ? parseFloat(req.query.maxDistance as string) : undefined;
       
-      // Only proceed if we have at least a query or a location
-      if ((!query || query.trim().length < 3) && !locationQuery) {
+      console.log(`Searching users with query: "${query}", location: "${locationQuery}", maxDistance: ${maxDistance || 'none'}`);
+      
+      // Check if we have at least a text query or a location query
+      if (!query && !locationQuery) {
+        console.log('No search parameters provided');
         return res.json([]);
       }
       
-      // Search users with optional location filter
-      const users = await storage.searchUsers(query, locationQuery);
+      // Search users with location filter and distance parameters
+      const users = await storage.searchUsers(query, locationQuery, maxDistance);
+      console.log(`Found ${users.length} users matching search criteria`);
       
-      // Remove sensitive info (passwords) from the response
-      const safeUsers = users.map(user => {
+      // Add isFollowing property if a user is logged in
+      const processedUsers = await Promise.all(users.map(async (user) => {
+        // Don't return passwords
         const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      });
+        
+        // Add isFollowing property if a user is logged in
+        let isFollowing = false;
+        if (req.session.userId) {
+          isFollowing = await storage.isFollowing(req.session.userId, user.id);
+        }
+        
+        // Get event count
+        const userEvents = await storage.getUserEvents(user.id);
+        const eventsCount = userEvents.length;
+        
+        return {
+          ...userWithoutPassword,
+          isFollowing,
+          eventsCount
+        };
+      }));
       
-      res.json(safeUsers);
+      res.json(processedUsers);
     } catch (error: any) {
       console.error('Error searching users:', error);
       res.status(500).json({ message: error.message || "Error searching users" });

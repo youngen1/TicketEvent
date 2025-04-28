@@ -53,28 +53,58 @@ export default function UserListingPage() {
   // Perform search when either search query or location query changes
   useEffect(() => {
     const delaySearch = setTimeout(() => {
-      if ((searchQuery && searchQuery.length >= 3) || locationQuery) {
+      if ((searchQuery && searchQuery.length >= 3) || (locationQuery && locationQuery.length >= 2)) {
+        // If we have sufficient search criteria, use the API
         setIsSearching(true);
+        
+        // Create a proper query key that includes all search parameters
+        const searchQueryKey = ["/api/users/search", 
+          searchQuery ? searchQuery : "", 
+          locationQuery ? locationQuery : ""
+        ];
+        
         queryClient.fetchQuery({
-          queryKey: ["/api/users/search"],
+          queryKey: searchQueryKey,
           queryFn: async () => {
             const url = new URL("/api/users/search", window.location.origin);
             if (searchQuery) url.searchParams.append("query", searchQuery);
             if (locationQuery) url.searchParams.append("location", locationQuery);
+            
+            console.log("Searching users with URL:", url.toString());
+            
             const res = await fetch(url.toString());
-            if (!res.ok) throw new Error("Search failed");
+            if (!res.ok) {
+              console.error("Search failed:", res.statusText);
+              throw new Error("Search failed");
+            }
+            
             const data = await res.json();
+            console.log(`Found ${data.length} users matching search criteria`);
+            
             setSearchResults(data);
             setIsSearching(false);
             return data;
           }
         });
       } else if (users.length > 0) {
-        // Use client-side filtering when search query is less than 3 chars or empty
-        const filtered = users.filter(user => 
-          user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (user.displayName && user.displayName.toLowerCase().includes(searchQuery.toLowerCase()))
-        );
+        // Use client-side filtering when search criteria are minimal
+        let filtered = users;
+        
+        // Apply name/username filter if any search query exists
+        if (searchQuery) {
+          filtered = filtered.filter(user => 
+            user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (user.displayName && user.displayName.toLowerCase().includes(searchQuery.toLowerCase()))
+          );
+        }
+        
+        // Apply location filter if any location query exists
+        if (locationQuery && locationQuery.length === 1) {
+          filtered = filtered.filter(user => 
+            user.location && user.location.toLowerCase().includes(locationQuery.toLowerCase())
+          );
+        }
+        
         setSearchResults(filtered);
       }
     }, 500); // Debounce search
