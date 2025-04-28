@@ -6,7 +6,7 @@ import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { 
   Search, Plus, Share2, User, Calendar, CreditCard, 
-  Lock, LogOut 
+  Lock, LogOut, Bell
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +29,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import NotificationCenter from "@/components/NotificationCenter";
 
 // Category options based on the EventCircle.site
 const CATEGORIES = [
