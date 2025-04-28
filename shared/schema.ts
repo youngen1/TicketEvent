@@ -189,12 +189,17 @@ export type InsertUserFavorite = {
 
 // Notification types enum
 export const NOTIFICATION_TYPE = {
-  EVENT_REMINDER: "event_reminder",
-  EVENT_UPDATE: "event_update",
-  EVENT_CANCELED: "event_canceled",
-  NEW_COMMENT: "new_comment",
-  ATTENDANCE_UPDATE: "attendance_update",
-  ADMIN_MESSAGE: "admin_message",
+  EVENT_REMINDER: "event_reminder",        // Reminder for upcoming events
+  EVENT_UPDATE: "event_update",            // Event details were updated
+  EVENT_CANCELED: "event_canceled",        // Event was canceled
+  NEW_FOLLOWER: "new_follower",            // Someone followed you
+  NEW_FRIEND: "new_friend",                // Mutual follow created a friendship
+  FOLLOWED_USER_EVENT: "followed_user_event", // Someone you follow created an event
+  FOLLOWED_USER_TICKET: "followed_user_ticket", // Someone you follow bought a ticket
+  NEW_COMMENT: "new_comment",              // New comment on your event
+  ATTENDANCE_UPDATE: "attendance_update",  // Someone is attending your event
+  ADMIN_MESSAGE: "admin_message",          // Message from admin
+  EVENT_STARTING_TODAY: "event_starting_today", // Event is starting today
 } as const;
 
 // Notifications - Type Definitions
