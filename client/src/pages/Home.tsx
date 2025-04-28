@@ -542,31 +542,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* Location Dropdown */}
-        <div className="mb-4">
-          <Select
-            value={locationFilter}
-            onValueChange={setLocationFilter}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Search by Location" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all-locations">All Locations</SelectItem>
-              {events
-                .map(e => e.location)
-                .filter((location, index, array) => 
-                  location && array.indexOf(location) === index
-                )
-                .map(location => (
-                  <SelectItem key={location} value={location || "unknown-location"}>
-                    {location}
-                  </SelectItem>
-                ))
-              }
-            </SelectContent>
-          </Select>
-        </div>
+
 
         {/* Categories */}
         <div className="mb-4">
