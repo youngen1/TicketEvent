@@ -95,6 +95,10 @@ export const events = pgTable("events", {
   isFree: boolean("is_free").default(true),
   price: text("price"),
   tags: text("tags"),
+  // Ticket information
+  hasMultipleTicketTypes: boolean("has_multiple_ticket_types").default(false),
+  ticketsSold: integer("tickets_sold").default(0),
+  totalTickets: integer("total_tickets").default(0),
   // Gender restriction fields
   genderRestriction: text("gender_restriction"), // Store as male-only, female-only, or null for no restriction
   ageRestriction: text("age_restriction").array(), // Store as array of age groups: ["under 18", "20s", "30s", "40+"]
@@ -118,6 +122,8 @@ export const insertEventSchema = createInsertSchema(events).pick({
   isFree: true,
   price: true,
   tags: true,
+  hasMultipleTicketTypes: true,
+  totalTickets: true,
   genderRestriction: true,
   ageRestriction: true,
 });
@@ -262,6 +268,7 @@ export const eventTickets = pgTable("event_tickets", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   eventId: integer("event_id").notNull().references(() => events.id),
+  ticketTypeId: integer("ticket_type_id").references(() => ticketTypes.id),
   quantity: integer("quantity").notNull().default(1),
   totalAmount: integer("total_amount").notNull(),
   paymentReference: text("payment_reference").notNull(),
@@ -274,6 +281,7 @@ export const eventTickets = pgTable("event_tickets", {
 export const insertEventTicketSchema = createInsertSchema(eventTickets).pick({
   userId: true,
   eventId: true,
+  ticketTypeId: true,
   quantity: true,
   totalAmount: true,
   paymentReference: true,
@@ -282,6 +290,32 @@ export const insertEventTicketSchema = createInsertSchema(eventTickets).pick({
 
 export type InsertEventTicket = z.infer<typeof insertEventTicketSchema>;
 export type EventTicket = typeof eventTickets.$inferSelect;
+
+// Ticket types for events with multiple ticket options
+export const ticketTypes = pgTable("ticket_types", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").notNull().references(() => events.id),
+  name: text("name").notNull(), // e.g., "General Admission", "VIP", "Early Bird"
+  description: text("description"),
+  price: text("price").notNull(),
+  quantity: integer("quantity").notNull(), // Total number of this ticket type available
+  soldCount: integer("sold_count").default(0), // Number of tickets sold of this type
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const insertTicketTypeSchema = createInsertSchema(ticketTypes).pick({
+  eventId: true,
+  name: true,
+  description: true,
+  price: true,
+  quantity: true,
+  isActive: true,
+});
+
+export type InsertTicketType = z.infer<typeof insertTicketTypeSchema>;
+export type TicketType = typeof ticketTypes.$inferSelect;
 
 // User follows table for following relationships
 export const userFollows = pgTable("user_follows", {
@@ -319,7 +353,8 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   comments: many(comments),
   ratings: many(eventRatings),
   attendees: many(eventAttendees),
-  tickets: many(eventTickets)
+  tickets: many(eventTickets),
+  ticketTypes: many(ticketTypes)
 }));
 
 export const commentsRelations = relations(comments, ({ one }) => ({
@@ -364,6 +399,10 @@ export const eventTicketsRelations = relations(eventTickets, ({ one }) => ({
     fields: [eventTickets.eventId],
     references: [events.id],
   }),
+  ticketType: one(ticketTypes, {
+    fields: [eventTickets.ticketTypeId],
+    references: [ticketTypes.id],
+  }),
 }));
 
 export const userFollowsRelations = relations(userFollows, ({ one }) => ({
@@ -391,5 +430,12 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   relatedUser: one(users, {
     fields: [notifications.relatedUserId],
     references: [users.id],
+  }),
+}));
+
+export const ticketTypesRelations = relations(ticketTypes, ({ one }) => ({
+  event: one(events, {
+    fields: [ticketTypes.eventId],
+    references: [events.id],
   }),
 }));
