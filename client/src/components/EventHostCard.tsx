@@ -2,7 +2,6 @@ import { User } from "@shared/schema";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
 
 interface EventHostCardProps {
   host: User | null;
@@ -45,36 +44,37 @@ export default function EventHostCard({ host, isLoading }: EventHostCardProps) {
   };
 
   const displayName = host.displayName || host.username;
+  
+  const handleViewProfile = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.location.href = `/users/${host.id}`;
+  };
 
   return (
     <div className="mt-4 flex items-center justify-between p-3 border rounded-lg">
       <div className="flex items-center space-x-3">
-        <Link href={`/users/${host.id}`}>
-          <Avatar className="h-10 w-10 cursor-pointer">
-            {host.avatar ? (
-              <AvatarImage src={host.avatar} alt={displayName} />
-            ) : null}
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              {getInitials(displayName)}
-            </AvatarFallback>
-          </Avatar>
-        </Link>
-        <Link href={`/users/${host.id}`}>
-          <div className="cursor-pointer">
-            <p className="font-medium text-sm">{displayName}</p>
-            <p className="text-xs text-neutral-500">@{host.username}</p>
-          </div>
-        </Link>
+        <Avatar className="h-10 w-10 cursor-pointer" onClick={handleViewProfile}>
+          {host.avatar ? (
+            <AvatarImage src={host.avatar} alt={displayName} />
+          ) : null}
+          <AvatarFallback className="bg-primary text-primary-foreground">
+            {getInitials(displayName)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="cursor-pointer" onClick={handleViewProfile}>
+          <p className="font-medium text-sm">{displayName}</p>
+          <p className="text-xs text-neutral-500">@{host.username}</p>
+        </div>
       </div>
-      <Link href={`/users/${host.id}`}>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs"
-        >
-          View Profile
-        </Button>
-      </Link>
+      <Button
+        variant="outline"
+        size="sm"
+        className="text-xs"
+        onClick={handleViewProfile}
+      >
+        View Profile
+      </Button>
     </div>
   );
 }
