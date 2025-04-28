@@ -990,7 +990,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User follow routes
-  // Get users to follow (all users except the current user)
+  // Get users to follow (all users except the current user) - requires authentication
   app.get("/api/users", isAuthenticated, async (req, res) => {
     try {
       if (!req.session.userId) {
@@ -1018,6 +1018,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching users:', error);
       res.status(500).json({ message: error.message || "Error fetching users" });
+    }
+  });
+  
+  // Get all users with basic info - public endpoint, no authentication required
+  app.get("/api/users/all", async (req, res) => {
+    try {
+      // Get all users
+      const allUsers = await storage.getAllUsers();
+      
+      // Process users to add additional info and remove sensitive data
+      const processedUsers = await Promise.all(allUsers.map(async (user) => {
+        // Don't return passwords
+        const { password, ...userWithoutPassword } = user;
+        
+        // Add isFollowing property if a user is logged in
+        let isFollowing = false;
+        if (req.session.userId) {
+          isFollowing = await storage.isFollowing(req.session.userId, user.id);
+        }
+        
+        // Get event count
+        const userEvents = await storage.getUserEvents(user.id);
+        const eventsCount = userEvents.length;
+        
+        return {
+          ...userWithoutPassword,
+          isFollowing,
+          eventsCount
+        };
+      }));
+      
+      res.json(processedUsers);
+    } catch (error: any) {
+      console.error('Error fetching all users:', error);
+      res.status(500).json({ message: error.message || "Error fetching all users" });
     }
   });
   

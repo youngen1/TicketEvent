@@ -10,6 +10,7 @@ import CalendarPage from "@/pages/CalendarPage";
 import AboutPage from "@/pages/AboutPage";
 import ProfilePage from "@/pages/ProfilePage";
 import UserProfilePage from "@/pages/UserProfilePage";
+import UserListingPage from "@/pages/UserListingPage";
 import MapPage from "@/pages/MapPage";
 import FavoritesPage from "@/pages/FavoritesPage";
 import PaymentSuccessPage from "@/pages/PaymentSuccessPage";
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/favorites" component={FavoritesPage} />
       <Route path="/about" component={AboutPage} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/users" component={UserListingPage} />
       <Route path="/users/:id" component={UserProfilePage} />
       <Route path="/payment/success" component={PaymentSuccessPage} />
       <Route path="/payment/settings" component={PaymentSettingsPage} />
