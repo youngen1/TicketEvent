@@ -450,20 +450,20 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
               name="genderRestriction"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Gender Restriction</FormLabel>
+                  <FormLabel htmlFor="genderRestriction">Gender Restriction</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
-                    defaultValue={field.value || GENDER_RESTRICTION.NONE}
+                    defaultValue={field.value || "none"}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger id="genderRestriction" className="w-full">
                         <SelectValue placeholder="Select gender restriction" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={GENDER_RESTRICTION.NONE}>No Restriction</SelectItem>
-                      <SelectItem value={GENDER_RESTRICTION.MALE_ONLY}>Male Only</SelectItem>
-                      <SelectItem value={GENDER_RESTRICTION.FEMALE_ONLY}>Female Only</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="male-only">Male Only</SelectItem>
+                      <SelectItem value="female-only">Female Only</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>
@@ -480,26 +480,25 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
               name="ageRestriction"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Age Restriction</FormLabel>
+                  <FormLabel htmlFor="ageRestriction">Age Restriction</FormLabel>
                   <Select 
                     onValueChange={(value) => {
-                      // Parse as integer only if it's not "none"
                       const numValue = value === "none" ? null : parseInt(value);
                       field.onChange(numValue);
                     }} 
                     defaultValue={field.value ? field.value.toString() : "none"}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger id="ageRestriction" className="w-full">
                         <SelectValue placeholder="Select age restriction" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="none">No Age Restriction</SelectItem>
-                      <SelectItem value="13">13+</SelectItem>
-                      <SelectItem value="16">16+</SelectItem>
-                      <SelectItem value="18">18+</SelectItem>
-                      <SelectItem value="21">21+</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="13">13+ years</SelectItem>
+                      <SelectItem value="16">16+ years</SelectItem>
+                      <SelectItem value="18">18+ years</SelectItem>
+                      <SelectItem value="21">21+ years</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>
