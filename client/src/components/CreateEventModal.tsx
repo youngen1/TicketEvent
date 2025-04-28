@@ -521,12 +521,12 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="male-only">Male Only</SelectItem>
-                    <SelectItem value="female-only">Female Only</SelectItem>
+                    <SelectItem value="male-only">Restrict Male</SelectItem>
+                    <SelectItem value="female-only">Restrict Female</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormDescription>
-                  Restrict attendance to a specific gender (optional)
+                  Select which gender should be restricted from attending (optional)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
