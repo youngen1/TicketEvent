@@ -10,13 +10,15 @@ interface PaystackPaymentButtonProps {
   amount: number | string;
   buttonText?: string;
   className?: string;
+  ticketTypeId?: number; // Add ticketTypeId for multiple ticket types
 }
 
 export default function PaystackPaymentButton({ 
   eventId, 
   amount, 
   buttonText = "Pay Now", 
-  className = "" 
+  className = "",
+  ticketTypeId 
 }: PaystackPaymentButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -80,14 +82,16 @@ export default function PaystackPaymentButton({
       // Add clear logs for debugging
       console.log('Sending payment request to server:', {
         amount: numericAmount,
-        eventId
+        eventId,
+        ticketTypeId
       });
       
       // We'll test using real Paystack integration for all amounts
       console.log('Using Paystack live for amount:', numericAmount);
       return apiRequest('POST', '/api/payments/initialize', {
         amount: numericAmount,
-        eventId
+        eventId,
+        ticketTypeId
       });
     },
     onSuccess: async (response) => {

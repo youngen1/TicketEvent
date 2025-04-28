@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Event, User } from "@shared/schema";
+import { Event, User, TicketType } from "@shared/schema";
 import { 
   Heart, Calendar, MapPin, Users, X, ChevronLeft, ChevronRight, 
   Maximize, ArrowLeft, ArrowRight, Star, Clock,
-  CreditCard, Map
+  CreditCard, Map, Ticket
 } from "lucide-react";
 import GoogleMapComponent from "@/components/GoogleMapComponent";
 import FallbackMapComponent from "@/components/FallbackMapComponent";
@@ -49,6 +49,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
 
   // State for video display
   const [showVideo, setShowVideo] = useState(false);
+  const [selectedTicketType, setSelectedTicketType] = useState<number | null>(null);
   
   // Fetch host data
   const { data: hostUser, isLoading: isHostLoading } = useQuery<User | null>({
@@ -59,6 +60,18 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
       return res.json();
     },
     enabled: !!event?.userId && isOpen,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+  
+  // Fetch ticket types if event has multiple ticket types
+  const { data: ticketTypes = [], isLoading: isTicketTypesLoading } = useQuery<TicketType[]>({
+    queryKey: [`/api/events/${event?.id}/ticket-types`],
+    queryFn: async () => {
+      if (!event?.id || !event.hasMultipleTicketTypes) return [];
+      const res = await apiRequest("GET", `/api/events/${event.id}/ticket-types`);
+      return res.json();
+    },
+    enabled: !!event?.id && !!event.hasMultipleTicketTypes && isOpen,
   });
 
   // Parse event data and reset state when event changes
@@ -641,8 +654,62 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                   </div>
                 )}
                 
-                {/* Paid event */}
-                {event.price && parseFloat(event.price) > 0 && (
+                {/* Multiple ticket types */}
+                {event.hasMultipleTicketTypes && ticketTypes.length > 0 ? (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold flex items-center">
+                      <Ticket className="mr-2 h-5 w-5" /> Available Tickets
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      {ticketTypes.map((ticketType) => {
+                        const remainingTickets = ticketType.quantity - (ticketType.soldCount || 0);
+                        const soldOutOrRestricted = remainingTickets <= 0 || isRestricted;
+                        
+                        return (
+                          <div key={ticketType.id} className="border rounded-lg p-3 space-y-2">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-medium">{ticketType.name}</h4>
+                                <p className="text-sm text-neutral-600">{ticketType.description}</p>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-lg">R{parseFloat(ticketType.price).toFixed(2)}</div>
+                                <div className={`text-xs font-medium ${remainingTickets <= 10 ? 'text-amber-600' : 'text-green-600'}`}>
+                                  {remainingTickets > 0 ? `${remainingTickets} tickets left` : 'Sold out'}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="pt-2">
+                              {isAuthenticated && !isRestricted && remainingTickets > 0 ? (
+                                <PaystackPaymentButton 
+                                  eventId={event.id} 
+                                  amount={parseFloat(ticketType.price)} 
+                                  buttonText={`Buy ${ticketType.name}`}
+                                  className="w-full justify-center"
+                                  ticketTypeId={ticketType.id}
+                                />
+                              ) : isAuthenticated && isRestricted ? (
+                                <Button disabled className="w-full justify-center bg-gray-400">
+                                  Ticket Purchase Restricted
+                                </Button>
+                              ) : remainingTickets <= 0 ? (
+                                <Button disabled className="w-full justify-center bg-gray-400">
+                                  Sold Out
+                                </Button>
+                              ) : (
+                                <Button disabled className="w-full justify-center bg-gray-400">
+                                  Login to purchase tickets
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : event.price && parseFloat(event.price) > 0 && (
                   <div className="flex flex-wrap items-center gap-3">
                     {isAuthenticated && !isRestricted ? (
                       <PaystackPaymentButton 
