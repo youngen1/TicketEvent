@@ -69,7 +69,19 @@ export default function Home() {
     queryClient.invalidateQueries({ queryKey: ["/api/events"] });
   }, [queryClient]);
   
-  const { data: eventsData, isLoading, error } = useQuery({
+  // Define the type for the events API response
+  interface EventsResponse {
+    events: Event[];
+    pagination: {
+      page: number;
+      totalPages: number;
+      hasMore: boolean;
+      totalCount: number;
+      limit: number;
+    };
+  }
+
+  const { data: eventsData, isLoading, error } = useQuery<EventsResponse>({
     queryKey: ["/api/events", { 
       page: currentPage, 
       limit: eventsPerPage,

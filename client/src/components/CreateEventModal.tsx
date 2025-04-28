@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertEventSchema, insertTicketTypeSchema, GENDER_RESTRICTION, genderRestrictionSchema } from "@shared/schema";
+import { insertEventSchema, insertTicketTypeSchema, GENDER_RESTRICTION, genderRestrictionSchema, EVENT_CATEGORIES } from "@shared/schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
