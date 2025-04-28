@@ -1021,6 +1021,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Search users by username, displayName, bio or email
+  app.get("/api/users/search", async (req, res) => {
+    try {
+      const query = req.query.query as string || '';
+      
+      if (!query || query.trim().length < 3) {
+        return res.json([]);
+      }
+      
+      // Search users
+      const users = await storage.searchUsers(query);
+      
+      // Remove sensitive info (passwords) from the response
+      const safeUsers = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json(safeUsers);
+    } catch (error: any) {
+      console.error('Error searching users:', error);
+      res.status(500).json({ message: error.message || "Error searching users" });
+    }
+  });
+  
   // Get all users with basic info - public endpoint, no authentication required
   app.get("/api/users/all", async (req, res) => {
     try {
