@@ -24,6 +24,9 @@ import EventRating from "./EventRating";
 import EventAttendance from "./EventAttendance";
 import PaymentButton from "./PaymentButton";
 import PaystackPaymentButton from "./PaystackPaymentButton";
+import { useAuth } from "@/contexts/AuthContext";
+import { GENDER_RESTRICTION } from "@shared/schema";
+import { AlertTriangle } from "lucide-react";
 
 interface EventDetailsModalProps {
   event: Event | null;
@@ -33,6 +36,7 @@ interface EventDetailsModalProps {
 
 export default function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalProps) {
   const queryClient = useQueryClient();
+  const { user, isAuthenticated } = useAuth();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -180,6 +184,62 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
       toggleFullscreen();
     }
   };
+  
+  // Check if user is restricted by gender
+  const isGenderRestricted = (): boolean => {
+    if (!user || !event.genderRestriction) return false;
+    
+    if (event.genderRestriction === GENDER_RESTRICTION.MALE_ONLY && user.gender !== 'male') {
+      return true;
+    }
+    
+    if (event.genderRestriction === GENDER_RESTRICTION.FEMALE_ONLY && user.gender !== 'female') {
+      return true;
+    }
+    
+    return false;
+  };
+  
+  // Check if user is restricted by age
+  const isAgeRestricted = (): boolean => {
+    if (!user || !event.ageRestriction || !Array.isArray(event.ageRestriction) || event.ageRestriction.length === 0) {
+      return false;
+    }
+    
+    // If no date of birth, we can't determine age restriction
+    if (!user.dateOfBirth) return false;
+    
+    const birthDate = new Date(user.dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    
+    // Adjust age if birthday hasn't occurred yet this year
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    // Check against age restriction groups
+    if (age < 18 && event.ageRestriction.includes('under 18')) {
+      return true;
+    }
+    
+    if (age >= 20 && age < 30 && event.ageRestriction.includes('20s')) {
+      return true;
+    }
+    
+    if (age >= 30 && age < 40 && event.ageRestriction.includes('30s')) {
+      return true;
+    }
+    
+    if (age >= 40 && event.ageRestriction.includes('40plus')) {
+      return true;
+    }
+    
+    return false;
+  };
+  
+  const isRestricted = isAuthenticated && (isGenderRestricted() || isAgeRestricted());
 
   // Fullscreen image view component
   const FullscreenImageView = () => (
@@ -520,22 +580,47 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
               </Tabs>
             </div>
             <DialogFooter className="bg-neutral-50 px-4 py-3 flex flex-row justify-between">
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col space-y-2 flex-1">
+                {isAuthenticated && isRestricted && (
+                  <div className="flex items-center bg-amber-50 text-amber-700 px-3 py-2 rounded-md mb-2 text-sm">
+                    <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <div>
+                      <strong>Restriction Notice:</strong>
+                      {isGenderRestricted() && (
+                        <span> This event has a gender restriction that prevents you from purchasing tickets.</span>
+                      )}
+                      {isAgeRestricted() && (
+                        <span> You are in an age group that is restricted from attending this event.</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 {event.price && parseFloat(event.price) > 0 && (
-                  <>
-                    <PaystackPaymentButton 
-                      eventId={event.id} 
-                      amount={parseFloat(event.price)} 
-                      buttonText={`Pay with Paystack`}
-                      className="flex items-center"
-                    />
+                  <div className="flex flex-wrap items-center gap-3">
+                    {isAuthenticated && !isRestricted ? (
+                      <PaystackPaymentButton 
+                        eventId={event.id} 
+                        amount={parseFloat(event.price)} 
+                        buttonText={`Pay with Paystack`}
+                        className="flex items-center"
+                      />
+                    ) : isAuthenticated ? (
+                      <Button disabled className="flex items-center bg-gray-400">
+                        Ticket Purchase Restricted
+                      </Button>
+                    ) : (
+                      <Button disabled className="flex items-center bg-gray-400">
+                        Login to purchase tickets
+                      </Button>
+                    )}
                     <div className="text-sm font-medium text-neutral-700">
                       Price: R{parseFloat(event.price).toFixed(2)}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={onClose} className="ml-3 flex-shrink-0">
                 Close
               </Button>
             </DialogFooter>

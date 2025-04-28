@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Event } from "@shared/schema";
+import { Event, GENDER_RESTRICTION } from "@shared/schema";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Ticket, Calendar } from "lucide-react";
+import { Users, Ticket, Calendar, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -71,6 +71,62 @@ export default function EventAttendance({ event }: EventAttendanceProps) {
   const ticketCount = Array.isArray(ticketAttendees) 
     ? ticketAttendees.reduce((sum, attendee) => sum + (attendee.quantity || 0), 0)
     : 0;
+    
+  // Check if user is restricted by gender
+  const isGenderRestricted = () => {
+    if (!user || !event.genderRestriction) return false;
+    
+    if (event.genderRestriction === GENDER_RESTRICTION.MALE_ONLY && user.gender !== 'male') {
+      return true;
+    }
+    
+    if (event.genderRestriction === GENDER_RESTRICTION.FEMALE_ONLY && user.gender !== 'female') {
+      return true;
+    }
+    
+    return false;
+  };
+  
+  // Check if user is restricted by age
+  const isAgeRestricted = () => {
+    if (!user || !event.ageRestriction || !Array.isArray(event.ageRestriction) || event.ageRestriction.length === 0) {
+      return false;
+    }
+    
+    // If no date of birth, we can't determine age restriction
+    if (!user.dateOfBirth) return false;
+    
+    const birthDate = new Date(user.dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    
+    // Adjust age if birthday hasn't occurred yet this year
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    // Check against age restriction groups
+    if (age < 18 && event.ageRestriction.includes('under 18')) {
+      return true;
+    }
+    
+    if (age >= 20 && age < 30 && event.ageRestriction.includes('20s')) {
+      return true;
+    }
+    
+    if (age >= 30 && age < 40 && event.ageRestriction.includes('30s')) {
+      return true;
+    }
+    
+    if (age >= 40 && event.ageRestriction.includes('40plus')) {
+      return true;
+    }
+    
+    return false;
+  };
+  
+  const isRestricted = isAuthenticated && (isGenderRestricted() || isAgeRestricted());
 
   return (
     <>

@@ -7,6 +7,8 @@ interface User {
   username: string;
   displayName: string | null;
   email: string | null;
+  gender: string | null;
+  dateOfBirth: string | Date | null;
   createdAt: Date | null;
   updatedAt: Date | null;
   bio: string | null;
