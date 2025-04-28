@@ -531,9 +531,53 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                     onCheckedChange={(checked) => {
                       field.onChange(checked);
                       setIsFreeEvent(checked);
+                      
                       // Reset price to 0 when marked as free
                       if (checked) {
                         form.setValue("price", "0");
+                        
+                        // Also update all ticket types if multiple ticket types enabled
+                        if (hasMultipleTicketTypes && fields.length > 0) {
+                          fields.forEach((_, index) => {
+                            form.setValue(`ticketTypes.${index}.price`, "0");
+                          });
+                        }
+                      }
+                    }}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="hasMultipleTicketTypes"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="space-y-0.5">
+                  <FormLabel>Multiple Ticket Types</FormLabel>
+                  <FormDescription>
+                    Enable to create different ticket types (e.g., General, VIP)
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      setHasMultipleTicketTypes(checked);
+                      
+                      // If enabling multiple ticket types and there are none,
+                      // add one default ticket
+                      if (checked && (!fields || fields.length === 0)) {
+                        append({
+                          name: "General Admission",
+                          description: "",
+                          price: isFreeEvent ? "0" : form.getValues("price") || "0",
+                          quantity: form.getValues("totalTickets") || "100",
+                          isActive: true
+                        });
                       }
                     }}
                   />
@@ -667,29 +711,166 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
             )}
           />
           
-          {!isFreeEvent && (
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ticket Price (R)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min="0" 
-                      step="0.01" 
-                      placeholder="Enter price in Rands" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Enter the ticket price in Rands (e.g., 250 for R250.00)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+          {!hasMultipleTicketTypes && (
+            <>
+              {!isFreeEvent && (
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ticket Price (R)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="0.01" 
+                          placeholder="Enter price in Rands" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter the ticket price in Rands (e.g., 250 for R250.00)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            />
+              
+              <FormField
+                control={form.control}
+                name="totalTickets"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Available Tickets</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="1" 
+                        placeholder="Number of tickets available" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Enter the total number of tickets available for this event
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
+          
+          {/* Multiple ticket types section */}
+          {hasMultipleTicketTypes && (
+            <div className="space-y-4 border rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Ticket Types</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    append({
+                      name: "",
+                      description: "",
+                      price: isFreeEvent ? "0" : "0",
+                      quantity: "100",
+                      isActive: true
+                    });
+                  }}
+                  className="flex items-center gap-1"
+                >
+                  <Plus className="h-4 w-4" /> Add Ticket Type
+                </Button>
+              </div>
+              
+              {fields.map((field, index) => (
+                <div key={field.id} className="border rounded-md p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">Ticket Type {index + 1}</h4>
+                    {fields.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => remove(index)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name={`ticketTypes.${index}.name`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., General, VIP" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name={`ticketTypes.${index}.quantity`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantity</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="1" placeholder="100" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name={`ticketTypes.${index}.description`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Description of ticket benefits" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {!isFreeEvent && (
+                    <FormField
+                      control={form.control}
+                      name={`ticketTypes.${index}.price`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Price (R)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              step="0.01" 
+                              placeholder="Price in Rands" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
