@@ -10,6 +10,7 @@ import multer from 'multer';
 import path from 'path';
 import { processVideo } from "./utils/videoProcessor";
 import { paystackService } from './services/paystackService';
+import { createNotifications } from './create-notifications';
 
 // Add userId to session
 declare module 'express-session' {
@@ -1637,6 +1638,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error deleting notification:', error);
       res.status(500).json({ message: error.message || 'Error deleting notification' });
+    }
+  });
+  
+  // Generate dummy notifications for testing
+  app.post('/api/notifications/generate', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || !user.isAdmin) {
+        return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+      }
+      
+      await createNotifications();
+      
+      res.json({ 
+        success: true, 
+        message: 'Dummy notifications created successfully' 
+      });
+    } catch (error: any) {
+      console.error('Error creating dummy notifications:', error);
+      res.status(500).json({ message: error.message || 'Error creating dummy notifications' });
     }
   });
 
