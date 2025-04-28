@@ -2,6 +2,27 @@ import type { Express } from "express";
 import { storage } from "./storage";
 
 export function registerTestRoutes(app: Express): void {
+  // Test route - Get all event videos for debugging
+  app.get("/api/test/event-videos", async (req, res) => {
+    try {
+      const allEvents = await storage.getAllEvents();
+      const eventVideos = allEvents.map(event => ({
+        id: event.id,
+        title: event.title,
+        video: event.video
+      }));
+      
+      res.json({ 
+        success: true, 
+        count: eventVideos.length,
+        events: eventVideos
+      });
+    } catch (error: any) {
+      console.error('Error fetching event videos:', error);
+      res.status(500).json({ message: error.message || 'Error fetching event videos' });
+    }
+  });
+  
   // Test route - Update event videos
   app.post("/api/test/update-event-video", async (req, res) => {
     try {
@@ -183,6 +204,8 @@ export function registerTestRoutes(app: Express): void {
       
       // Add events to the database and create ticket types
       for (const eventData of sampleEvents) {
+        // Ensure we correctly set the video URL
+        console.log(`Creating event: ${eventData.title} with video: ${eventData.video}`);
         const event = await storage.createEvent(eventData);
         
         // Get ticket types for this event
