@@ -1421,6 +1421,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notification routes
+  // Get notifications for authenticated user
+  app.get('/api/notifications', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+      
+      const notifications = await storage.getUserNotifications(userId);
+      res.json(notifications);
+    } catch (error: any) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ message: error.message || 'Error fetching notifications' });
+    }
+  });
+
+  // Mark a notification as read
+  app.patch('/api/notifications/:id/read', isAuthenticated, async (req, res) => {
+    try {
+      const notificationId = parseInt(req.params.id);
+      const updatedNotification = await storage.markNotificationAsRead(notificationId);
+      res.json(updatedNotification);
+    } catch (error: any) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ message: error.message || 'Error marking notification as read' });
+    }
+  });
+
+  // Mark all notifications as read
+  app.post('/api/notifications/read-all', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+      
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error marking all notifications as read:', error);
+      res.status(500).json({ message: error.message || 'Error marking all notifications as read' });
+    }
+  });
+
+  // Delete a notification
+  app.delete('/api/notifications/:id', isAuthenticated, async (req, res) => {
+    try {
+      const notificationId = parseInt(req.params.id);
+      await storage.deleteNotification(notificationId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting notification:', error);
+      res.status(500).json({ message: error.message || 'Error deleting notification' });
+    }
+  });
+
+  // Get user friends (mutual follows)
+  app.get('/api/friends', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+      
+      const friends = await storage.getFriends(userId);
+      
+      // Don't return passwords
+      const sanitizedFriends = friends.map(friend => {
+        const { password, ...userWithoutPassword } = friend;
+        return userWithoutPassword;
+      });
+      
+      res.json(sanitizedFriends);
+    } catch (error: any) {
+      console.error('Error fetching friends:', error);
+      res.status(500).json({ message: error.message || 'Error fetching friends' });
+    }
+  });
+
+  // Check friendship status
+  app.get('/api/users/:id/friendship', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+      
+      const otherUserId = parseInt(req.params.id);
+      const isFriend = await storage.checkFriendship(userId, otherUserId);
+      
+      res.json({ isFriend });
+    } catch (error: any) {
+      console.error('Error checking friendship status:', error);
+      res.status(500).json({ message: error.message || 'Error checking friendship status' });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

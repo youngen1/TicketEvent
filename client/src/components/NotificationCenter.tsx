@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Users, Calendar, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { NOTIFICATION_TYPE, Notification } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,48 +16,56 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 
 export default function NotificationCenter() {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [, setLocation] = useLocation();
   
-  // Dummy notifications for demo purposes
-  const mockNotifications: Notification[] = [
-    {
-      id: 1,
-      userId: 1,
-      type: NOTIFICATION_TYPE.EVENT_REMINDER,
-      title: "Event Reminder",
-      message: "Your event 'Workshop' is starting in 1 hour",
-      eventId: 1,
-      isRead: false,
-      createdAt: new Date(Date.now() - 1000 * 60 * 30) // 30 minutes ago
+  // Fetch notifications from the API
+  const { 
+    data: notifications = [], 
+    isLoading, 
+    error 
+  } = useQuery({
+    queryKey: ['/api/notifications'],
+    queryFn: async () => {
+      if (!isAuthenticated) return [];
+      return apiRequest('GET', '/api/notifications')
+        .then(res => res.json());
     },
-    {
-      id: 2,
-      userId: 1,
-      type: NOTIFICATION_TYPE.NEW_COMMENT,
-      title: "New Comment",
-      message: "Someone commented on your event",
-      eventId: 2,
-      isRead: true,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2) // 2 hours ago
+    enabled: isAuthenticated
+  });
+  
+  // Mutation to mark a notification as read
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId: number) => {
+      return apiRequest('PATCH', `/api/notifications/${notificationId}/read`)
+        .then(res => res.json());
     },
-    {
-      id: 3,
-      userId: 1,
-      type: NOTIFICATION_TYPE.ATTENDANCE_UPDATE,
-      title: "Attendance Update",
-      message: "5 people are now attending your event",
-      eventId: 1,
-      isRead: false,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24) // 1 day ago
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
     }
-  ];
+  });
   
-  // Filter mockNotifications for authenticated users, empty for unauthenticated
-  const notifications = isAuthenticated ? mockNotifications : [];
+  // Mutation to mark all notifications as read
+  const markAllAsReadMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/notifications/read-all`)
+        .then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      toast({
+        title: "Success",
+        description: "All notifications marked as read"
+      });
+    }
+  });
   
   // Count unread notifications
   const unreadCount = notifications.filter(notification => !notification.isRead).length;
@@ -66,12 +74,20 @@ export default function NotificationCenter() {
   const eventNotifications = notifications.filter(notification => 
     notification.type === NOTIFICATION_TYPE.EVENT_REMINDER || 
     notification.type === NOTIFICATION_TYPE.EVENT_UPDATE ||
-    notification.type === NOTIFICATION_TYPE.EVENT_CANCELED
+    notification.type === NOTIFICATION_TYPE.EVENT_CANCELED ||
+    notification.type === NOTIFICATION_TYPE.EVENT_STARTING_TODAY
   );
   
   const socialNotifications = notifications.filter(notification => 
     notification.type === NOTIFICATION_TYPE.NEW_COMMENT || 
-    notification.type === NOTIFICATION_TYPE.ATTENDANCE_UPDATE
+    notification.type === NOTIFICATION_TYPE.ATTENDANCE_UPDATE ||
+    notification.type === NOTIFICATION_TYPE.NEW_FOLLOWER ||
+    notification.type === NOTIFICATION_TYPE.NEW_FRIEND
+  );
+  
+  const activityNotifications = notifications.filter(notification => 
+    notification.type === NOTIFICATION_TYPE.FOLLOWED_USER_EVENT || 
+    notification.type === NOTIFICATION_TYPE.FOLLOWED_USER_TICKET
   );
   
   const systemNotifications = notifications.filter(notification => 
@@ -79,14 +95,30 @@ export default function NotificationCenter() {
   );
   
   const handleNotificationClick = (notification: Notification) => {
-    // For demo, just update the UI state and close dropdown
+    // Mark the notification as read
+    if (!notification.isRead) {
+      markAsReadMutation.mutate(notification.id);
+    }
+    
+    // Close dropdown
     setIsOpen(false);
     
-    // In real implementation, would mark as read and navigate to related event
+    // Navigate to the appropriate page based on notification type
+    if (notification.eventId) {
+      setLocation(`/events/${notification.eventId}`);
+    } else if (notification.relatedUserId) {
+      setLocation(`/users/${notification.relatedUserId}`);
+    }
+    
+    // Show toast for feedback
     toast({
-      title: "Notification clicked",
-      description: `You clicked: ${notification.title}`,
+      title: "Notification",
+      description: notification.message,
     });
+  };
+
+  const handleMarkAllAsRead = () => {
+    markAllAsReadMutation.mutate();
   };
 
   const renderNotification = (notification: Notification) => {
@@ -101,9 +133,13 @@ export default function NotificationCenter() {
         onClick={() => handleNotificationClick(notification)}
       >
         <Avatar className="h-8 w-8 mt-1">
-          <AvatarFallback className="bg-primary text-white text-xs">
-            {getNotificationInitial(notification.type)}
-          </AvatarFallback>
+          {notification.relatedUserId ? (
+            <AvatarImage src={`https://ui-avatars.com/api/?name=User+${notification.relatedUserId}&background=random`} />
+          ) : (
+            <AvatarFallback className="bg-primary text-white text-xs">
+              {getNotificationInitial(notification.type)}
+            </AvatarFallback>
+          )}
         </Avatar>
         <div className="flex-1 space-y-1">
           <div className="flex justify-between">
@@ -126,11 +162,15 @@ export default function NotificationCenter() {
   // Helper to format notification dates in a human-readable way
   function formatNotificationDate(date: Date | null) {
     if (!date) return "";
+    
+    // Convert string date to Date object if needed
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    
     const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    const diffInHours = (now.getTime() - dateObj.getTime()) / (1000 * 60 * 60);
     
     if (diffInHours < 1) {
-      const minutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+      const minutes = Math.floor((now.getTime() - dateObj.getTime()) / (1000 * 60));
       return `${minutes} min${minutes !== 1 ? 's' : ''} ago`;
     } else if (diffInHours < 24) {
       const hours = Math.floor(diffInHours);
@@ -138,7 +178,7 @@ export default function NotificationCenter() {
     } else if (diffInHours < 48) {
       return 'Yesterday';
     } else {
-      return format(date, 'MMM d');
+      return format(dateObj, 'MMM d');
     }
   }
   
@@ -148,11 +188,18 @@ export default function NotificationCenter() {
       case NOTIFICATION_TYPE.EVENT_REMINDER: 
       case NOTIFICATION_TYPE.EVENT_UPDATE:
       case NOTIFICATION_TYPE.EVENT_CANCELED:
+      case NOTIFICATION_TYPE.EVENT_STARTING_TODAY:
         return "E"; // Event
       case NOTIFICATION_TYPE.NEW_COMMENT:
         return "C"; // Comment
       case NOTIFICATION_TYPE.ATTENDANCE_UPDATE:
         return "A"; // Attendance
+      case NOTIFICATION_TYPE.NEW_FOLLOWER:
+      case NOTIFICATION_TYPE.NEW_FRIEND:
+        return "F"; // Follower/Friend
+      case NOTIFICATION_TYPE.FOLLOWED_USER_EVENT:
+      case NOTIFICATION_TYPE.FOLLOWED_USER_TICKET:
+        return "U"; // User activity
       case NOTIFICATION_TYPE.ADMIN_MESSAGE:
         return "S"; // System
       default:
@@ -175,8 +222,12 @@ export default function NotificationCenter() {
       <DropdownMenuContent align="end" className="w-80 max-h-[70vh] overflow-y-auto">
         <DropdownMenuLabel className="flex justify-between items-center">
           <span>Notifications</span>
-          {notifications.length > 0 && (
-            <button className="text-xs text-blue-600 hover:text-blue-800">
+          {notifications.length > 0 && unreadCount > 0 && (
+            <button 
+              className="text-xs text-blue-600 hover:text-blue-800"
+              onClick={handleMarkAllAsRead}
+              disabled={markAllAsReadMutation.isPending}
+            >
               Mark all as read
             </button>
           )}
@@ -188,6 +239,19 @@ export default function NotificationCenter() {
             <h3 className="font-medium mb-1">No notifications</h3>
             <p className="text-sm text-neutral-500">
               Sign in to see your notifications
+            </p>
+          </div>
+        ) : isLoading ? (
+          <div className="p-4 text-center">
+            <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+            <p className="text-sm text-neutral-500">Loading notifications...</p>
+          </div>
+        ) : error ? (
+          <div className="p-4 text-center">
+            <Bell className="h-10 w-10 mx-auto text-red-300 mb-2" />
+            <h3 className="font-medium mb-1">Error loading notifications</h3>
+            <p className="text-sm text-neutral-500">
+              Please try again later
             </p>
           </div>
         ) : notifications.length === 0 ? (
@@ -202,8 +266,8 @@ export default function NotificationCenter() {
           <>
             {eventNotifications.length > 0 && (
               <DropdownMenuGroup>
-                <DropdownMenuLabel className="text-xs text-neutral-500 font-normal">
-                  Event Updates
+                <DropdownMenuLabel className="text-xs text-neutral-500 font-normal flex items-center">
+                  <Calendar className="h-3 w-3 mr-1" /> Event Updates
                 </DropdownMenuLabel>
                 {eventNotifications.map(renderNotification)}
                 <DropdownMenuSeparator />
@@ -212,10 +276,20 @@ export default function NotificationCenter() {
             
             {socialNotifications.length > 0 && (
               <DropdownMenuGroup>
-                <DropdownMenuLabel className="text-xs text-neutral-500 font-normal">
-                  Social Activity
+                <DropdownMenuLabel className="text-xs text-neutral-500 font-normal flex items-center">
+                  <Users className="h-3 w-3 mr-1" /> Social Activity
                 </DropdownMenuLabel>
                 {socialNotifications.map(renderNotification)}
+                <DropdownMenuSeparator />
+              </DropdownMenuGroup>
+            )}
+            
+            {activityNotifications.length > 0 && (
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="text-xs text-neutral-500 font-normal flex items-center">
+                  <MessageSquare className="h-3 w-3 mr-1" /> Following Activity
+                </DropdownMenuLabel>
+                {activityNotifications.map(renderNotification)}
                 <DropdownMenuSeparator />
               </DropdownMenuGroup>
             )}
@@ -229,7 +303,10 @@ export default function NotificationCenter() {
               </DropdownMenuGroup>
             )}
             
-            <DropdownMenuItem className="justify-center text-sm text-neutral-500 hover:text-blue-600">
+            <DropdownMenuItem 
+              className="justify-center text-sm text-neutral-500 hover:text-blue-600"
+              onClick={() => setLocation('/notifications')}
+            >
               View all notifications
             </DropdownMenuItem>
           </>
