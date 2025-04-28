@@ -5,12 +5,14 @@ import { useToast } from '@/hooks/use-toast';
 interface LocationSearchInputProps {
   value: string;
   onChange: (value: string, placeDetails?: google.maps.places.PlaceResult) => void;
+  onCoordinatesChange?: (latitude: string, longitude: string) => void;
   placeholder?: string;
 }
 
 export default function LocationSearchInput({ 
   value, 
   onChange, 
+  onCoordinatesChange,
   placeholder = "Enter location" 
 }: LocationSearchInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -94,6 +96,18 @@ export default function LocationSearchInput({
       
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
+        
+        // Extract the latitude and longitude if available
+        if (place.geometry && place.geometry.location) {
+          const lat = place.geometry.location.lat().toString();
+          const lng = place.geometry.location.lng().toString();
+          
+          // Call the onCoordinatesChange callback if provided
+          if (onCoordinatesChange) {
+            onCoordinatesChange(lat, lng);
+          }
+        }
+        
         if (place.formatted_address) {
           onChange(place.formatted_address, place);
         } else if (place.name) {

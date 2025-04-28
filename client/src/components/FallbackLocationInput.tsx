@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 interface FallbackLocationInputProps {
   value: string;
   onChange: (value: string) => void;
+  onCoordinatesChange?: (latitude: string, longitude: string) => void;
   placeholder?: string;
 }
 
@@ -12,6 +13,7 @@ interface FallbackLocationInputProps {
 export default function FallbackLocationInput({ 
   value, 
   onChange, 
+  onCoordinatesChange,
   placeholder = "Enter a location" 
 }: FallbackLocationInputProps) {
   return (

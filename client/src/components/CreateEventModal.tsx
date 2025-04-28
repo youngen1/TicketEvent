@@ -71,6 +71,8 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [latitude, setLatitude] = useState<string | null>(null);
+  const [longitude, setLongitude] = useState<string | null>(null);
   const { user } = useAuth();
 
   const [isFreeEvent, setIsFreeEvent] = useState(true);
