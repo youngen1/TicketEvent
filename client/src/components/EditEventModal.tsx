@@ -52,7 +52,7 @@ const formSchema = insertEventSchema.extend({
   time: z.string().min(1, { message: "Time is required" }),
   location: z.string().min(1, { message: "Location is required" }),
   genderRestriction: z.string().default(GENDER_RESTRICTION.NONE),
-  ageRestriction: z.number().nullable().default(null),
+  ageRestriction: z.array(z.string()).default([]),
   id: z.number().optional(),
   image: z.string().optional(),
   video: z.string().optional(),
@@ -82,7 +82,7 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
       image: "",
       video: "",
       genderRestriction: GENDER_RESTRICTION.NONE,
-      ageRestriction: null,
+      ageRestriction: [],
     },
   });
 
@@ -100,7 +100,7 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
         image: event.image || "",
         video: event.video || "",
         genderRestriction: event.genderRestriction || GENDER_RESTRICTION.NONE,
-        ageRestriction: event.ageRestriction || null,
+        ageRestriction: Array.isArray(event.ageRestriction) ? event.ageRestriction : [],
       });
       
       // Update the image preview
@@ -480,29 +480,89 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
               name="ageRestriction"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel htmlFor="ageRestriction">Age Restriction</FormLabel>
-                  <Select 
-                    onValueChange={(value) => {
-                      const numValue = value === "none" ? null : parseInt(value);
-                      field.onChange(numValue);
-                    }} 
-                    defaultValue={field.value ? field.value.toString() : "none"}
-                  >
-                    <FormControl>
-                      <SelectTrigger id="ageRestriction" className="w-full">
-                        <SelectValue placeholder="Select age restriction" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="13">13+ years</SelectItem>
-                      <SelectItem value="16">16+ years</SelectItem>
-                      <SelectItem value="18">18+ years</SelectItem>
-                      <SelectItem value="21">21+ years</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Age Groups</FormLabel>
+                  <div className="space-y-2">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="under18" 
+                          checked={field.value?.includes("under18")} 
+                          onCheckedChange={(checked) => {
+                            const currentValue = field.value || [];
+                            const newValue = checked 
+                              ? [...currentValue, "under18"] 
+                              : currentValue.filter(v => v !== "under18");
+                            field.onChange(newValue);
+                          }}
+                        />
+                        <label
+                          htmlFor="under18"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          Under 18
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="20s" 
+                          checked={field.value?.includes("20s")} 
+                          onCheckedChange={(checked) => {
+                            const currentValue = field.value || [];
+                            const newValue = checked 
+                              ? [...currentValue, "20s"] 
+                              : currentValue.filter(v => v !== "20s");
+                            field.onChange(newValue);
+                          }}
+                        />
+                        <label
+                          htmlFor="20s"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          20s
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="30s" 
+                          checked={field.value?.includes("30s")} 
+                          onCheckedChange={(checked) => {
+                            const currentValue = field.value || [];
+                            const newValue = checked 
+                              ? [...currentValue, "30s"] 
+                              : currentValue.filter(v => v !== "30s");
+                            field.onChange(newValue);
+                          }}
+                        />
+                        <label
+                          htmlFor="30s"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          30s
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="40plus" 
+                          checked={field.value?.includes("40plus")} 
+                          onCheckedChange={(checked) => {
+                            const currentValue = field.value || [];
+                            const newValue = checked 
+                              ? [...currentValue, "40plus"] 
+                              : currentValue.filter(v => v !== "40plus");
+                            field.onChange(newValue);
+                          }}
+                        />
+                        <label
+                          htmlFor="40plus"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          40+
+                        </label>
+                      </div>
+                    </div>
+                  </div>
                   <FormDescription>
-                    Set minimum age requirement for attendees (optional)
+                    Select which age groups this event is appropriate for (optional)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
