@@ -11,6 +11,7 @@ import path from 'path';
 import { processVideo } from "./utils/videoProcessor";
 import { paystackService } from './services/paystackService';
 import { createNotifications } from './create-notifications';
+import { registerTestRoutes } from './test-routes';
 
 // Add userId to session
 declare module 'express-session' {
@@ -2263,7 +2264,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
+  // Register test routes for development
+  registerTestRoutes(app);
 
+  const httpServer = createServer(app);
+  
   return httpServer;
 }
