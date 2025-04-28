@@ -226,6 +226,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error fetching event" });
     }
   });
+  
+  // Get ticket types for an event
+  app.get("/api/events/:id/ticket-types", async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      const ticketTypes = await storage.getEventTicketTypes(eventId);
+      
+      res.json(ticketTypes);
+    } catch (error) {
+      console.error('Error getting ticket types:', error);
+      res.status(500).json({ message: "Error getting ticket types" });
+    }
+  });
 
   // Set up multer for video upload
   const upload = multer({

@@ -933,6 +933,29 @@ export class MemStorage implements IStorage {
     return updatedTicket;
   }
   
+  // Ticket type methods
+  async createTicketType(ticketType: InsertTicketType): Promise<TicketType> {
+    const newTicketType: TicketType = {
+      id: this.nextTicketTypeId++,
+      eventId: ticketType.eventId,
+      name: ticketType.name,
+      description: ticketType.description || '',
+      price: ticketType.price,
+      quantity: ticketType.quantity,
+      soldCount: 0,
+      isActive: ticketType.isActive !== undefined ? ticketType.isActive : true,
+      createdAt: new Date(),
+      updatedAt: null
+    };
+    
+    this.ticketTypes.push(newTicketType);
+    return newTicketType;
+  }
+  
+  async getEventTicketTypes(eventId: number): Promise<TicketType[]> {
+    return this.ticketTypes.filter(ticketType => ticketType.eventId === eventId);
+  }
+  
   // User follow methods
   async getUserFollowers(userId: number): Promise<User[]> {
     // Find all follows where the user is being followed
@@ -1138,6 +1161,22 @@ export class MemStorage implements IStorage {
 
 // Database implementation
 export class DatabaseStorage implements IStorage {
+  // Ticket Type methods
+  async createTicketType(ticketType: InsertTicketType): Promise<TicketType> {
+    const [newTicketType] = await db
+      .insert(ticketTypes)
+      .values(ticketType)
+      .returning();
+    return newTicketType;
+  }
+  
+  async getEventTicketTypes(eventId: number): Promise<TicketType[]> {
+    return db
+      .select()
+      .from(ticketTypes)
+      .where(eq(ticketTypes.eventId, eventId))
+      .orderBy(asc(ticketTypes.name));
+  }
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
