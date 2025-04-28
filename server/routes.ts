@@ -1104,6 +1104,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get upcoming events for a user (events they're attending)
+  app.get("/api/users/:id/upcoming-events", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Verify user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get upcoming events the user is attending
+      const upcomingEvents = await storage.getUpcomingUserEvents(userId);
+      
+      res.json(upcomingEvents);
+    } catch (error: any) {
+      console.error('Error fetching upcoming events:', error);
+      res.status(500).json({ message: error.message || "Error fetching upcoming events" });
+    }
+  });
+  
+  // Check if current user is following a specific user
+  app.get("/api/users/:id/is-following", async (req, res) => {
+    try {
+      const userToCheckId = parseInt(req.params.id);
+      const currentUserId = req.session.userId;
+      
+      if (!currentUserId) {
+        return res.json(false);
+      }
+      
+      if (currentUserId === userToCheckId) {
+        return res.json(false); // Cannot follow yourself
+      }
+      
+      const isFollowing = await storage.isFollowing(currentUserId, userToCheckId);
+      res.json(isFollowing);
+    } catch (error: any) {
+      console.error('Error checking follow status:', error);
+      res.status(500).json({ message: error.message || "Error checking follow status" });
+    }
+  });
+  
   // Follow a user
   app.post("/api/users/:id/follow", isAuthenticated, async (req, res) => {
     try {

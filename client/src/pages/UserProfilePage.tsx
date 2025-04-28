@@ -17,6 +17,12 @@ import EventDetailsModal from "@/components/EventDetailsModal";
 import UserProfileSummary from "@/components/UserProfileSummary";
 import { useLocation, useParams } from "wouter";
 
+// Define types for API responses
+type UserEventsResponse = Event[];
+type UserFollowersResponse = User[];
+type UserFollowingResponse = User[];
+type UpcomingEventsResponse = Event[];
+
 export default function UserProfilePage() {
   const params = useParams();
   const userId = params.userId ? parseInt(params.userId) : undefined;
@@ -39,25 +45,25 @@ export default function UserProfilePage() {
   });
   
   // Get user's event history
-  const { data: userEvents = [], isLoading: userEventsLoading } = useQuery({
+  const { data: userEvents = [] as Event[], isLoading: userEventsLoading } = useQuery<UserEventsResponse>({
     queryKey: [`/api/users/${userId}/events`],
     enabled: !!userId,
   });
   
   // Get user's followers
-  const { data: followers = [], isLoading: followersLoading } = useQuery({
+  const { data: followers = [] as User[], isLoading: followersLoading } = useQuery<UserFollowersResponse>({
     queryKey: [`/api/users/${userId}/followers`],
     enabled: !!userId,
   });
   
   // Get users followed by the user
-  const { data: following = [], isLoading: followingLoading } = useQuery({
+  const { data: following = [] as User[], isLoading: followingLoading } = useQuery<UserFollowingResponse>({
     queryKey: [`/api/users/${userId}/following`],
     enabled: !!userId,
   });
   
   // Get user's upcoming events (events they're attending)
-  const { data: upcomingEvents = [], isLoading: upcomingEventsLoading } = useQuery({
+  const { data: upcomingEvents = [] as Event[], isLoading: upcomingEventsLoading } = useQuery<UpcomingEventsResponse>({
     queryKey: [`/api/users/${userId}/upcoming-events`],
     enabled: !!userId,
   });
