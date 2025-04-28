@@ -2,6 +2,31 @@ import type { Express } from "express";
 import { storage } from "./storage";
 
 export function registerTestRoutes(app: Express): void {
+  // Test route - Update event videos
+  app.post("/api/test/update-event-video", async (req, res) => {
+    try {
+      const { id, video } = req.body;
+      if (!id || !video) {
+        return res.status(400).json({ message: "Event ID and video URL are required" });
+      }
+      
+      const event = await storage.getEvent(id);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const updatedEvent = await storage.updateEvent(id, { video });
+      res.json({ 
+        success: true, 
+        message: `Updated video for event ID: ${id}`,
+        event: updatedEvent
+      });
+    } catch (error: any) {
+      console.error('Error updating event video:', error);
+      res.status(500).json({ message: error.message || 'Error updating event video' });
+    }
+  });
+  
   // Test route - Create sample events with multiple ticket types (for development)
   app.get("/api/test/create-sample-events", async (req, res) => {
     try {
