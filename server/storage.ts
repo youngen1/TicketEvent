@@ -65,6 +65,7 @@ export interface IStorage {
   // Ticket type methods
   createTicketType(ticketType: InsertTicketType): Promise<TicketType>;
   getEventTicketTypes(eventId: number): Promise<TicketType[]>;
+  getTicketType(id: number): Promise<TicketType | undefined>;
   
   // User follow methods
   getUserFollowers(userId: number): Promise<User[]>;
@@ -956,6 +957,10 @@ export class MemStorage implements IStorage {
     return this.ticketTypes.filter(ticketType => ticketType.eventId === eventId);
   }
   
+  async getTicketType(id: number): Promise<TicketType | undefined> {
+    return this.ticketTypes.find(ticketType => ticketType.id === id);
+  }
+  
   // User follow methods
   async getUserFollowers(userId: number): Promise<User[]> {
     // Find all follows where the user is being followed
@@ -1176,6 +1181,14 @@ export class DatabaseStorage implements IStorage {
       .from(ticketTypes)
       .where(eq(ticketTypes.eventId, eventId))
       .orderBy(asc(ticketTypes.name));
+  }
+  
+  async getTicketType(id: number): Promise<TicketType | undefined> {
+    const [ticketType] = await db
+      .select()
+      .from(ticketTypes)
+      .where(eq(ticketTypes.id, id));
+    return ticketType;
   }
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));

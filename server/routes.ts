@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertEventSchema, insertUserSchema, type InsertEventTicket, type InsertUser } from "@shared/schema";
+import { insertEventSchema, insertUserSchema, insertTicketTypeSchema, type InsertEventTicket, type InsertUser } from "@shared/schema";
 import * as bcrypt from 'bcrypt';
 import session from 'express-session';
 import { db } from "./db";
@@ -239,6 +239,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error getting ticket types" });
     }
   });
+  
+  // Create a ticket type for an event
+  app.post("/api/events/:id/ticket-types", isAuthenticated, async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      const event = await storage.getEvent(eventId);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // Check if user has permission (created the event or is admin)
+      const currentUser = await storage.getUser(req.session.userId);
+      if (event.userId !== req.session.userId && !currentUser?.isAdmin) {
+        return res.status(403).json({ message: "You do not have permission to add ticket types to this event" });
+      }
+      
+      const ticketTypeData = {
+        ...req.body,
+        eventId,
+        quantity: parseInt(req.body.quantity),
+        price: parseFloat(req.body.price),
+        soldCount: 0,
+        isActive: req.body.isActive === 'false' ? false : true
+      };
+      
+      const validation = insertTicketTypeSchema.safeParse(ticketTypeData);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid ticket type data", 
+          errors: validation.error.format() 
+        });
+      }
+      
+      const ticketType = await storage.createTicketType(validation.data);
+      res.status(201).json(ticketType);
+    } catch (error: any) {
+      console.error('Error creating ticket type:', error);
+      res.status(500).json({ message: error.message || "Error creating ticket type" });
+    }
+  });
 
   // Set up multer for video upload
   const upload = multer({
@@ -374,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/payments/initialize", isAuthenticated, async (req, res) => {
     try {
       console.log('Payment initialization request received:', req.body);
-      const { amount, eventId } = req.body;
+      const { amount, eventId, ticketTypeId } = req.body;
       
       if (!amount || !eventId) {
         console.log('Missing amount or eventId:', { amount, eventId });
@@ -399,6 +441,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // If ticket type ID is provided, fetch ticket type details
+      let ticketType = null;
+      if (ticketTypeId) {
+        ticketType = await storage.getTicketType(parseInt(ticketTypeId));
+        if (!ticketType) {
+          return res.status(404).json({ message: "Ticket type not found" });
+        }
+        
+        // Check if tickets are available
+        if (ticketType.quantity <= ticketType.soldCount) {
+          return res.status(400).json({ message: "This ticket type is sold out" });
+        }
       }
       
       // Check gender restrictions
@@ -465,6 +521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.session.userId,
         eventId: parseInt(eventId),
         quantity: 1,
+        ticketTypeId: ticketTypeId ? parseInt(ticketTypeId) : null,
         totalAmount: parseFloat(amount),
         paymentReference: reference,
         paymentStatus: "pending" // Will be updated to completed on verification
