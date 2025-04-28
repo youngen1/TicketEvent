@@ -76,11 +76,13 @@ export default function EventAttendance({ event }: EventAttendanceProps) {
   const isGenderRestricted = () => {
     if (!user || !event.genderRestriction) return false;
     
-    if (event.genderRestriction === GENDER_RESTRICTION.MALE_ONLY && user.gender !== 'male') {
+    // "male-only" now means "restrict male"
+    if (event.genderRestriction === GENDER_RESTRICTION.MALE_ONLY && user.gender === 'male') {
       return true;
     }
     
-    if (event.genderRestriction === GENDER_RESTRICTION.FEMALE_ONLY && user.gender !== 'female') {
+    // "female-only" now means "restrict female"
+    if (event.genderRestriction === GENDER_RESTRICTION.FEMALE_ONLY && user.gender === 'female') {
       return true;
     }
     
@@ -169,7 +171,7 @@ export default function EventAttendance({ event }: EventAttendanceProps) {
                       </Badge>
                       <p className="text-sm text-amber-600 mt-2">
                         {isGenderRestricted() ? (
-                          `This event is restricted to ${event.genderRestriction === 'male-only' ? 'male' : 'female'} attendees only.`
+                          `This event restricts ${event.genderRestriction === 'male-only' ? 'male' : 'female'} attendees from participating.`
                         ) : (
                           'You are in an age group that is restricted from attending this event.'
                         )}

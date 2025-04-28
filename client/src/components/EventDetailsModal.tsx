@@ -189,11 +189,13 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
   const isGenderRestricted = (): boolean => {
     if (!user || !event.genderRestriction) return false;
     
-    if (event.genderRestriction === GENDER_RESTRICTION.MALE_ONLY && user.gender !== 'male') {
+    // "male-only" now means "restrict male"
+    if (event.genderRestriction === GENDER_RESTRICTION.MALE_ONLY && user.gender === 'male') {
       return true;
     }
     
-    if (event.genderRestriction === GENDER_RESTRICTION.FEMALE_ONLY && user.gender !== 'female') {
+    // "female-only" now means "restrict female"
+    if (event.genderRestriction === GENDER_RESTRICTION.FEMALE_ONLY && user.gender === 'female') {
       return true;
     }
     
@@ -587,7 +589,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                     <div>
                       <strong>Restriction Notice:</strong>
                       {isGenderRestricted() && (
-                        <span> This event has a gender restriction that prevents you from purchasing tickets.</span>
+                        <span> This event restricts {user?.gender} attendees from participating.</span>
                       )}
                       {isAgeRestricted() && (
                         <span> You are in an age group that is restricted from attending this event.</span>

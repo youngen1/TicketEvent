@@ -361,15 +361,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check gender restrictions
       if (event.genderRestriction) {
-        if (event.genderRestriction === "male-only" && user.gender !== "male") {
+        // "male-only" now means "restrict male"
+        if (event.genderRestriction === "male-only" && user.gender === "male") {
           return res.status(403).json({ 
-            message: "You cannot purchase tickets due to gender restriction for this event" 
+            message: "This event restricts male attendees from participating" 
           });
         }
         
-        if (event.genderRestriction === "female-only" && user.gender !== "female") {
+        // "female-only" now means "restrict female"
+        if (event.genderRestriction === "female-only" && user.gender === "female") {
           return res.status(403).json({ 
-            message: "You cannot purchase tickets due to gender restriction for this event" 
+            message: "This event restricts female attendees from participating" 
           });
         }
       }
