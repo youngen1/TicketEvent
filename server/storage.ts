@@ -23,6 +23,7 @@ export interface IStorage {
   updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
   getUserEvents(userId: number): Promise<Event[]>;
   getAllUsers(): Promise<User[]>;
+  searchUsers(query: string): Promise<User[]>;
   
   // Event methods
   getAllEvents(category?: string, tags?: string, featured?: boolean): Promise<Event[]>;
@@ -1037,6 +1038,19 @@ export class MemStorage implements IStorage {
     return this.users;
   }
   
+  async searchUsers(query: string): Promise<User[]> {
+    // Search by username, displayName, bio, email
+    const lowerCaseQuery = query.toLowerCase();
+    return this.users.filter(user => {
+      return (
+        user.username.toLowerCase().includes(lowerCaseQuery) ||
+        (user.displayName && user.displayName.toLowerCase().includes(lowerCaseQuery)) ||
+        (user.bio && user.bio.toLowerCase().includes(lowerCaseQuery)) ||
+        (user.email && user.email.toLowerCase().includes(lowerCaseQuery))
+      );
+    });
+  }
+  
   // Get all tickets (for admin purposes)
   async getAllTickets(): Promise<EventTicket[]> {
     return this.tickets;
@@ -1137,6 +1151,23 @@ export class DatabaseStorage implements IStorage {
   
   async getUsersToFollow(): Promise<User[]> {
     return db.select().from(users).limit(20);
+  }
+  
+  async searchUsers(query: string): Promise<User[]> {
+    return db
+      .select()
+      .from(users)
+      .where(
+        sql`${users.username} ILIKE ${'%' + query + '%'} OR 
+            ${users.displayName} ILIKE ${'%' + query + '%'} OR
+            ${users.bio} ILIKE ${'%' + query + '%'} OR
+            ${users.email} ILIKE ${'%' + query + '%'}`
+      )
+      .limit(20);
+  }
+  
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users);
   }
   
   async updateUser(id: number, userData: Partial<InsertUser>): Promise<User> {

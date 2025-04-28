@@ -135,6 +135,29 @@ export default function Home() {
     }
   };
 
+  // Handle user search when search query is active
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  
+  // Search for users when search query changes
+  useEffect(() => {
+    if (searchQuery.trim().length > 2) {
+      setIsSearchingUsers(true);
+      fetch(`/api/users/search?query=${encodeURIComponent(searchQuery)}`)
+        .then(res => res.json())
+        .then(data => {
+          setUserSearchResults(data || []);
+          setIsSearchingUsers(false);
+        })
+        .catch(err => {
+          console.error("Error searching users:", err);
+          setIsSearchingUsers(false);
+        });
+    } else {
+      setUserSearchResults([]);
+    }
+  }, [searchQuery]);
+
   // Apply filters only on the events loaded on the current page
   // When filters change, we'll stay on the same page but show filtered results
   const filteredEvents = Array.isArray(events) ? events.filter((event) => {    
@@ -474,7 +497,7 @@ export default function Home() {
         <div className="relative mb-4">
           <Input
             type="text"
-            placeholder="Search by location"
+            placeholder="Search events, users, or locations"
             className="pl-10 pr-4 py-2"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -482,6 +505,41 @@ export default function Home() {
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-gray-400" />
           </div>
+          
+          {/* User search results */}
+          {userSearchResults.length > 0 && (
+            <div className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg py-1 max-h-60 overflow-auto">
+              <h3 className="px-4 py-2 text-sm font-medium text-gray-700 border-b">Users</h3>
+              {userSearchResults.map(user => (
+                <Link 
+                  key={user.id} 
+                  href={`/user/${user.id}`}
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                >
+                  <div className="w-8 h-8 bg-gray-300 rounded-full overflow-hidden mr-3">
+                    <img 
+                      src={user.avatar || getUserAvatar(user.id, user.displayName || user.username)} 
+                      alt={user.displayName || user.username} 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <p className="font-medium">{user.displayName || user.username}</p>
+                    <p className="text-xs text-gray-500">@{user.username}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+          
+          {isSearchingUsers && searchQuery.trim().length > 2 && (
+            <div className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg p-4 text-center">
+              <div className="animate-spin inline-block w-5 h-5 border-2 border-current border-t-transparent text-purple-600 rounded-full" role="status" aria-label="loading">
+                <span className="sr-only">Loading...</span>
+              </div>
+              <p className="mt-2 text-sm text-gray-500">Searching for users...</p>
+            </div>
+          )}
         </div>
 
         {/* Location Dropdown */}
