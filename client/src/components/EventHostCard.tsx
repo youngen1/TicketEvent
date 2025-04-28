@@ -1,6 +1,5 @@
 import { User } from "@shared/schema";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Link } from "wouter";
 import { UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
