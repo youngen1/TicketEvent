@@ -2,6 +2,7 @@ import { User } from "@shared/schema";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 interface EventHostCardProps {
   host: User | null;
@@ -9,6 +10,8 @@ interface EventHostCardProps {
 }
 
 export default function EventHostCard({ host, isLoading }: EventHostCardProps) {
+  const [, setLocation] = useLocation();
+
   if (isLoading) {
     return (
       <div className="mt-4 flex items-center space-x-3 p-3 border rounded-lg animate-pulse">
@@ -45,10 +48,16 @@ export default function EventHostCard({ host, isLoading }: EventHostCardProps) {
 
   const displayName = host.displayName || host.username;
 
+  const handleViewProfile = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setLocation(`/users/${host.id}`);
+  };
+
   return (
     <div className="mt-4 flex items-center justify-between p-3 border rounded-lg">
       <div className="flex items-center space-x-3">
-        <Avatar className="h-10 w-10 cursor-pointer">
+        <Avatar className="h-10 w-10 cursor-pointer" onClick={handleViewProfile}>
           {host.avatar ? (
             <AvatarImage src={host.avatar} alt={displayName} />
           ) : null}
@@ -56,7 +65,7 @@ export default function EventHostCard({ host, isLoading }: EventHostCardProps) {
             {getInitials(displayName)}
           </AvatarFallback>
         </Avatar>
-        <div>
+        <div onClick={handleViewProfile} className="cursor-pointer">
           <p className="font-medium text-sm">{displayName}</p>
           <p className="text-xs text-neutral-500">@{host.username}</p>
         </div>
@@ -65,7 +74,7 @@ export default function EventHostCard({ host, isLoading }: EventHostCardProps) {
         variant="outline"
         size="sm"
         className="text-xs"
-        onClick={() => window.location.href = `/users/${host.id}`}
+        onClick={handleViewProfile}
       >
         View Profile
       </Button>
