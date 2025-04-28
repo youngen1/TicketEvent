@@ -51,7 +51,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
   const [showVideo, setShowVideo] = useState(false);
   
   // Fetch host data
-  const { data: hostUser, isLoading: isHostLoading } = useQuery<User>({
+  const { data: hostUser, isLoading: isHostLoading } = useQuery<User | null>({
     queryKey: [`/api/users/${event?.userId}`],
     queryFn: async () => {
       if (!event?.userId) return null;

@@ -1,7 +1,11 @@
-import { Image as ImageIcon, MapPin } from "lucide-react";
-import { Event } from "@shared/schema";
+import { Image as ImageIcon, MapPin, User as UserIcon } from "lucide-react";
+import { Event, User } from "@shared/schema";
 import { calculateDistance } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Link } from "wouter";
 
 interface EventCardProps {
   event: Event;
@@ -11,6 +15,27 @@ interface EventCardProps {
 export default function EventCard({ event, onShowDetails }: EventCardProps) {
   const [userCoordinates, setUserCoordinates] = useState<{lat: number, lng: number} | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
+  
+  // Fetch host data
+  const { data: hostUser, isLoading: isHostLoading } = useQuery<User | null>({
+    queryKey: [`/api/users/${event?.userId}`],
+    queryFn: async () => {
+      if (!event?.userId) return null;
+      const res = await apiRequest("GET", `/api/users/${event.userId}`);
+      return res.json();
+    },
+    enabled: !!event?.userId,
+  });
+  
+  // Helper function to get initials for avatar
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
   
   // Get user's current coordinates if available
   useEffect(() => {
@@ -143,9 +168,46 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           <span className="line-clamp-1">{event.location}</span>
         </div>
         
-        <p className="text-gray-600 text-sm line-clamp-2">
+        <p className="text-gray-600 text-sm line-clamp-2 mb-3">
           {event.description}
         </p>
+        
+        {/* Host Profile Card */}
+        <div className="border-t pt-3 mt-3">
+          {isHostLoading ? (
+            <div className="flex items-center space-x-2 animate-pulse">
+              <div className="bg-gray-200 h-8 w-8 rounded-full"></div>
+              <div className="h-3 bg-gray-200 rounded w-24"></div>
+            </div>
+          ) : hostUser ? (
+            <div 
+              className="flex items-center space-x-2"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent event card click
+                window.location.href = `/user/${hostUser.id}`;
+              }}
+            >
+              <Avatar className="h-8 w-8">
+                {hostUser.avatar ? (
+                  <AvatarImage src={hostUser.avatar} alt={hostUser.displayName || hostUser.username} />
+                ) : null}
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                  {getInitials(hostUser.displayName || hostUser.username)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-medium">Hosted by {hostUser.displayName || hostUser.username}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2 text-gray-500">
+              <div className="bg-gray-100 h-8 w-8 rounded-full flex items-center justify-center">
+                <UserIcon className="h-4 w-4" />
+              </div>
+              <p className="text-sm">Unknown host</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
