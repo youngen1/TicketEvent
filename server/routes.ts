@@ -1128,6 +1128,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all users with basic info - public endpoint, no authentication required
+  app.get("/api/users/all", async (req, res) => {
+    try {
+      console.log("Fetching all users");
+      // Get all users
+      const allUsers = await storage.getAllUsers();
+      
+      // Process users to add additional info and remove sensitive data
+      const processedUsers = await Promise.all(allUsers.map(async (user) => {
+        // Don't return passwords
+        const { password, ...userWithoutPassword } = user;
+        
+        // Add isFollowing property if a user is logged in
+        let isFollowing = false;
+        if (req.session.userId) {
+          isFollowing = await storage.isFollowing(req.session.userId, user.id);
+        }
+        
+        // Get event count
+        const userEvents = await storage.getUserEvents(user.id);
+        const eventsCount = userEvents.length;
+        
+        return {
+          ...userWithoutPassword,
+          isFollowing,
+          eventsCount
+        };
+      }));
+      
+      console.log(`Returning ${processedUsers.length} users from /api/users/all`);
+      res.json(processedUsers);
+    } catch (error: any) {
+      console.error('Error fetching all users:', error);
+      res.status(500).json({ message: error.message || "Error fetching all users" });
+    }
+  });
+
   // Search users by username, displayName, bio, email, and location
   app.get("/api/users/search", async (req, res) => {
     try {
@@ -1251,40 +1288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
 
   
-  // Get all users with basic info - public endpoint, no authentication required
-  app.get("/api/users/all", async (req, res) => {
-    try {
-      // Get all users
-      const allUsers = await storage.getAllUsers();
-      
-      // Process users to add additional info and remove sensitive data
-      const processedUsers = await Promise.all(allUsers.map(async (user) => {
-        // Don't return passwords
-        const { password, ...userWithoutPassword } = user;
-        
-        // Add isFollowing property if a user is logged in
-        let isFollowing = false;
-        if (req.session.userId) {
-          isFollowing = await storage.isFollowing(req.session.userId, user.id);
-        }
-        
-        // Get event count
-        const userEvents = await storage.getUserEvents(user.id);
-        const eventsCount = userEvents.length;
-        
-        return {
-          ...userWithoutPassword,
-          isFollowing,
-          eventsCount
-        };
-      }));
-      
-      res.json(processedUsers);
-    } catch (error: any) {
-      console.error('Error fetching all users:', error);
-      res.status(500).json({ message: error.message || "Error fetching all users" });
-    }
-  });
+
   
   // Get user followers
   app.get("/api/users/:id/followers", async (req, res) => {
