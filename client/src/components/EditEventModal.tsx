@@ -452,7 +452,7 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
                   <FormLabel>Gender Restriction</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
-                    defaultValue={field.value}
+                    defaultValue={field.value || GENDER_RESTRICTION.NONE}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -465,6 +465,9 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
                       <SelectItem value={GENDER_RESTRICTION.FEMALE_ONLY}>Female Only</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    Restrict attendance to a specific gender (optional)
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -478,7 +481,11 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
                 <FormItem>
                   <FormLabel>Age Restriction</FormLabel>
                   <Select 
-                    onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))} 
+                    onValueChange={(value) => {
+                      // Parse as integer only if it's not "none"
+                      const numValue = value === "none" ? null : parseInt(value);
+                      field.onChange(numValue);
+                    }} 
                     defaultValue={field.value ? field.value.toString() : "none"}
                   >
                     <FormControl>
@@ -494,6 +501,9 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
                       <SelectItem value="21">21+</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    Set minimum age requirement for attendees (optional)
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
