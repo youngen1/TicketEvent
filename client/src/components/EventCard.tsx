@@ -24,8 +24,19 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
         },
         (error) => {
           console.error("Error getting user location:", error);
+          // Set default location for testing (Cape Town)
+          setUserCoordinates({
+            lat: -33.9249,
+            lng: 18.4241
+          });
         }
       );
+    } else {
+      // Set default location for testing (Cape Town)
+      setUserCoordinates({
+        lat: -33.9249,
+        lng: 18.4241
+      });
     }
   }, []);
   
