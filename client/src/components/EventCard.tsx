@@ -1,5 +1,7 @@
-import { Image as ImageIcon } from "lucide-react";
+import { Image as ImageIcon, MapPin } from "lucide-react";
 import { Event } from "@shared/schema";
+import { calculateDistance } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 interface EventCardProps {
   event: Event;
@@ -7,6 +9,39 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, onShowDetails }: EventCardProps) {
+  const [userCoordinates, setUserCoordinates] = useState<{lat: number, lng: number} | null>(null);
+  const [distance, setDistance] = useState<number | null>(null);
+  
+  // Get user's current coordinates if available
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoordinates({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.error("Error getting user location:", error);
+        }
+      );
+    }
+  }, []);
+  
+  // Calculate distance when coordinates are available
+  useEffect(() => {
+    if (userCoordinates && event.latitude && event.longitude) {
+      const calculatedDistance = calculateDistance(
+        userCoordinates.lat,
+        userCoordinates.lng,
+        event.latitude,
+        event.longitude
+      );
+      setDistance(calculatedDistance);
+    }
+  }, [userCoordinates, event.latitude, event.longitude]);
+
   // Get image data
   let firstImage = event.image || '';
   
@@ -66,11 +101,19 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
             <ImageIcon size={40} className="text-gray-400" />
           </div>
         )}
+        
+        {/* Distance badge (if available) */}
+        {distance !== null && (
+          <div className="absolute bottom-2 right-2 bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
+            <MapPin size={12} className="mr-1" />
+            <span>{distance} km</span>
+          </div>
+        )}
       </div>
       
       {/* Event Details */}
       <div className="p-4">
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-between mb-2">
           <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full">
             {event.category || 'General'}
           </span>
@@ -84,8 +127,9 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           {event.title}
         </h3>
         
-        <div className="text-gray-600 mb-2">
-          {event.location}
+        <div className="flex items-center text-gray-600 mb-2">
+          <MapPin size={16} className="mr-1 flex-shrink-0" />
+          <span className="line-clamp-1">{event.location}</span>
         </div>
         
         <p className="text-gray-600 text-sm line-clamp-2">
