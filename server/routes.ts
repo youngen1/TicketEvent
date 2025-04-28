@@ -231,9 +231,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/events/:id/ticket-types", async (req, res) => {
     try {
       const eventId = parseInt(req.params.id);
+      const event = await storage.getEvent(eventId);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
       const ticketTypes = await storage.getEventTicketTypes(eventId);
       
-      res.json(ticketTypes);
+      // Filter ticket types based on permissions:
+      // - Event creator and admins can see all ticket types (active and inactive)
+      // - Regular users can only see active ticket types
+      let filteredTicketTypes = ticketTypes;
+      if (req.session.userId !== event.userId) {
+        // If not the event creator, filter to only active types
+        const currentUser = req.session.userId ? await storage.getUser(req.session.userId) : null;
+        if (!currentUser?.isAdmin) {
+          filteredTicketTypes = ticketTypes.filter(type => type.isActive);
+        }
+      }
+      
+      res.json(filteredTicketTypes);
     } catch (error) {
       console.error('Error getting ticket types:', error);
       res.status(500).json({ message: "Error getting ticket types" });
@@ -251,8 +269,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user has permission (created the event or is admin)
-      const currentUser = await storage.getUser(req.session.userId);
-      if (event.userId !== req.session.userId && !currentUser?.isAdmin) {
+      const userId = req.session.userId || 0;
+      const currentUser = await storage.getUser(userId);
+      if (event.userId !== userId && !currentUser?.isAdmin) {
         return res.status(403).json({ message: "You do not have permission to add ticket types to this event" });
       }
       
@@ -452,7 +471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Check if tickets are available
-        if (ticketType.quantity <= ticketType.soldCount) {
+        if (ticketType.quantity <= (ticketType.soldCount || 0)) {
           return res.status(400).json({ message: "This ticket type is sold out" });
         }
       }
@@ -547,7 +566,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eventId,
           userId: req.session.userId,
           eventTitle: event.title,
-          ticketId: ticket.id
+          ticketId: ticket.id,
+          ticketTypeId: ticketTypeId || null
         }
       });
       
@@ -693,10 +713,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // For test tickets or small amounts, create a completed ticket
           if (reference.includes('-test') || (amount && parseFloat(amount.toString()) <= 5)) {
             console.log('Creating completed test ticket');
+            
+            // Try to extract ticket type from reference (if available)
+            let ticketTypeId = null;
+            // Format could be: eventId-timestamp-userId-ticketTypeId-test
+            const parts = reference.split('-');
+            if (parts.length > 3 && !isNaN(parseInt(parts[3]))) {
+              ticketTypeId = parseInt(parts[3]);
+            }
+            
             const ticket = await storage.createTicket({
               userId,
               eventId,
               quantity: 1,
+              ticketTypeId,
               totalAmount: amount ? parseFloat(amount.toString()) : (event.price ? parseFloat(event.price) : 0),
               paymentReference: reference,
               paymentStatus: "completed"
@@ -721,11 +751,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (verification.status === "success") {
             console.log('Paystack verification successful, creating completed ticket');
             
+            // Try to extract ticket type from reference or metadata if available
+            let ticketTypeId = null;
+            
+            // Try to get from metadata first
+            if (verification.metadata && verification.metadata.ticketTypeId) {
+              ticketTypeId = parseInt(verification.metadata.ticketTypeId);
+            } else {
+              // Format could be: eventId-timestamp-userId-ticketTypeId
+              const parts = reference.split('-');
+              if (parts.length > 3 && !isNaN(parseInt(parts[3]))) {
+                ticketTypeId = parseInt(parts[3]);
+              }
+            }
+            
             // Create a ticket
             const ticket = await storage.createTicket({
               userId,
               eventId,
               quantity: 1,
+              ticketTypeId,
               totalAmount: verification.amount / 100, // Convert from smallest currency unit to decimal
               paymentReference: reference,
               paymentStatus: "completed"
@@ -759,7 +804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Free ticket registration endpoint
   app.post('/api/tickets/free', isAuthenticated, async (req, res) => {
     try {
-      const { eventId } = req.body;
+      const { eventId, ticketTypeId } = req.body;
       
       if (!eventId) {
         return res.status(400).json({ message: "Missing eventId" });
@@ -785,6 +830,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You already have a ticket for this event" });
       }
       
+      // If ticket type ID is provided, fetch ticket type details
+      if (ticketTypeId) {
+        const ticketType = await storage.getTicketType(parseInt(ticketTypeId));
+        if (!ticketType) {
+          return res.status(404).json({ message: "Ticket type not found" });
+        }
+        
+        // Check if tickets are available
+        if (ticketType.quantity <= (ticketType.soldCount || 0)) {
+          return res.status(400).json({ message: "This ticket type is sold out" });
+        }
+      }
+      
       // Generate a unique reference for the free ticket
       const reference = `free-${eventId}-${Date.now()}-${req.session.userId}`;
       
@@ -793,6 +851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.session.userId,
         eventId: parseInt(eventId),
         quantity: 1,
+        ticketTypeId: ticketTypeId ? parseInt(ticketTypeId) : null,
         totalAmount: 0, // Free ticket
         paymentReference: reference,
         paymentStatus: "completed" // Mark as completed since it's free
@@ -831,7 +890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Not authenticated" });
       }
       
-      const { eventId, quantity = 1, amount = 1500 } = req.body;
+      const { eventId, quantity = 1, amount = 1500, ticketTypeId } = req.body;
       
       if (!eventId) {
         return res.status(400).json({ message: "Event ID is required" });
@@ -841,6 +900,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const event = await storage.getEvent(parseInt(eventId));
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // If ticket type ID is provided, fetch ticket type details and validate
+      if (ticketTypeId) {
+        const ticketType = await storage.getTicketType(parseInt(ticketTypeId));
+        if (!ticketType) {
+          return res.status(404).json({ message: "Ticket type not found" });
+        }
+        
+        // Check if tickets are available
+        if (ticketType.quantity <= (ticketType.soldCount || 0)) {
+          return res.status(400).json({ message: "This ticket type is sold out" });
+        }
       }
       
       console.log('Creating test ticket for event:', eventId, 'with amount:', amount);
@@ -853,6 +925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.session.userId,
         eventId: parseInt(eventId),
         quantity: parseInt(quantity.toString()),
+        ticketTypeId: ticketTypeId ? parseInt(ticketTypeId) : null,
         totalAmount: parseFloat(amount.toString()),
         paymentReference: reference,
         paymentStatus: "completed"
