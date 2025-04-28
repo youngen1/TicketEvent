@@ -415,13 +415,9 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="Technology">Technology</SelectItem>
-                  <SelectItem value="Business">Business</SelectItem>
-                  <SelectItem value="Music">Music</SelectItem>
-                  <SelectItem value="Art">Art</SelectItem>
-                  <SelectItem value="Education">Education</SelectItem>
-                  <SelectItem value="Sports">Sports</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
+                    {EVENT_CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />

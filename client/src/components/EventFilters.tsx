@@ -21,9 +21,7 @@ export interface FilterState {
   toDate: Date | null;
 }
 
-const ALL_CATEGORIES = [
-  "Technology", "Business", "Music", "Art", "Education", "Sports", "Food", "Health", "Community", "Other"
-];
+import { EVENT_CATEGORIES } from "@shared/schema";
 
 const POPULAR_TAGS = [
   "workshop", "conference", "meetup", "concert", "exhibition", 
@@ -138,7 +136,7 @@ export default function EventFilters({ onFilterChange }: EventFiltersProps) {
                 <h4 className="font-medium">Event Categories</h4>
                 <Separator />
                 <div className="grid grid-cols-2 gap-2">
-                  {ALL_CATEGORIES.map(category => (
+                  {EVENT_CATEGORIES.map(category => (
                     <div key={category} className="flex items-center space-x-2">
                       <Checkbox 
                         id={`category-${category}`} 

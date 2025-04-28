@@ -31,19 +31,8 @@ import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import NotificationCenter from "@/components/NotificationCenter";
 
-// Category options based on the EventCircle.site
-const CATEGORIES = [
-  "Recreational",
-  "Religious",
-  "Sports",
-  "Cultural",
-  "Concert",
-  "Conference",
-  "Workshop",
-  "Meetup",
-  "Party",
-  "Testing"
-];
+// Import standardized categories from schema
+import { EVENT_CATEGORIES } from "@shared/schema";
 
 // Date filter options
 const DATE_FILTERS = [
@@ -471,7 +460,7 @@ export default function Home() {
         <div className="mb-4">
           <h3 className="font-medium text-gray-700 mb-2">Categories</h3>
           <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(category => (
+            {EVENT_CATEGORIES.map(category => (
               <Badge
                 key={category}
                 variant={selectedCategories.includes(category) ? "default" : "outline"}
