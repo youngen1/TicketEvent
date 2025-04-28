@@ -182,7 +182,7 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
           ) : hostUser ? (
             <div className="flex items-center space-x-2">
               <Link 
-                href={`/user/${hostUser.id}`}
+                href={`/users/${hostUser.id}`}
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent event card click
                 }}
