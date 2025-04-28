@@ -599,6 +599,31 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                   </div>
                 )}
                 
+                {/* Free event */}
+                {(event.isFree || !event.price || parseFloat(event.price) === 0) && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    {isAuthenticated && !isRestricted ? (
+                      <FreeTicketButton 
+                        eventId={event.id} 
+                        buttonText="Register for Free"
+                        className="flex items-center"
+                      />
+                    ) : isAuthenticated ? (
+                      <Button disabled className="flex items-center bg-gray-400">
+                        Registration Restricted
+                      </Button>
+                    ) : (
+                      <Button disabled className="flex items-center bg-gray-400">
+                        Login to register
+                      </Button>
+                    )}
+                    <div className="text-sm font-medium text-neutral-700 flex items-center">
+                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Free Event</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Paid event */}
                 {event.price && parseFloat(event.price) > 0 && (
                   <div className="flex flex-wrap items-center gap-3">
                     {isAuthenticated && !isRestricted ? (
