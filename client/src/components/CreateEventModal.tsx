@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertEventSchema, GENDER_RESTRICTION, genderRestrictionSchema } from "@shared/schema";
+import { insertEventSchema, insertTicketTypeSchema, GENDER_RESTRICTION, genderRestrictionSchema } from "@shared/schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -39,12 +39,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image, Video, Upload, X, Film, FileVideo } from "lucide-react";
+import { Image, Video, Upload, X, Film, FileVideo, Plus, Trash2 } from "lucide-react";
 
 interface CreateEventModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const ticketTypeSchema = z.object({
+  name: z.string().min(1, { message: "Ticket name is required" }),
+  description: z.string().optional(),
+  price: z.string().min(1, { message: "Price is required" }),
+  quantity: z.string().min(1, { message: "Quantity is required" }),
+  isActive: z.boolean().default(true),
+});
 
 const formSchema = insertEventSchema.extend({
   title: z.string().min(1, { message: "Title is required" }),
@@ -55,11 +63,15 @@ const formSchema = insertEventSchema.extend({
   location: z.string().min(1, { message: "Location is required" }),
   isFree: z.boolean().default(true),
   price: z.string().default("0"),
+  hasMultipleTicketTypes: z.boolean().default(false),
+  totalTickets: z.string().optional(),
+  ticketTypes: z.array(ticketTypeSchema).optional(),
   genderRestriction: z.string().default(GENDER_RESTRICTION.NONE),
   ageRestriction: z.array(z.string()).default([]),
 });
 
 type FormValues = z.infer<typeof formSchema>;
+type TicketTypeValues = z.infer<typeof ticketTypeSchema>;
 
 export default function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
   const { toast } = useToast();
@@ -76,6 +88,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
   const { user } = useAuth();
 
   const [isFreeEvent, setIsFreeEvent] = useState(true);
+  const [hasMultipleTicketTypes, setHasMultipleTicketTypes] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -90,9 +103,20 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       image: "",
       isFree: true,
       price: "0",
+      hasMultipleTicketTypes: false,
+      totalTickets: "100",
+      ticketTypes: [
+        { name: "General Admission", description: "", price: "0", quantity: "100", isActive: true }
+      ],
       genderRestriction: GENDER_RESTRICTION.NONE,
       ageRestriction: [],
     },
+  });
+  
+  // Use fieldArray for managing multiple ticket types
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "ticketTypes",
   });
 
   const createEventMutation = useMutation({
