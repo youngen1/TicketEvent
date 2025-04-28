@@ -453,6 +453,9 @@ export default function Home() {
             <p className="text-sm text-gray-600">{user?.username || "username"}</p>
           </div>
         </div>
+        <div className="flex items-center">
+          <NotificationCenter />
+        </div>
       </div>
 
       {/* Events header with Add Event button */}
