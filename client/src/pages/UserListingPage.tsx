@@ -11,11 +11,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Users, UserPlus, UserMinus, Search, CalendarDays, Loader2 } from "lucide-react";
 
-// Extended user type to include additional properties from API
-interface ExtendedUser extends Omit<User, 'followersCount'> {
+// Extended user type with additional API properties
+interface ExtendedUser {
+  id: number;
+  username: string;
+  displayName: string | null;
+  email: string | null;
+  bio: string | null;
+  avatar: string | null;
+  followersCount: number | null;
+  followingCount: number | null;
+  isAdmin: boolean | null;
   isFollowing?: boolean;
   eventsCount?: number;
-  followersCount?: number | null;
 }
 
 export default function UserListingPage() {

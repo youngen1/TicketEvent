@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, User, Plus, LogIn, LogOut, Heart, Bell, Calendar, CreditCard, Lock, ShieldCheck } from "lucide-react";
+import { Menu, X, User, Plus, LogIn, LogOut, Heart, Bell, Calendar, CreditCard, Lock, ShieldCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -31,6 +31,7 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/events", label: "Events" },
+    { href: "/users", label: "Community" },
     { href: "/calendar", label: "Calendar" },
     { href: "/map", label: "Map" },
     { href: "/about", label: "About" }
@@ -106,6 +107,11 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
                     <DropdownMenuItem asChild>
                       <Link href="/profile" className="w-full">
                         <User className="h-4 w-4 mr-2" /> Your Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/users" className="w-full">
+                        <Users className="h-4 w-4 mr-2" /> Community
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -220,6 +226,15 @@ export default function Navbar({ onNewEventClick, onLoginClick, onSignupClick }:
               >
                 <div className="flex items-center">
                   <User className="h-4 w-4 mr-2" /> Your Profile
+                </div>
+              </Link>
+              <Link 
+                href="/users" 
+                className="block px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-100"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <div className="flex items-center">
+                  <Users className="h-4 w-4 mr-2" /> Community
                 </div>
               </Link>
               <Link 
