@@ -93,7 +93,7 @@ export const events = pgTable("events", {
   tags: text("tags"),
   // Gender restriction fields
   genderRestriction: text("gender_restriction"), // Store as male-only, female-only, or null for no restriction
-  ageRestriction: integer("age_restriction"), // Minimum age required (18+, 21+, etc.)
+  ageRestriction: text("age_restriction").array(), // Store as array of age groups: ["under 18", "20s", "30s", "40+"]
 });
 
 export const insertEventSchema = createInsertSchema(events).pick({
