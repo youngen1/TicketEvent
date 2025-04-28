@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Event } from "@shared/schema";
+import { Event, User } from "@shared/schema";
 import { 
   Heart, Calendar, MapPin, Users, X, ChevronLeft, ChevronRight, 
   Maximize, ArrowLeft, ArrowRight, Star, Clock,
@@ -19,12 +19,13 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import EventRating from "./EventRating";
 import EventAttendance from "./EventAttendance";
 import PaymentButton from "./PaymentButton";
 import PaystackPaymentButton from "./PaystackPaymentButton";
 import FreeTicketButton from "./FreeTicketButton";
+import EventHostCard from "./EventHostCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { GENDER_RESTRICTION } from "@shared/schema";
 import { AlertTriangle } from "lucide-react";
@@ -48,6 +49,17 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
 
   // State for video display
   const [showVideo, setShowVideo] = useState(false);
+  
+  // Fetch host data
+  const { data: hostUser, isLoading: isHostLoading } = useQuery<User>({
+    queryKey: [`/api/users/${event?.userId}`],
+    queryFn: async () => {
+      if (!event?.userId) return null;
+      const res = await apiRequest("GET", `/api/users/${event.userId}`);
+      return res.json();
+    },
+    enabled: !!event?.userId && isOpen,
+  });
 
   // Parse event data and reset state when event changes
   useEffect(() => {
@@ -473,6 +485,12 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                 >
                   <Heart className={(event as any).isFavorite ? "text-red-500 fill-red-500" : ""} size={20} />
                 </button>
+              </div>
+              
+              {/* Host Profile */}
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-gray-500 mb-2">Event Host</h4>
+                <EventHostCard host={hostUser} isLoading={isHostLoading} />
               </div>
               
               <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-3">
