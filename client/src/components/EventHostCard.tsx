@@ -62,14 +62,15 @@ export default function EventHostCard({ host, isLoading }: EventHostCardProps) {
           <p className="text-xs text-neutral-500">@{host.username}</p>
         </div>
       </div>
-      <Button
-        variant="outline"
-        size="sm"
-        className="text-xs"
-        asChild
-      >
-        <Link href={`/user/${host.id}`}>View Profile</Link>
-      </Button>
+      <Link href={`/user/${host.id}`}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs"
+        >
+          View Profile
+        </Button>
+      </Link>
     </div>
   );
 }

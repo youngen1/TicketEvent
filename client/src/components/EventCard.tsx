@@ -180,24 +180,26 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
               <div className="h-3 bg-gray-200 rounded w-24"></div>
             </div>
           ) : hostUser ? (
-            <div 
-              className="flex items-center space-x-2"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent event card click
-                window.location.href = `/user/${hostUser.id}`;
-              }}
-            >
-              <Avatar className="h-8 w-8">
-                {hostUser.avatar ? (
-                  <AvatarImage src={hostUser.avatar} alt={hostUser.displayName || hostUser.username} />
-                ) : null}
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  {getInitials(hostUser.displayName || hostUser.username)}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium">Hosted by {hostUser.displayName || hostUser.username}</p>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Link 
+                href={`/user/${hostUser.id}`}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent event card click
+                }}
+                className="flex items-center space-x-2 cursor-pointer"
+              >
+                <Avatar className="h-8 w-8">
+                  {hostUser.avatar ? (
+                    <AvatarImage src={hostUser.avatar} alt={hostUser.displayName || hostUser.username} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {getInitials(hostUser.displayName || hostUser.username)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">Hosted by {hostUser.displayName || hostUser.username}</p>
+                </div>
+              </Link>
             </div>
           ) : (
             <div className="flex items-center space-x-2 text-gray-500">
