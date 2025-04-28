@@ -539,7 +539,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
             name="ageRestriction"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Age Groups</FormLabel>
+                <FormLabel>Age Restriction</FormLabel>
                 <div className="space-y-2">
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center space-x-2">
@@ -621,7 +621,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                   </div>
                 </div>
                 <FormDescription>
-                  Select which age groups this event is appropriate for (optional)
+                  Select which age groups are NOT allowed to attend or purchase tickets (optional)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
