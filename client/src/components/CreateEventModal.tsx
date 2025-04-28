@@ -513,8 +513,8 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
               <FormItem>
                 <FormLabel>Age Restriction</FormLabel>
                 <Select 
-                  onValueChange={(value) => field.onChange(value ? parseInt(value) : null)} 
-                  defaultValue={field.value ? field.value.toString() : ""}
+                  onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))} 
+                  defaultValue={field.value ? field.value.toString() : "none"}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -522,7 +522,7 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Age Restriction</SelectItem>
+                    <SelectItem value="none">No Age Restriction</SelectItem>
                     <SelectItem value="13">13+</SelectItem>
                     <SelectItem value="16">16+</SelectItem>
                     <SelectItem value="18">18+</SelectItem>
