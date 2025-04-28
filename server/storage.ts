@@ -1828,5 +1828,5 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Use MemStorage instead of DatabaseStorage due to database schema issues
-export const storage = new MemStorage();
+// Use DatabaseStorage for persistent storage with PostgreSQL
+export const storage = new DatabaseStorage();
