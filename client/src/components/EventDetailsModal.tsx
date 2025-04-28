@@ -24,6 +24,7 @@ import EventRating from "./EventRating";
 import EventAttendance from "./EventAttendance";
 import PaymentButton from "./PaymentButton";
 import PaystackPaymentButton from "./PaystackPaymentButton";
+import FreeTicketButton from "./FreeTicketButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { GENDER_RESTRICTION } from "@shared/schema";
 import { AlertTriangle } from "lucide-react";
