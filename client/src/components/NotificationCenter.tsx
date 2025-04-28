@@ -105,16 +105,24 @@ export default function NotificationCenter() {
     
     // Navigate to the appropriate page based on notification type
     if (notification.eventId) {
-      setLocation(`/events/${notification.eventId}`);
+      // Instead of trying to navigate to a page that doesn't exist,
+      // go to the home page and show a toast with information
+      setLocation(`/`);
+      
+      // Show toast with a better message about the event
+      toast({
+        title: notification.title,
+        description: `Event ID: ${notification.eventId}. ${notification.message}`,
+      });
     } else if (notification.relatedUserId) {
       setLocation(`/users/${notification.relatedUserId}`);
+    } else {
+      // Show toast for other notification types
+      toast({
+        title: notification.title,
+        description: notification.message,
+      });
     }
-    
-    // Show toast for feedback
-    toast({
-      title: "Notification",
-      description: notification.message,
-    });
   };
 
   const handleMarkAllAsRead = () => {
