@@ -331,6 +331,12 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       data.userId = user.id;
     }
     
+    // Add latitude and longitude if available
+    if (latitude && longitude) {
+      data.latitude = latitude;
+      data.longitude = longitude;
+    }
+    
     createEventMutation.mutate(data);
   };
 
@@ -435,6 +441,10 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                   <FallbackLocationInput 
                     value={field.value} 
                     onChange={(value) => field.onChange(value)}
+                    onCoordinatesChange={(lat, lng) => {
+                      setLatitude(lat);
+                      setLongitude(lng);
+                    }}
                     placeholder="Enter location (e.g., 123 Main St, City, State)"
                   />
                 ) : (
@@ -443,14 +453,17 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                     value={field.value || ''} 
                     onChange={(value, placeDetails) => {
                       field.onChange(value);
-                      // If you want to store additional place details like coordinates
+                      // Extract and store coordinates from place details
                       if (placeDetails?.geometry?.location) {
-                        // You could store these in separate form fields if needed
-                        console.log('Location coordinates:', {
-                          lat: placeDetails.geometry.location.lat(),
-                          lng: placeDetails.geometry.location.lng(),
-                        });
+                        const lat = placeDetails.geometry.location.lat().toString();
+                        const lng = placeDetails.geometry.location.lng().toString();
+                        setLatitude(lat);
+                        setLongitude(lng);
                       }
+                    }}
+                    onCoordinatesChange={(lat, lng) => {
+                      setLatitude(lat);
+                      setLongitude(lng);
                     }}
                     placeholder="Search for a location"
                   />

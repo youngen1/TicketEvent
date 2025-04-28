@@ -68,6 +68,8 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isVideoProcessing, setIsVideoProcessing] = useState(false);
+  const [latitude, setLatitude] = useState<string | null>(null);
+  const [longitude, setLongitude] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -109,6 +111,10 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
       
       // Update the video preview
       setVideoPreview(event.video || null);
+      
+      // Set latitude and longitude if available
+      if (event.latitude) setLatitude(event.latitude);
+      if (event.longitude) setLongitude(event.longitude);
     }
   }, [event, form]);
 
@@ -172,6 +178,12 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
   });
 
   const onSubmit = (data: FormValues) => {
+    // Add latitude and longitude if available
+    if (latitude && longitude) {
+      data.latitude = latitude;
+      data.longitude = longitude;
+    }
+    
     updateEventMutation.mutate(data);
   };
 
@@ -419,6 +431,10 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
                       <FallbackLocationInput 
                         value={field.value} 
                         onChange={(value) => field.onChange(value)}
+                        onCoordinatesChange={(lat, lng) => {
+                          setLatitude(lat);
+                          setLongitude(lng);
+                        }}
                         placeholder="Enter location (e.g., 123 Main St, City, State)"
                       />
                     ) : (
@@ -427,14 +443,17 @@ export default function EditEventModal({ event, isOpen, onClose }: EditEventModa
                         value={field.value || ''} 
                         onChange={(value, placeDetails) => {
                           field.onChange(value);
-                          // If you want to store additional place details like coordinates
+                          // Extract and store coordinates from place details
                           if (placeDetails?.geometry?.location) {
-                            // You could store these in separate form fields if needed
-                            console.log('Location coordinates:', {
-                              lat: placeDetails.geometry.location.lat(),
-                              lng: placeDetails.geometry.location.lng(),
-                            });
+                            const lat = placeDetails.geometry.location.lat().toString();
+                            const lng = placeDetails.geometry.location.lng().toString();
+                            setLatitude(lat);
+                            setLongitude(lng);
                           }
+                        }}
+                        onCoordinatesChange={(lat, lng) => {
+                          setLatitude(lat);
+                          setLongitude(lng);
                         }}
                         placeholder="Search for a location"
                       />
