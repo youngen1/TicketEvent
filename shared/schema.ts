@@ -77,6 +77,8 @@ export const events = pgTable("events", {
   date: text("date").notNull(),
   time: text("time"),
   location: text("location"),
+  latitude: text("latitude"), // Store latitude for geographic features
+  longitude: text("longitude"), // Store longitude for geographic features
   userId: integer("user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -102,6 +104,8 @@ export const insertEventSchema = createInsertSchema(events).pick({
   date: true,
   time: true,
   location: true,
+  latitude: true,
+  longitude: true,
   userId: true,
   image: true,
   images: true,
