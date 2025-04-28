@@ -3,6 +3,28 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
+// Event categories - used consistently across the application
+export const EVENT_CATEGORIES = [
+  "Technology",
+  "Business",
+  "Music",
+  "Art",
+  "Education", 
+  "Sports",
+  "Religious",
+  "Cultural",
+  "Concert",
+  "Conference",
+  "Workshop",
+  "Meetup",
+  "Party",
+  "Food",
+  "Health",
+  "Community",
+  "Recreational",
+  "Other"
+];
+
 // Gender enum for consistent gender options
 export const GENDER_OPTIONS = {
   MALE: "male",
