@@ -39,6 +39,12 @@ const formSchema = z.object({
   displayName: z.string()
     .min(2, "Display name must be at least 2 characters")
     .max(50, "Display name must be less than 50 characters"),
+  bio: z.string()
+    .max(250, "Bio must be less than 250 characters")
+    .optional(),
+  interests: z.string()
+    .max(150, "Interests must be less than 150 characters")
+    .optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -54,6 +60,8 @@ export default function EditProfileModal({ isOpen, onClose }: EditProfileModalPr
     defaultValues: {
       username: user?.username || "",
       displayName: user?.displayName || "",
+      bio: user?.bio || "",
+      interests: user?.interests || "",
     },
   });
 
@@ -63,6 +71,8 @@ export default function EditProfileModal({ isOpen, onClose }: EditProfileModalPr
       form.reset({
         username: user.username,
         displayName: user.displayName || "",
+        bio: user.bio || "",
+        interests: user.interests || "",
       });
     }
   }, [user, form, isOpen]);
@@ -148,6 +158,47 @@ export default function EditProfileModal({ isOpen, onClose }: EditProfileModalPr
                   <FormControl>
                     <Input placeholder="Display Name" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="bio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bio</FormLabel>
+                  <FormControl>
+                    <textarea 
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="Tell us about yourself"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    A short biography to appear on your profile (max 250 characters)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="interests"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Interests</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="music, tech, hiking, photography..." 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Comma-separated list of your interests
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
