@@ -770,13 +770,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
             
-            // Create a ticket
+            // Create a ticket with proper ZAR currency conversion
+            const amountInRands = verification.amount / 100; // Convert from cents to Rands
+            console.log(`Payment verified: ${verification.amount} cents → R${amountInRands.toFixed(2)}`);
+            
             const ticket = await storage.createTicket({
               userId,
               eventId,
               quantity: 1,
               ticketTypeId,
-              totalAmount: verification.amount / 100, // Convert from smallest currency unit to decimal
+              totalAmount: amountInRands,
               paymentReference: reference,
               paymentStatus: "completed"
             } as InsertEventTicket);

@@ -49,10 +49,14 @@ export default function PaymentSuccessPage() {
               
               console.log('Found ticket for display:', latestTicket);
               
-              // Create transaction details from ticket
+              // Create transaction details from ticket - store amount directly in cents
+              const amountInRands = parseFloat(latestTicket.totalAmount.toString());
+              console.log(`Ticket amount is R${amountInRands.toFixed(2)}`);
+              
               setTransactionDetails({
                 reference: latestTicket.paymentReference,
-                amount: latestTicket.totalAmount * 100, // Convert to cents for display
+                amount: amountInRands * 100, // Convert to cents for internal handling
+                amountInRands: amountInRands, // Also store the original amount in Rands
                 status: latestTicket.paymentStatus,
                 paidAt: latestTicket.purchaseDate || latestTicket.createdAt,
                 testPayment: latestTicket.paymentReference.includes('-test')
@@ -77,10 +81,14 @@ export default function PaymentSuccessPage() {
             
             console.log('No reference, showing latest ticket:', latestTicket);
             
-            // Create transaction details from ticket
+            // Create transaction details from ticket - store amount directly in cents
+            const amountInRands = parseFloat(latestTicket.totalAmount.toString());
+            console.log(`Ticket amount is R${amountInRands.toFixed(2)}`);
+            
             setTransactionDetails({
               reference: latestTicket.paymentReference,
-              amount: latestTicket.totalAmount * 100, // Convert to cents for display
+              amount: amountInRands * 100, // Convert to cents for internal handling
+              amountInRands: amountInRands, // Also store the original amount in Rands
               status: latestTicket.paymentStatus,
               paidAt: latestTicket.purchaseDate || latestTicket.createdAt,
               testPayment: latestTicket.paymentReference.includes('-test')
@@ -102,8 +110,13 @@ export default function PaymentSuccessPage() {
     }
   }, [match]);
   
-  // Format amount from cents/kobo to regular currency
+  // Format amount from cents to Rands with proper ZAR currency symbol
   const formatAmount = (amount: number) => {
+    // If we have the amount in Rands directly, use it
+    if (transactionDetails?.amountInRands) {
+      return `R${transactionDetails.amountInRands.toFixed(2)}`;
+    }
+    // Otherwise convert from cents to Rands
     return `R${(amount / 100).toFixed(2)}`;
   };
   
@@ -153,6 +166,7 @@ export default function PaymentSuccessPage() {
                 <dt className="text-gray-500">Amount</dt>
                 <dd className="text-gray-900 font-medium">
                   {formatAmount(transactionDetails.amount)}
+                  <span className="ml-1 text-gray-500 text-xs">(ZAR)</span>
                 </dd>
               </div>
               
