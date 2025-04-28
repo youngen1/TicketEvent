@@ -208,6 +208,31 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
       return;
     }
     
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please select an image file smaller than 10MB.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Compress image if it's large
+    let imageToUpload = file;
+    if (file.size > 2 * 1024 * 1024) { // If larger than 2MB
+      toast({
+        title: 'Processing image',
+        description: 'Large image detected, optimizing for upload...',
+      });
+      
+      // Generate preview immediately for better UX
+      const preview = await readFileAsDataURL(file);
+      setCoverImagePreview(preview);
+      
+      // We'll handle image compression later in the form submission
+    }
+    
     // Reset existing upload state
     setUploadError(null);
     setUploadProgress(0);
@@ -215,9 +240,11 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
     // Store file for later upload
     setCoverImageFile(file);
     
-    // Generate preview
-    const preview = await readFileAsDataURL(file);
-    setCoverImagePreview(preview);
+    // Generate preview if not already done
+    if (!coverImagePreview) {
+      const preview = await readFileAsDataURL(file);
+      setCoverImagePreview(preview);
+    }
     
     toast({
       title: 'Cover image ready',
