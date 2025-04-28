@@ -1128,17 +1128,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Search users by username, displayName, bio or email
+  // Search users by username, displayName, bio, email, and location
   app.get("/api/users/search", async (req, res) => {
     try {
       const query = req.query.query as string || '';
+      const locationQuery = req.query.location as string || '';
       
-      if (!query || query.trim().length < 3) {
+      // Only proceed if we have at least a query or a location
+      if ((!query || query.trim().length < 3) && !locationQuery) {
         return res.json([]);
       }
       
-      // Search users
-      const users = await storage.searchUsers(query);
+      // Search users with optional location filter
+      const users = await storage.searchUsers(query, locationQuery);
       
       // Remove sensitive info (passwords) from the response
       const safeUsers = users.map(user => {

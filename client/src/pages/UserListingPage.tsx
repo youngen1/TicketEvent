@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import { useLocation } from "wouter";
@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserPlus, UserMinus, Search, CalendarDays, Loader2 } from "lucide-react";
+import { Users, UserPlus, UserMinus, Search, CalendarDays, Loader2, MapPin } from "lucide-react";
+import { queryClient } from "@/lib/queryClient";
 
 // Extended user type with additional API properties
 interface ExtendedUser {
@@ -22,6 +23,9 @@ interface ExtendedUser {
   followersCount: number | null;
   followingCount: number | null;
   isAdmin: boolean | null;
+  location: string | null;
+  latitude: number | null;
+  longitude: number | null;
   isFollowing?: boolean;
   eventsCount?: number;
 }
@@ -31,17 +35,61 @@ export default function UserListingPage() {
   const { user: currentUser, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [locationQuery, setLocationQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<ExtendedUser[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   
   // Get all users
   const { data: users = [], isLoading } = useQuery<ExtendedUser[]>({
     queryKey: ["/api/users/all"],
   });
   
-  const filteredUsers = users
-    .filter(user => 
-      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (user.displayName && user.displayName.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
+  // Search API endpoint for more advanced search capabilities
+  const { data: searchResults2 = [], isLoading: isSearchLoading, refetch: refetchSearch } = useQuery<ExtendedUser[]>({
+    queryKey: ["/api/users/search", searchQuery, locationQuery],
+    enabled: false, // Don't automatically fetch
+  });
+
+  // Perform search when either search query or location query changes
+  useEffect(() => {
+    const delaySearch = setTimeout(() => {
+      if ((searchQuery && searchQuery.length >= 3) || locationQuery) {
+        setIsSearching(true);
+        queryClient.fetchQuery({
+          queryKey: ["/api/users/search"],
+          queryFn: async () => {
+            const url = new URL("/api/users/search", window.location.origin);
+            if (searchQuery) url.searchParams.append("query", searchQuery);
+            if (locationQuery) url.searchParams.append("location", locationQuery);
+            const res = await fetch(url.toString());
+            if (!res.ok) throw new Error("Search failed");
+            const data = await res.json();
+            setSearchResults(data);
+            setIsSearching(false);
+            return data;
+          }
+        });
+      } else if (users.length > 0) {
+        // Use client-side filtering when search query is less than 3 chars or empty
+        const filtered = users.filter(user => 
+          user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (user.displayName && user.displayName.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+        setSearchResults(filtered);
+      }
+    }, 500); // Debounce search
+
+    return () => clearTimeout(delaySearch);
+  }, [searchQuery, locationQuery, users]);
+  
+  // Initial load of all users into search results
+  useEffect(() => {
+    if (users.length > 0 && searchResults.length === 0) {
+      setSearchResults(users);
+    }
+  }, [users]);
+  
+  const filteredUsers = searchResults
     .sort((a, b) => {
       // Sort by 1) not current user, 2) followers count
       if (a.id === currentUser?.id) return -1;
@@ -111,7 +159,7 @@ export default function UserListingPage() {
         </p>
       </div>
       
-      <div className="mb-6 relative">
+      <div className="mb-6 space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
           <Input 
@@ -121,6 +169,23 @@ export default function UserListingPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        
+        <div className="relative">
+          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+          <Input 
+            className="pl-10"
+            placeholder="Filter by location (city, country)..." 
+            value={locationQuery}
+            onChange={(e) => setLocationQuery(e.target.value)}
+          />
+        </div>
+        
+        {isSearching && (
+          <div className="flex items-center justify-center py-2">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
+            <span className="text-sm text-muted-foreground">Searching...</span>
+          </div>
+        )}
       </div>
       
       {filteredUsers.length === 0 ? (
@@ -198,6 +263,13 @@ export default function UserListingPage() {
                           <CalendarDays className="mr-1 h-4 w-4 text-muted-foreground" />
                           <span>{user.eventsCount || 0} Events</span>
                         </div>
+                        
+                        {user.location && (
+                          <div className="flex items-center text-sm col-span-2 mt-1">
+                            <MapPin className="mr-1 h-4 w-4 text-muted-foreground" />
+                            <span className="truncate">{user.location}</span>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="mt-4">

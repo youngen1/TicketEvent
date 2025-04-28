@@ -126,7 +126,14 @@ export class MemStorage implements IStorage {
       followersCount: 0,
       followingCount: 0,
       isAdmin: false,
-      platformBalance: "0"
+      platformBalance: "0",
+      location: "Cape Town, South Africa",
+      latitude: -33.9249,
+      longitude: 18.4241,
+      gender: "other",
+      dateOfBirth: "1990-01-01",
+      interests: null,
+      isBanned: false
     });
     
     // Create admin account
@@ -144,7 +151,14 @@ export class MemStorage implements IStorage {
       followersCount: 0,
       followingCount: 0,
       isAdmin: true,
-      platformBalance: "0"
+      platformBalance: "0",
+      location: "Johannesburg, South Africa",
+      latitude: -26.2041,
+      longitude: 28.0473,
+      gender: "other",
+      dateOfBirth: "1985-01-01",
+      interests: null,
+      isBanned: false
     });
     
     console.log("Created admin account with username: admin and password: password");
