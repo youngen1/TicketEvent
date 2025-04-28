@@ -556,18 +556,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isLiveMode = process.env.PAYSTACK_MODE === 'live';
       console.log('Payment mode:', isLiveMode ? 'LIVE' : 'TEST');
       
+      // Log clear amount information
+      console.log(`Payment amount in ZAR: R${parseFloat(amount).toFixed(2)}`);
+      
       // Initialize transaction with Paystack
       const transaction = await paystackService.initializeTransaction({
         email: user.email,
-        amount: parseFloat(amount),
+        amount: parseFloat(amount), // Service will convert to cents
         reference,
         callback_url: callbackUrl,
         metadata: {
           eventId,
           userId: req.session.userId,
           eventTitle: event.title,
-          ticketId: ticket.id,
-          ticketTypeId: ticketTypeId || null
+          ticketId: ticket.id, 
+          ticketTypeId: ticketTypeId || null,
+          currencyCode: "ZAR",
+          amountInRands: parseFloat(amount).toFixed(2)
         }
       });
       

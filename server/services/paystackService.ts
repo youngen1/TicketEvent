@@ -56,26 +56,26 @@ class PaystackService {
    */
   async initializeTransaction(params: PaymentInitializeParams) {
     try {
-      console.log('Initializing Paystack transaction for R2 event:', {
+      console.log('Initializing Paystack transaction in ZAR:', {
         email: params.email,
         amount: params.amount,
         reference: params.reference
       });
       
-      // Convert amount to kobo (Paystack uses the smallest currency unit)
-      // No need to enforce R10 minimum - we'll let Paystack handle any minimums
-      const calculatedKobo = Math.round(params.amount * 100);
-      const amountInKobo = calculatedKobo;
+      // Convert ZAR amount to smallest currency unit (cents)
+      // Make sure it's always in South African Rands
+      const amountInCents = Math.round(params.amount * 100);
       
-      console.log(`Processing payment: Original amount ${params.amount} → ${calculatedKobo} kobo`);
+      console.log(`Processing payment: R${params.amount} → ${amountInCents} cents (ZAR)`);
 
       // Convert metadata to JSON string if it exists (Paystack requires metadata as string)
       const metadataString = params.metadata ? JSON.stringify(params.metadata) : undefined;
       
-      // Using live Paystack API for all transactions
+      // Using live Paystack API for all transactions with explicit ZAR currency
       const response = await this.paystack.initializeTransaction({
         email: params.email,
-        amount: amountInKobo,
+        amount: amountInCents,
+        currency: "ZAR", // Explicitly specify South African Rand
         reference: params.reference,
         callback_url: params.callback_url,
         metadata: metadataString
@@ -113,11 +113,20 @@ class PaystackService {
         throw new Error(response.body.message || 'Failed to verify transaction');
       }
 
+      // Verify currency is ZAR
+      if (response.body.data.currency !== 'ZAR') {
+        console.warn(`Warning: Payment currency is ${response.body.data.currency}, expected ZAR`);
+      }
+
+      // Convert amount from cents back to Rands for better readability in logs
+      const amountInRands = response.body.data.amount / 100;
+
       console.log('Paystack payment verification successful:', {
         reference: response.body.data.reference,
         status: response.body.data.status,
-        amount: response.body.data.amount,
-        currency: response.body.data.currency
+        amount: `R${amountInRands.toFixed(2)}`,
+        amountInCents: response.body.data.amount,
+        currency: response.body.data.currency || 'ZAR'
       });
 
       return response.body.data;

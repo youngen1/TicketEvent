@@ -60,7 +60,7 @@ export default function PaystackPaymentButton({
     return isNaN(numericValue) ? 0 : numericValue;
   };
   
-  // For display in button
+  // For display in button - always use ZAR format with R symbol
   const getFormattedAmountForDisplay = (): string => {
     const numericAmount = getNumericAmount();
     return `R${numericAmount.toFixed(2)}`;
