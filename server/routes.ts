@@ -1168,8 +1168,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Search users by username, displayName, bio, email, and location
   app.get("/api/users/search", async (req, res) => {
     try {
-      const query = req.query.query as string || '';
-      const locationQuery = req.query.location as string || '';
+      // Trim whitespace from queries to handle spaces properly
+      const query = (req.query.query as string || '').trim();
+      const locationQuery = (req.query.location as string || '').trim();
       const maxDistance = req.query.maxDistance ? parseFloat(req.query.maxDistance as string) : undefined;
       
       console.log(`Searching users with query: "${query}", location: "${locationQuery}", maxDistance: ${maxDistance || 'none'}`);

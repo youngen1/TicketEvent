@@ -67,8 +67,13 @@ export default function UserListingPage() {
           queryKey: searchQueryKey,
           queryFn: async () => {
             const url = new URL("/api/users/search", window.location.origin);
-            if (searchQuery) url.searchParams.append("query", searchQuery);
-            if (locationQuery) url.searchParams.append("location", locationQuery);
+            
+            // Trim whitespace but preserve the original query for display purposes
+            const trimmedSearchQuery = searchQuery.trim();
+            const trimmedLocationQuery = locationQuery.trim();
+            
+            if (trimmedSearchQuery) url.searchParams.append("query", trimmedSearchQuery);
+            if (trimmedLocationQuery) url.searchParams.append("location", trimmedLocationQuery);
             
             console.log("Searching users with URL:", url.toString());
             
@@ -92,17 +97,25 @@ export default function UserListingPage() {
         
         // Apply name/username filter if any search query exists
         if (searchQuery) {
-          filtered = filtered.filter(user => 
-            user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (user.displayName && user.displayName.toLowerCase().includes(searchQuery.toLowerCase()))
-          );
+          // Trim the search query to handle trailing spaces
+          const trimmedSearchQuery = searchQuery.trim().toLowerCase();
+          if (trimmedSearchQuery) {
+            filtered = filtered.filter(user => 
+              user.username.toLowerCase().includes(trimmedSearchQuery) ||
+              (user.displayName && user.displayName.toLowerCase().includes(trimmedSearchQuery))
+            );
+          }
         }
         
         // Apply location filter if any location query exists
-        if (locationQuery && locationQuery.length === 1) {
-          filtered = filtered.filter(user => 
-            user.location && user.location.toLowerCase().includes(locationQuery.toLowerCase())
-          );
+        if (locationQuery) {
+          // Trim the location query to handle trailing spaces
+          const trimmedLocationQuery = locationQuery.trim().toLowerCase();
+          if (trimmedLocationQuery) {
+            filtered = filtered.filter(user => 
+              user.location && user.location.toLowerCase().includes(trimmedLocationQuery)
+            );
+          }
         }
         
         setSearchResults(filtered);
