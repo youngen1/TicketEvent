@@ -161,6 +161,20 @@ export default function EventAttendance({ event }: EventAttendanceProps) {
                         You have a ticket for this event
                       </Badge>
                     </div>
+                  ) : isAuthenticated && isRestricted ? (
+                    <div className="w-full">
+                      <Badge variant="outline" className="bg-amber-100 text-amber-800">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        {isGenderRestricted() ? 'You cannot attend (gender restriction)' : 'You cannot attend (age restriction)'}
+                      </Badge>
+                      <p className="text-sm text-amber-600 mt-2">
+                        {isGenderRestricted() ? (
+                          `This event is restricted to ${event.genderRestriction === 'male-only' ? 'male' : 'female'} attendees only.`
+                        ) : (
+                          'You are in an age group that is restricted from attending this event.'
+                        )}
+                      </p>
+                    </div>
                   ) : (
                     <div className="w-full">
                       <p className="text-sm text-muted-foreground">

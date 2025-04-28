@@ -127,13 +127,39 @@ export default function PaystackPaymentButton({
       }
       setIsLoading(false);
     },
-    onError: (error: any) => {
+    onError: async (error: any) => {
       console.error('Payment initialization error:', error);
-      toast({
-        title: "Payment Error",
-        description: error.message || "Failed to initiate payment. Please try again.",
-        variant: "destructive",
-      });
+      
+      try {
+        // Try to extract more detailed error message from the response
+        let errorMessage = "Failed to initiate payment";
+        let errorTitle = "Payment Error";
+        
+        if (error.response) {
+          const errorData = await error.response.json();
+          errorMessage = errorData.message || errorMessage;
+          
+          // Check if this is a restriction error (403)
+          if (error.response.status === 403) {
+            errorTitle = "Restriction Error";
+            // Use the server's error message which will be specific about age or gender
+          }
+        }
+        
+        toast({
+          title: errorTitle,
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } catch (e) {
+        // If we can't parse the error, just show a generic message
+        toast({
+          title: "Payment Error",
+          description: "Failed to initiate payment. Please try again.",
+          variant: "destructive",
+        });
+      }
+      
       setIsLoading(false);
     }
   });

@@ -359,6 +359,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Event not found" });
       }
       
+      // Check gender restrictions
+      if (event.genderRestriction) {
+        if (event.genderRestriction === "male-only" && user.gender !== "male") {
+          return res.status(403).json({ 
+            message: "You cannot purchase tickets due to gender restriction for this event" 
+          });
+        }
+        
+        if (event.genderRestriction === "female-only" && user.gender !== "female") {
+          return res.status(403).json({ 
+            message: "You cannot purchase tickets due to gender restriction for this event" 
+          });
+        }
+      }
+      
+      // Check age restrictions
+      if (event.ageRestriction && Array.isArray(event.ageRestriction) && event.ageRestriction.length > 0) {
+        if (user.dateOfBirth) {
+          const birthDate = new Date(user.dateOfBirth);
+          const today = new Date();
+          let age = today.getFullYear() - birthDate.getFullYear();
+          
+          // Adjust age if birthday hasn't occurred yet this year
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+          }
+          
+          // Check against age restriction groups
+          let isRestricted = false;
+          
+          if (age < 18 && event.ageRestriction.includes("under 18")) {
+            isRestricted = true;
+          } else if (age >= 20 && age < 30 && event.ageRestriction.includes("20s")) {
+            isRestricted = true;
+          } else if (age >= 30 && age < 40 && event.ageRestriction.includes("30s")) {
+            isRestricted = true;
+          } else if (age >= 40 && event.ageRestriction.includes("40plus")) {
+            isRestricted = true;
+          }
+          
+          if (isRestricted) {
+            return res.status(403).json({ 
+              message: "You cannot purchase tickets due to age restriction for this event" 
+            });
+          }
+        }
+      }
+      
       // Generate a unique reference
       const reference = `${eventId}-${Date.now()}-${req.session.userId}`;
       
@@ -1102,6 +1151,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get the user's completed tickets to calculate available balance
       const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
       const user = await storage.getUser(userId);
       const userTickets = await storage.getUserTickets(userId);
       const completedTickets = userTickets.filter(ticket => ticket.paymentStatus === 'completed');
@@ -1325,6 +1377,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/users/profile', isAuthenticated, async (req, res) => {
     try {
       const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
       const { username, displayName } = req.body;
       
       if (!username && !displayName) {
