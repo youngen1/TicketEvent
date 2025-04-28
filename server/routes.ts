@@ -1672,7 +1672,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tags: "faith,community,men,karoo,eastern cape",
           latitude: "-31.4965",
           longitude: "25.0124",
-          featured: false
+          featured: false,
+          genderRestriction: "male-only",
+          hasMultipleTicketTypes: true,
+          totalTickets: 10000,
+          ticketsSold: 792
         },
         {
           title: "Cape Town Tech Summit",
@@ -1701,7 +1705,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       // Define ticket types for each event
-      const ticketTypesMap = {
+      // Use type annotation to help TypeScript understand the structure
+      const ticketTypesMap: Record<string, Array<{
+        name: string;
+        description: string;
+        price: string;
+        quantity: number;
+        soldCount: number;
+        isActive: boolean;
+      }>> = {
         "Cape Town Jazz Festival 2025": [
           {
             name: "General Admission",
@@ -1799,18 +1811,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const event = await storage.createEvent(eventData);
         
         // Get ticket types for this event
-        const ticketTypes = ticketTypesMap[event.title];
+        // Use type assertion with 'as' to avoid TypeScript index signature error
+        const ticketTypes = ticketTypesMap[event.title as keyof typeof ticketTypesMap];
         if (ticketTypes && ticketTypes.length > 0) {
           for (const ticketTypeData of ticketTypes) {
-            await storage.createTicketType({
+            // Create the ticket type without the soldCount property
+            const ticketType = await storage.createTicketType({
               eventId: event.id,
               name: ticketTypeData.name,
               description: ticketTypeData.description,
               price: ticketTypeData.price,
               quantity: ticketTypeData.quantity,
-              soldCount: ticketTypeData.soldCount,
               isActive: ticketTypeData.isActive
             });
+            
+            // If needed, update the soldCount separately
+            if (ticketType && ticketTypeData.soldCount) {
+              // For this example, we're using a direct approach since the
+              // in-memory storage allows this pattern. In a real DB, you would 
+              // use a proper update query here.
+              ticketType.soldCount = ticketTypeData.soldCount;
+            }
           }
           console.log(`Created ${ticketTypes.length} ticket types for event "${event.title}"`);
         }
