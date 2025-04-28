@@ -23,11 +23,12 @@ export function registerTestRoutes(app: Express): void {
           maxAttendees: 5000,
           attendees: 0,
           userId: 1, // Admin user
-          tags: ["jazz", "music festival", "cape town"],
+          tags: "jazz,music festival,cape town",
           views: 0,
           averageRating: 0,
           totalTickets: 5000,
-          ticketsSold: 0
+          ticketsSold: 0,
+          video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
         },
         {
           title: "Soweto Wine & Lifestyle Festival",
@@ -43,11 +44,12 @@ export function registerTestRoutes(app: Express): void {
           maxAttendees: 1000,
           attendees: 0,
           userId: 1,
-          tags: ["wine", "food", "culture", "soweto"],
+          tags: "wine,food,culture,soweto",
           views: 0,
           averageRating: 0,
           totalTickets: 1000,
-          ticketsSold: 0
+          ticketsSold: 0,
+          video: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
         },
         {
           title: "Durban International Film Festival 2025",
@@ -63,11 +65,12 @@ export function registerTestRoutes(app: Express): void {
           maxAttendees: 2000,
           attendees: 0,
           userId: 1,
-          tags: ["film", "cinema", "durban", "festival"],
+          tags: "film,cinema,durban,festival",
           views: 0,
           averageRating: 0,
           totalTickets: 2000,
-          ticketsSold: 0
+          ticketsSold: 0,
+          video: "https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
         }
       ];
 
