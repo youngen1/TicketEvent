@@ -1599,7 +1599,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tags: "jazz,music,festival,cape town",
           latitude: "-33.9155",
           longitude: "18.4239",
-          featured: true
+          featured: true,
+          hasMultipleTicketTypes: true,
+          totalTickets: 5000,
+          ticketsSold: 247
         },
         {
           title: "Soweto Wine & Lifestyle Festival",
@@ -1620,7 +1623,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tags: "wine,food,lifestyle,soweto,johannesburg",
           latitude: "-26.2485",
           longitude: "27.8540",
-          featured: true
+          featured: true,
+          hasMultipleTicketTypes: true,
+          totalTickets: 2000,
+          ticketsSold: 156,
+          ageRestriction: ["18+"]
         },
         {
           title: "Durban International Film Festival",
@@ -1641,7 +1648,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tags: "film,cinema,festival,durban",
           latitude: "-29.8587",
           longitude: "31.0218",
-          featured: false
+          featured: false,
+          hasMultipleTicketTypes: true,
+          totalTickets: 3000,
+          ticketsSold: 489
         },
         {
           title: "Karoo Mighty Men Conference",
@@ -1683,20 +1693,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tags: "tech,summit,innovation,cape town",
           latitude: "-33.8869",
           longitude: "18.5030",
-          featured: true
+          featured: true,
+          hasMultipleTicketTypes: true,
+          totalTickets: 1500,
+          ticketsSold: 324
         }
       ];
       
-      // Add events to the database
+      // Define ticket types for each event
+      const ticketTypesMap = {
+        "Cape Town Jazz Festival 2025": [
+          {
+            name: "General Admission",
+            description: "Standard festival access to all stages",
+            price: "850",
+            quantity: 4000,
+            soldCount: 203,
+            isActive: true
+          },
+          {
+            name: "VIP Pass",
+            description: "Premium access with backstage tours, artist meet & greets, and exclusive lounge",
+            price: "1950",
+            quantity: 1000,
+            soldCount: 44,
+            isActive: true
+          }
+        ],
+        "Soweto Wine & Lifestyle Festival": [
+          {
+            name: "General Entry",
+            description: "Festival access with 5 wine tasting tokens",
+            price: "350",
+            quantity: 1500,
+            soldCount: 145,
+            isActive: true
+          },
+          {
+            name: "VIP Experience",
+            description: "Premium access with unlimited tastings, food pairing masterclass, and VIP lounge",
+            price: "750",
+            quantity: 500,
+            soldCount: 11,
+            isActive: true
+          }
+        ],
+        "Durban International Film Festival": [
+          {
+            name: "Single Day Pass",
+            description: "Access to all screenings for one day",
+            price: "200",
+            quantity: 2000,
+            soldCount: 478,
+            isActive: true
+          },
+          {
+            name: "Festival Pass",
+            description: "Full access to all screenings for the entire festival duration",
+            price: "850",
+            quantity: 1000,
+            soldCount: 11,
+            isActive: true
+          }
+        ],
+        "Karoo Mighty Men Conference": [
+          {
+            name: "Standard Registration",
+            description: "Full conference access with camping spot",
+            price: "450",
+            quantity: 8000,
+            soldCount: 780,
+            isActive: true
+          },
+          {
+            name: "Premium Package",
+            description: "Conference access with premium tent accommodation and meals included",
+            price: "1200",
+            quantity: 2000,
+            soldCount: 12,
+            isActive: true
+          }
+        ],
+        "Cape Town Tech Summit": [
+          {
+            name: "Standard Pass",
+            description: "Access to all keynotes and exhibition area",
+            price: "1200",
+            quantity: 1000,
+            soldCount: 289,
+            isActive: true
+          },
+          {
+            name: "Executive Pass",
+            description: "Full summit access including workshops, networking events, and VIP dinner",
+            price: "2500",
+            quantity: 500,
+            soldCount: 35,
+            isActive: true
+          }
+        ]
+      };
+      
+      // Add events to the database and create ticket types
       for (const eventData of sampleEvents) {
-        await storage.createEvent(eventData);
+        const event = await storage.createEvent(eventData);
+        
+        // Get ticket types for this event
+        const ticketTypes = ticketTypesMap[event.title];
+        if (ticketTypes && ticketTypes.length > 0) {
+          for (const ticketTypeData of ticketTypes) {
+            await storage.createTicketType({
+              eventId: event.id,
+              name: ticketTypeData.name,
+              description: ticketTypeData.description,
+              price: ticketTypeData.price,
+              quantity: ticketTypeData.quantity,
+              soldCount: ticketTypeData.soldCount,
+              isActive: ticketTypeData.isActive
+            });
+          }
+          console.log(`Created ${ticketTypes.length} ticket types for event "${event.title}"`);
+        }
       }
       
-      console.log(`Created ${sampleEvents.length} sample events successfully`);
+      console.log(`Created ${sampleEvents.length} sample events successfully with multiple ticket types`);
       
       res.json({ 
         success: true, 
-        message: `Created ${sampleEvents.length} sample events successfully`,
+        message: `Created ${sampleEvents.length} sample events successfully with multiple ticket types`,
         count: sampleEvents.length
       });
     } catch (error: any) {
