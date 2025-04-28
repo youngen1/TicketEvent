@@ -25,7 +25,7 @@ type UpcomingEventsResponse = Event[];
 
 export default function UserProfilePage() {
   const params = useParams();
-  const userId = params.userId ? parseInt(params.userId) : undefined;
+  const userId = params.id ? parseInt(params.id) : undefined;
   const { user: currentUser, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
