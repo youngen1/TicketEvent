@@ -202,25 +202,31 @@ export const NOTIFICATION_TYPE = {
   EVENT_STARTING_TODAY: "event_starting_today", // Event is starting today
 } as const;
 
-// Notifications - Type Definitions
-export type Notification = {
-  id: number;
-  userId: number;
-  type: string;
-  title: string;
-  message: string;
-  eventId: number | null;
-  isRead: boolean | null;
-  createdAt: Date | null;
-};
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  eventId: integer("event_id").references(() => events.id),
+  relatedUserId: integer("related_user_id").references(() => users.id),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
-export type InsertNotification = {
-  userId: number;
-  type: string;
-  title: string;
-  message: string;
-  eventId?: number;
-};
+export const insertNotificationSchema = createInsertSchema(notifications).pick({
+  userId: true,
+  type: true,
+  title: true,
+  message: true,
+  eventId: true,
+  relatedUserId: true,
+  isRead: true,
+});
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
 
 // Session table for PostgreSQL
 export const session = pgTable("session", {
@@ -295,7 +301,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   attendees: many(eventAttendees),
   tickets: many(eventTickets),
   followers: many(userFollows, { relationName: "followers" }),
-  following: many(userFollows, { relationName: "following" })
+  following: many(userFollows, { relationName: "following" }),
+  notifications: many(notifications)
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -363,5 +370,20 @@ export const userFollowsRelations = relations(userFollows, ({ one }) => ({
     fields: [userFollows.followingId],
     references: [users.id],
     relationName: "followers"
+  }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+  event: one(events, {
+    fields: [notifications.eventId],
+    references: [events.id],
+  }),
+  relatedUser: one(users, {
+    fields: [notifications.relatedUserId],
+    references: [users.id],
   }),
 }));

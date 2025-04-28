@@ -67,6 +67,17 @@ export interface IStorage {
   unfollowUser(followerId: number, followingId: number): Promise<void>;
   isFollowing(followerId: number, followingId: number): Promise<boolean>;
   getUsersToFollow(): Promise<User[]>;
+  
+  // Notification methods
+  getUserNotifications(userId: number): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationAsRead(notificationId: number): Promise<Notification>;
+  markAllNotificationsAsRead(userId: number): Promise<void>;
+  deleteNotification(notificationId: number): Promise<void>;
+  
+  // User friendship methods (for mutual follows)
+  getFriends(userId: number): Promise<User[]>;
+  checkFriendship(userId1: number, userId2: number): Promise<boolean>;
 }
 
 // A simple in-memory storage implementation that can be used when database has issues
@@ -78,6 +89,7 @@ export class MemStorage implements IStorage {
   private attendees: EventAttendee[] = [];
   private tickets: EventTicket[] = [];
   private userFollows: UserFollow[] = [];
+  private notifications: Notification[] = [];
   private nextUserId = 1;
   private nextEventId = 1;
   private nextCommentId = 1;
@@ -85,6 +97,7 @@ export class MemStorage implements IStorage {
   private nextAttendeeId = 1;
   private nextTicketId = 1;
   private nextUserFollowId = 1;
+  private nextNotificationId = 1;
 
   constructor() {
     console.log("Initializing MemStorage...");
@@ -1033,6 +1046,72 @@ export class MemStorage implements IStorage {
   async seedEvents(): Promise<void> {
     // Already done in constructor
     return Promise.resolve();
+  }
+
+  // Notification methods
+  async getUserNotifications(userId: number): Promise<Notification[]> {
+    return this.notifications.filter(notification => notification.userId === userId)
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const newNotification: Notification = {
+      id: this.nextNotificationId++,
+      ...notification,
+      isRead: false,
+      createdAt: new Date(),
+    };
+    this.notifications.push(newNotification);
+    return newNotification;
+  }
+
+  async markNotificationAsRead(notificationId: number): Promise<Notification> {
+    const notification = this.notifications.find(n => n.id === notificationId);
+    if (!notification) {
+      throw new Error(`Notification with ID ${notificationId} not found`);
+    }
+    notification.isRead = true;
+    return notification;
+  }
+
+  async markAllNotificationsAsRead(userId: number): Promise<void> {
+    this.notifications
+      .filter(notification => notification.userId === userId)
+      .forEach(notification => {
+        notification.isRead = true;
+      });
+  }
+
+  async deleteNotification(notificationId: number): Promise<void> {
+    const index = this.notifications.findIndex(n => n.id === notificationId);
+    if (index === -1) {
+      throw new Error(`Notification with ID ${notificationId} not found`);
+    }
+    this.notifications.splice(index, 1);
+  }
+
+  // Friendship methods (for mutual follows)
+  async getFriends(userId: number): Promise<User[]> {
+    // Get all users who user is following
+    const following = await this.getUserFollowing(userId);
+    const followingIds = following.map(user => user.id);
+    
+    // Get all users who follow user
+    const followers = await this.getUserFollowers(userId);
+    
+    // Return only users who are in both lists (mutual follows)
+    return followers.filter(follower => followingIds.includes(follower.id));
+  }
+
+  async checkFriendship(userId1: number, userId2: number): Promise<boolean> {
+    // Check if userId1 follows userId2
+    const follows1to2 = await this.isFollowing(userId1, userId2);
+    
+    // Check if userId2 follows userId1
+    const follows2to1 = await this.isFollowing(userId2, userId1);
+    
+    // Return true if both follow each other
+    return follows1to2 && follows2to1;
   }
 }
 
