@@ -260,6 +260,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eventData.video = videoResult.videoPath;
       }
       
+      // Handle ticket types if provided
+      let ticketTypes = [];
+      if (eventData.hasMultipleTicketTypes === 'true' && eventData.ticketTypes) {
+        try {
+          ticketTypes = JSON.parse(eventData.ticketTypes);
+          // Remove from eventData as it will be processed separately
+          delete eventData.ticketTypes;
+        } catch (error) {
+          console.error('Error parsing ticket types:', error);
+        }
+      }
+      
       const validation = insertEventSchema.safeParse(eventData);
       
       if (!validation.success) {
@@ -269,7 +281,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Create the event
       const event = await storage.createEvent(validation.data);
+      
+      // Create ticket types if multiple ticket types are enabled
+      if (eventData.hasMultipleTicketTypes === 'true' && ticketTypes.length > 0) {
+        for (const ticketType of ticketTypes) {
+          await storage.createTicketType({
+            eventId: event.id,
+            name: ticketType.name,
+            description: ticketType.description || '',
+            price: ticketType.price,
+            quantity: parseInt(ticketType.quantity),
+            isActive: ticketType.isActive || true
+          });
+        }
+      }
+      
       res.status(201).json(event);
     } catch (error: any) {
       console.error('Error creating event:', error);

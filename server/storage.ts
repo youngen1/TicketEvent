@@ -1,5 +1,5 @@
 import { 
-  users, events, comments, eventRatings, eventAttendees, eventTickets, userFollows,
+  users, events, comments, eventRatings, eventAttendees, eventTickets, userFollows, ticketTypes,
   type User, type InsertUser, 
   type Event, type InsertEvent,
   type Comment, type InsertComment,
@@ -7,6 +7,7 @@ import {
   type EventAttendee, type InsertEventAttendee,
   type EventTicket, type InsertEventTicket,
   type UserFollow, type InsertUserFollow,
+  type TicketType, type InsertTicketType,
   ATTENDANCE_STATUS
 } from "@shared/schema";
 import { db } from "./db";
@@ -61,6 +62,10 @@ export interface IStorage {
   getTicketByReference(reference: string): Promise<EventTicket | undefined>;
   getAllTickets(): Promise<EventTicket[]>;
   
+  // Ticket type methods
+  createTicketType(ticketType: InsertTicketType): Promise<TicketType>;
+  getEventTicketTypes(eventId: number): Promise<TicketType[]>;
+  
   // User follow methods
   getUserFollowers(userId: number): Promise<User[]>;
   getUserFollowing(userId: number): Promise<User[]>;
@@ -91,6 +96,7 @@ export class MemStorage implements IStorage {
   private tickets: EventTicket[] = [];
   private userFollows: UserFollow[] = [];
   private notifications: Notification[] = [];
+  private ticketTypes: TicketType[] = [];
   private nextUserId = 1;
   private nextEventId = 1;
   private nextCommentId = 1;
@@ -99,6 +105,7 @@ export class MemStorage implements IStorage {
   private nextTicketId = 1;
   private nextUserFollowId = 1;
   private nextNotificationId = 1;
+  private nextTicketTypeId = 1;
 
   constructor() {
     console.log("Initializing MemStorage...");
