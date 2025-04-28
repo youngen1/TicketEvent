@@ -42,8 +42,8 @@ app.use((req, res, next) => {
 // Initialize database and seed data
 const initDatabase = async () => {
   try {
-    // Skip schema push for now due to interaction issues
-    log('Skipping database schema push', 'database');
+    // Schema was pushed using our custom script
+    log('Using pre-pushed database schema', 'database');
     
     // Seed sample data
     if (storage instanceof DatabaseStorage) {
