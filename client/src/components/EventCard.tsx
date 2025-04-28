@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useLocation } from "wouter";
 
 interface EventCardProps {
   event: Event;
@@ -184,8 +183,7 @@ export default function EventCard({ event, onShowDetails }: EventCardProps) {
               className="flex items-center space-x-2 cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent event card click
-                const [, setLocation] = useLocation();
-                setLocation(`/users/${hostUser.id}`);
+                window.location.href = `/users/${hostUser.id}`;
               }}
             >
               <Avatar className="h-8 w-8">
