@@ -72,6 +72,9 @@ export const users = pgTable("users", {
   avatar: text("avatar"),
   interests: text("interests"), // Store user interests as comma-separated text
   preferences: text("preferences"),
+  location: text("location"), // Store location as a string (city, country)
+  latitude: text("latitude"), // Store latitude for location-based features
+  longitude: text("longitude"), // Store longitude for location-based features
   followersCount: integer("followers_count").default(0),
   followingCount: integer("following_count").default(0),
   isAdmin: boolean("is_admin").default(false),
@@ -90,6 +93,9 @@ export const insertUserSchema = createInsertSchema(users).pick({
   avatar: true,
   interests: true,
   preferences: true,
+  location: true,
+  latitude: true,
+  longitude: true,
   isBanned: true,
 });
 

@@ -1073,16 +1073,30 @@ export class MemStorage implements IStorage {
     return this.users;
   }
   
-  async searchUsers(query: string): Promise<User[]> {
+  async searchUsers(query: string, locationQuery?: string, maxDistance?: number): Promise<User[]> {
     // Search by username, displayName, bio, email
     const lowerCaseQuery = query.toLowerCase();
-    return this.users.filter(user => {
+    const filteredUsers = this.users.filter(user => {
       return (
         user.username.toLowerCase().includes(lowerCaseQuery) ||
         (user.displayName && user.displayName.toLowerCase().includes(lowerCaseQuery)) ||
         (user.bio && user.bio.toLowerCase().includes(lowerCaseQuery)) ||
         (user.email && user.email.toLowerCase().includes(lowerCaseQuery))
       );
+    });
+    
+    // If no location query, return the text search results
+    if (!locationQuery) {
+      return filteredUsers;
+    }
+    
+    // Filter by location if provided
+    return filteredUsers.filter(user => {
+      // If user has location information
+      if (user.location) {
+        return user.location.toLowerCase().includes(locationQuery.toLowerCase());
+      }
+      return false;
     });
   }
   
@@ -1212,17 +1226,28 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(users).limit(20);
   }
   
-  async searchUsers(query: string): Promise<User[]> {
-    return db
+  async searchUsers(query: string, locationQuery?: string, maxDistance?: number): Promise<User[]> {
+    let queryBuilder = db
       .select()
-      .from(users)
-      .where(
-        sql`${users.username} ILIKE ${'%' + query + '%'} OR 
-            ${users.displayName} ILIKE ${'%' + query + '%'} OR
-            ${users.bio} ILIKE ${'%' + query + '%'} OR
-            ${users.email} ILIKE ${'%' + query + '%'}`
-      )
-      .limit(20);
+      .from(users);
+    
+    // Add text search filter
+    queryBuilder = queryBuilder.where(
+      sql`${users.username} ILIKE ${'%' + query + '%'} OR 
+          ${users.displayName} ILIKE ${'%' + query + '%'} OR
+          ${users.bio} ILIKE ${'%' + query + '%'} OR
+          ${users.email} ILIKE ${'%' + query + '%'}`
+    );
+    
+    // Add location filter if provided
+    if (locationQuery) {
+      queryBuilder = queryBuilder.where(
+        sql`${users.location} ILIKE ${'%' + locationQuery + '%'}`
+      );
+    }
+    
+    // Return the results
+    return queryBuilder.limit(20);
   }
   
   async getAllUsers(): Promise<User[]> {
