@@ -277,7 +277,8 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
   // Generate shareable event URL
   const getShareableUrl = (): string => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/events/${event.id}`;
+    // Use a shareable event URL that works with the current routing structure
+    return `${baseUrl}?eventId=${event.id}`;
   };
 
   // Share functions
@@ -300,9 +301,10 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
   };
 
   const shareOnWhatsApp = () => {
-    const url = encodeURIComponent(getShareableUrl());
+    // For WhatsApp, include the URL directly in the text instead of using the url parameter
     const text = encodeURIComponent(`Check out this event: ${event.title} ${getShareableUrl()}`);
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    // Use the simpler WhatsApp sharing link that works more reliably
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
 
   const copyLinkToClipboard = () => {
@@ -548,7 +550,7 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
               {/* Host Profile */}
               <div className="mt-4">
                 <h4 className="text-sm font-medium text-gray-500 mb-2">Event Host</h4>
-                <EventHostCard host={hostUser} isLoading={isHostLoading} />
+                <EventHostCard host={hostUser || null} isLoading={isHostLoading} />
               </div>
               
               <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-3">

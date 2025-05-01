@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
@@ -15,11 +15,13 @@ export default function EventsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const eventsPerPage = 12;
 
-  const { data: events = [], isLoading } = useQuery({
+  // Get events from API
+  const { data: events = [], isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
   });
-
-  const handleShowDetails = (event: Event, openFullscreen = false) => {
+  
+  // Define handleShowDetails with useCallback to prevent unnecessary recreation
+  const handleShowDetails = useCallback((event: Event, openFullscreen = false) => {
     setSelectedEvent(event);
     setIsDetailsModalOpen(true);
     
@@ -31,14 +33,33 @@ export default function EventsPage() {
         }));
       }, 300); // Short delay to ensure modal and images are loaded
     }
-  };
-
-  const filteredEvents = events.filter((event: Event) => {
-    const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          event.location.toLowerCase().includes(searchQuery.toLowerCase());
+  }, []);
+  
+  // Listen for custom event to open event by ID from deep links
+  useEffect(() => {
+    const handleOpenEventById = (e: CustomEvent<{eventId: number}>) => {
+      const { eventId } = e.detail;
+      
+      // Find the event by ID
+      const event = events.find((event) => event.id === eventId);
+      if (event) {
+        handleShowDetails(event);
+      }
+    };
     
-    return matchesSearch;
+    window.addEventListener('openEventById', handleOpenEventById as EventListener);
+    
+    return () => {
+      window.removeEventListener('openEventById', handleOpenEventById as EventListener);
+    };
+  }, [events, handleShowDetails]); // Re-run effect when events array or handler changes
+
+  const filteredEvents = events.filter((event) => {
+    const titleMatch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const descriptionMatch = event.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+    const locationMatch = event.location?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+    
+    return titleMatch || descriptionMatch || locationMatch;
   });
 
   // Calculate pagination
@@ -173,7 +194,7 @@ export default function EventsPage() {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {isLoading
             ? renderEventSkeletons()
-            : currentEvents.map((event: Event) => (
+            : currentEvents.map((event) => (
                 <EventCard 
                   key={event.id} 
                   event={event} 

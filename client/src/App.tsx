@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
+import React, { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -48,6 +49,36 @@ function Router() {
       <Route component={NotFound} />
     </Switch>
   );
+}
+
+// Component to handle deep linking to events via URL parameters
+function EventDeepLinkHandler() {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    // Check for eventId in URL query parameters when app loads
+    const params = new URLSearchParams(window.location.search);
+    const eventId = params.get('eventId');
+    
+    if (eventId) {
+      // Find the event and open its modal
+      const openEventModal = () => {
+        // Create a custom event to trigger opening the event modal
+        const event = new CustomEvent('openEventById', {
+          detail: { eventId: parseInt(eventId) }
+        });
+        window.dispatchEvent(event);
+        
+        // Clear the URL parameter after handling
+        setLocation('/', { replace: true });
+      };
+      
+      // Slight delay to ensure app is fully loaded
+      setTimeout(openEventModal, 100);
+    }
+  }, [setLocation]);
+  
+  return null;
 }
 
 function App() {
@@ -103,6 +134,7 @@ function App() {
               onSuccess={handleSignupSuccess}
             />
             <Toaster />
+            <EventDeepLinkHandler />
           </div>
         </TooltipProvider>
       </AuthProvider>
