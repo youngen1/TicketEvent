@@ -1269,6 +1269,25 @@ export class MemStorage implements IStorage {
 
 // Database implementation
 export class DatabaseStorage implements IStorage {
+  // Check if user has purchased a ticket for an event
+  async hasUserPurchasedEventTicket(userId: number, eventId: number): Promise<boolean> {
+    const tickets = await db
+      .select()
+      .from(eventTickets)
+      .where(
+        and(
+          eq(eventTickets.userId, userId),
+          eq(eventTickets.eventId, eventId),
+          or(
+            eq(eventTickets.paymentStatus, 'completed'),
+            eq(eventTickets.paymentStatus, 'pending')
+          )
+        )
+      );
+    
+    return tickets.length > 0;
+  }
+
   // Ticket Type methods
   async createTicketType(ticketType: InsertTicketType): Promise<TicketType> {
     const [newTicketType] = await db

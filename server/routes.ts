@@ -528,6 +528,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Check if the user already has a ticket for this event
+      const hasTicket = await storage.hasUserPurchasedEventTicket(req.session.userId, parseInt(eventId));
+      if (hasTicket) {
+        return res.status(400).json({ 
+          message: "You already have a ticket for this event. Only one ticket per user is allowed."
+        });
+      }
+
       // Generate a unique reference
       const reference = `${eventId}-${Date.now()}-${req.session.userId}`;
       
@@ -834,9 +842,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if the user already has a ticket for this event
-      const existingTicket = await storage.getUserAttendance(req.session.userId, parseInt(eventId));
-      if (existingTicket) {
-        return res.status(400).json({ message: "You already have a ticket for this event" });
+      const hasTicket = await storage.hasUserPurchasedEventTicket(req.session.userId, parseInt(eventId));
+      if (hasTicket) {
+        return res.status(400).json({ message: "You already have a ticket for this event. Only one ticket per user is allowed." });
       }
       
       // If ticket type ID is provided, fetch ticket type details
@@ -911,6 +919,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Event not found" });
       }
       
+      // Check if the user already has a ticket for this event
+      const hasTicket = await storage.hasUserPurchasedEventTicket(req.session.userId, parseInt(eventId));
+      if (hasTicket) {
+        return res.status(400).json({ 
+          message: "You already have a ticket for this event. Only one ticket per user is allowed."
+        });
+      }
+
       // If ticket type ID is provided, fetch ticket type details and validate
       if (ticketTypeId) {
         const ticketType = await storage.getTicketType(parseInt(ticketTypeId));
