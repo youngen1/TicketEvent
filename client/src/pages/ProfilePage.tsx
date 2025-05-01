@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { 
   CalendarDays, User, Settings, Star, Calendar, 
   Clock, MapPin, Upload, Camera, Loader2, Ticket, CreditCard,
-  Users, UserPlus, UserMinus, Search
+  Users, UserPlus, UserMinus, Search, ArrowLeft
 } from "lucide-react";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
@@ -220,6 +220,17 @@ export default function ProfilePage() {
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div className="mb-10">
+        <div className="flex items-center gap-4 mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex items-center text-neutral-600 hover:text-primary transition-colors"
+            onClick={() => setLocation('/')}
+          >
+            <ArrowLeft size={16} className="mr-1" />
+            <span>Back</span>
+          </Button>
+        </div>
         <h1 className="text-3xl font-bold">My Profile</h1>
         <p className="text-muted-foreground mt-1">
           View and manage your event profile

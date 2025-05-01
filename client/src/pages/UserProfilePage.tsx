@@ -10,7 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
   CalendarDays, Users, Star, Heart, Calendar, 
-  Clock, MapPin, UserPlus, UserMinus, Loader2
+  Clock, MapPin, UserPlus, UserMinus, Loader2, ArrowLeft
 } from "lucide-react";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
@@ -149,6 +149,17 @@ export default function UserProfilePage() {
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
+        <div className="flex items-center gap-4 mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex items-center text-neutral-600 hover:text-primary transition-colors"
+            onClick={() => window.history.back()}
+          >
+            <ArrowLeft size={16} className="mr-1" />
+            <span>Back</span>
+          </Button>
+        </div>
         <h1 className="text-3xl font-bold">{profileUser.displayName || profileUser.username}'s Profile</h1>
         <p className="text-muted-foreground mt-1">
           {isOwnProfile ? "Your public profile" : `View ${profileUser.displayName || profileUser.username}'s profile`}

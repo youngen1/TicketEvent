@@ -506,27 +506,40 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
             </div>
 
             {/* Thumbnail gallery for quick navigation */}
-            {parsedImages.length > 1 && (
-              <div className="px-4 pt-2 overflow-x-auto">
-                <div className="flex space-x-2 pb-2">
-                  {parsedImages.map((url: string, index: number) => (
-                    <button
-                      key={index}
-                      className={`flex-shrink-0 h-16 w-16 rounded overflow-hidden ${
-                        index === activeImageIndex ? "ring-2 ring-primary" : ""
-                      }`}
-                      onClick={() => setActiveImageIndex(index)}
-                    >
-                      <img
-                        src={getFullImageUrl(url)}
-                        alt={`Thumbnail ${index + 1}`}
-                        className="h-full w-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
+            <div className="px-4 pt-2 overflow-x-auto">
+              <div className="flex justify-between items-center">
+                {/* Back button */}
+                <button
+                  className="flex items-center text-sm text-neutral-700 hover:text-primary transition-colors"
+                  onClick={onClose}
+                  aria-label="Back to events"
+                >
+                  <ArrowLeft size={16} className="mr-1" />
+                  <span>Back to events</span>
+                </button>
+
+                {/* Image thumbnails */}
+                {parsedImages.length > 1 && (
+                  <div className="flex space-x-2 pb-2 overflow-x-auto">
+                    {parsedImages.map((url: string, index: number) => (
+                      <button
+                        key={index}
+                        className={`flex-shrink-0 h-16 w-16 rounded overflow-hidden ${
+                          index === activeImageIndex ? "ring-2 ring-primary" : ""
+                        }`}
+                        onClick={() => setActiveImageIndex(index)}
+                      >
+                        <img
+                          src={getFullImageUrl(url)}
+                          alt={`Thumbnail ${index + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
             
             <div className="px-4 pt-5 pb-4 sm:p-6" id="event-details-description">
               <div className="flex justify-between items-start">
