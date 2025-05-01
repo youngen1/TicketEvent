@@ -88,11 +88,19 @@ export default function PaystackPaymentButton({
       
       // We'll test using real Paystack integration for all amounts
       console.log('Using Paystack live for amount:', numericAmount);
-      return apiRequest('POST', '/api/payments/initialize', {
+      const response = await apiRequest('POST', '/api/payments/initialize', {
         amount: numericAmount,
         eventId,
         ticketTypeId
       });
+      
+      // Handle 400 status explicitly to display error messages properly
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Payment initialization failed');
+      }
+      
+      return response;
     },
     onSuccess: async (response) => {
       console.log('Payment initialization response:', response);
@@ -134,35 +142,20 @@ export default function PaystackPaymentButton({
     onError: async (error: any) => {
       console.error('Payment initialization error:', error);
       
-      try {
-        // Try to extract more detailed error message from the response
-        let errorMessage = "Failed to initiate payment";
-        let errorTitle = "Payment Error";
-        
-        if (error.response) {
-          const errorData = await error.response.json();
-          errorMessage = errorData.message || errorMessage;
-          
-          // Check if this is a restriction error (403)
-          if (error.response.status === 403) {
-            errorTitle = "Restriction Error";
-            // Use the server's error message which will be specific about age or gender
-          }
-        }
-        
-        toast({
-          title: errorTitle,
-          description: errorMessage,
-          variant: "destructive",
-        });
-      } catch (e) {
-        // If we can't parse the error, just show a generic message
-        toast({
-          title: "Payment Error",
-          description: "Failed to initiate payment. Please try again.",
-          variant: "destructive",
-        });
+      // Display the error message directly from the Error object
+      let errorMessage = error.message || "Failed to initiate payment";
+      let errorTitle = "Payment Error";
+      
+      // For restriction errors (403)
+      if (error.response && error.response.status === 403) {
+        errorTitle = "Restriction Error";
       }
+      
+      toast({
+        title: errorTitle,
+        description: errorMessage,
+        variant: "destructive",
+      });
       
       setIsLoading(false);
     }
