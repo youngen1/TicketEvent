@@ -17,7 +17,7 @@ interface EventShareProps {
 export default function EventShare({ event }: EventShareProps) {
   const { toast } = useToast();
   
-  const eventUrl = `${window.location.origin}/events?id=${event.id}`;
+  const eventUrl = `${window.location.origin}/events?eventId=${event.id}`;
   
   const shareLinks = [
     {
