@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ export default function LoginModal({ isOpen, onClose, onSignupClick, onSuccess }
   const { toast } = useToast();
   const { login } = useAuth();
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -135,18 +137,32 @@ export default function LoginModal({ isOpen, onClose, onSignupClick, onSuccess }
             </Button>
           </form>
         </Form>
-        <div className="pt-2 text-center text-sm">
-          <span className="text-muted-foreground">Don't have an account?</span>{" "}
-          <button
-            type="button"
-            className="text-primary hover:underline font-medium"
-            onClick={() => {
-              onClose();
-              onSignupClick();
-            }}
-          >
-            Sign up
-          </button>
+        <div className="pt-2 text-center text-sm space-y-2">
+          <div>
+            <span className="text-muted-foreground">Don't have an account?</span>{" "}
+            <button
+              type="button"
+              className="text-primary hover:underline font-medium"
+              onClick={() => {
+                onClose();
+                onSignupClick();
+              }}
+            >
+              Sign up
+            </button>
+          </div>
+          <div>
+            <button
+              type="button"
+              className="text-primary hover:underline font-medium text-sm"
+              onClick={() => {
+                onClose();
+                setLocation('/forgot-password');
+              }}
+            >
+              Forgot your password?
+            </button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

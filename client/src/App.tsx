@@ -19,6 +19,9 @@ import PaymentSettingsPage from "@/pages/PaymentSettingsPage";
 import FinancePage from "@/pages/FinancePage";
 import AdminPage from "@/pages/AdminPage";
 import UserManagementPage from "@/pages/UserManagementPage";
+import VerifyEmailPage from "@/pages/VerifyEmailPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useState } from "react";
@@ -46,6 +49,10 @@ function Router() {
       <Route path="/finance" component={FinancePage} />
       <Route path="/admin" component={AdminPage} />
       <Route path="/admin/users" component={UserManagementPage} />
+      {/* Authentication routes */}
+      <Route path="/verify-email" component={VerifyEmailPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route component={NotFound} />
     </Switch>
   );
