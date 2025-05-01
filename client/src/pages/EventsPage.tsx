@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Search, Filter, ArrowDownAZ } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import LoginModal from "@/components/LoginModal";
+import SignupModal from "@/components/SignupModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -14,7 +17,10 @@ export default function EventsPage() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const eventsPerPage = 12;
+  
+  const { login } = useAuth();
 
   interface EventsResponse {
     events: Event[];
@@ -254,6 +260,31 @@ export default function EventsPage() {
         event={selectedEvent}
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
+        onLoginClick={() => setIsLoginModalOpen(true)}
+      />
+      
+      {/* Authentication Modals */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSignupClick={() => {
+          setIsLoginModalOpen(false);
+          setIsSignupModalOpen(true);
+        }}
+        onSuccess={() => setIsLoginModalOpen(false)}
+      />
+      
+      <SignupModal
+        isOpen={isSignupModalOpen}
+        onClose={() => setIsSignupModalOpen(false)}
+        onLoginClick={() => {
+          setIsSignupModalOpen(false);
+          setIsLoginModalOpen(true);
+        }}
+        onSuccess={() => {
+          setIsSignupModalOpen(false);
+          setIsLoginModalOpen(true);
+        }}
       />
     </main>
   );
