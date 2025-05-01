@@ -68,24 +68,39 @@ function EventDeepLinkHandler() {
     const eventId = params.get('eventId');
     
     if (eventId) {
+      console.log('Found eventId in URL:', eventId);
       // Find the event and open its modal
       const openEventModal = () => {
-        // Create a custom event to trigger opening the event modal
-        const event = new CustomEvent('openEventById', {
-          detail: { eventId: parseInt(eventId) }
-        });
-        window.dispatchEvent(event);
-        
-        // Don't clear the URL parameter immediately to allow time for event to be processed
-        // We'll do this from the events page after the modal opens
+        try {
+          const parsedId = parseInt(eventId, 10);
+          if (isNaN(parsedId)) {
+            console.error('Invalid eventId, not a number:', eventId);
+            return;
+          }
+          
+          // Create a custom event to trigger opening the event modal
+          const customEvent = new CustomEvent('openEventById', {
+            detail: { eventId: parsedId }
+          });
+          
+          console.log('Dispatching openEventById event with:', parsedId);
+          window.dispatchEvent(customEvent);
+          
+          // Don't clear the URL parameter immediately to allow time for event to be processed
+          // We'll do this from the events page after the modal opens
+        } catch (error) {
+          console.error('Error opening event from deep link:', error);
+        }
       };
-      
-      // Slight delay to ensure app is fully loaded
-      setTimeout(openEventModal, 300);
       
       // Navigate to the events page if not already there (helps with deep linking)
       if (window.location.pathname !== '/events') {
         setLocation('/events', { replace: true });
+        // Add a delay to ensure navigation has completed before dispatching the event
+        setTimeout(openEventModal, 500);
+      } else {
+        // We're already on the events page, open the modal with a shorter delay
+        setTimeout(openEventModal, 300);
       }
     }
   }, [setLocation]);
