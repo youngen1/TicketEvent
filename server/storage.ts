@@ -62,6 +62,7 @@ export interface IStorage {
   getTicket(ticketId: number): Promise<EventTicket | undefined>;
   getTicketByReference(reference: string): Promise<EventTicket | undefined>;
   getAllTickets(): Promise<EventTicket[]>;
+  hasUserPurchasedEventTicket(userId: number, eventId: number): Promise<boolean>;
   
   // Ticket type methods
   createTicketType(ticketType: InsertTicketType): Promise<TicketType>;
@@ -1180,6 +1181,17 @@ export class MemStorage implements IStorage {
   // Get all tickets (for admin purposes)
   async getAllTickets(): Promise<EventTicket[]> {
     return this.tickets;
+  }
+
+  async hasUserPurchasedEventTicket(userId: number, eventId: number): Promise<boolean> {
+    // Find any ticket for this user and event with completed or pending status
+    const existingTicket = this.tickets.find(ticket => 
+      ticket.userId === userId && 
+      ticket.eventId === eventId && 
+      (ticket.paymentStatus === 'completed' || ticket.paymentStatus === 'pending')
+    );
+    
+    return !!existingTicket; // Convert to boolean
   }
   
   // Extra properties to make TypeScript happy
