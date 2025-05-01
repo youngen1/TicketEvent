@@ -3,8 +3,9 @@ import { Event, User, TicketType } from "@shared/schema";
 import { 
   Heart, Calendar, MapPin, Users, X, ChevronLeft, ChevronRight, 
   Maximize, ArrowLeft, ArrowRight, Star, Clock,
-  CreditCard, Map, Ticket
+  CreditCard, Map, Ticket, Share2, Copy, Check
 } from "lucide-react";
+import { FaFacebook, FaTwitter, FaLinkedin, FaWhatsapp } from "react-icons/fa";
 import GoogleMapComponent from "@/components/GoogleMapComponent";
 import FallbackMapComponent from "@/components/FallbackMapComponent";
 import {
@@ -50,6 +51,10 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
   // State for video display
   const [showVideo, setShowVideo] = useState(false);
   const [selectedTicketType, setSelectedTicketType] = useState<number | null>(null);
+  
+  // State for share functionality
+  const [showShareOptions, setShowShareOptions] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   
   // Fetch host data
   const { data: hostUser, isLoading: isHostLoading } = useQuery<User | null>({
@@ -268,6 +273,46 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
   };
   
   const isRestricted = isAuthenticated && (isGenderRestricted() || isAgeRestricted());
+
+  // Generate shareable event URL
+  const getShareableUrl = (): string => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/events/${event.id}`;
+  };
+
+  // Share functions
+  const shareOnFacebook = () => {
+    const url = encodeURIComponent(getShareableUrl());
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+  };
+
+  const shareOnTwitter = () => {
+    const url = encodeURIComponent(getShareableUrl());
+    const text = encodeURIComponent(`Check out this event: ${event.title}`);
+    window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank');
+  };
+
+  const shareOnLinkedIn = () => {
+    const url = encodeURIComponent(getShareableUrl());
+    const title = encodeURIComponent(event.title);
+    const summary = encodeURIComponent(event.description || '');
+    window.open(`https://www.linkedin.com/shareArticle?mini=true&url=${url}&title=${title}&summary=${summary}`, '_blank');
+  };
+
+  const shareOnWhatsApp = () => {
+    const url = encodeURIComponent(getShareableUrl());
+    const text = encodeURIComponent(`Check out this event: ${event.title} ${getShareableUrl()}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
+  const copyLinkToClipboard = () => {
+    navigator.clipboard.writeText(getShareableUrl())
+      .then(() => {
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 3000);
+      })
+      .catch(err => console.error('Failed to copy link:', err));
+  };
 
   // Fullscreen image view component
   const FullscreenImageView = () => (
@@ -615,6 +660,64 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
             </div>
             <DialogFooter className="bg-neutral-50 px-4 py-3 flex flex-row justify-between">
               <div className="flex flex-col space-y-2 flex-1">
+                {/* Share Options */}
+                <div className="mb-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-1" 
+                    onClick={() => setShowShareOptions(!showShareOptions)}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    <span>Share</span>
+                  </Button>
+                  
+                  {showShareOptions && (
+                    <div className="mt-2 p-3 bg-white rounded-md shadow-md">
+                      <h4 className="text-sm font-medium mb-2">Share this event</h4>
+                      <div className="flex flex-wrap gap-2">
+                        <button 
+                          onClick={shareOnFacebook}
+                          className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                          aria-label="Share on Facebook"
+                        >
+                          <FaFacebook size={16} />
+                        </button>
+                        <button 
+                          onClick={shareOnTwitter}
+                          className="p-2 rounded-full bg-sky-500 text-white hover:bg-sky-600 transition-colors"
+                          aria-label="Share on Twitter"
+                        >
+                          <FaTwitter size={16} />
+                        </button>
+                        <button 
+                          onClick={shareOnLinkedIn}
+                          className="p-2 rounded-full bg-blue-700 text-white hover:bg-blue-800 transition-colors"
+                          aria-label="Share on LinkedIn"
+                        >
+                          <FaLinkedin size={16} />
+                        </button>
+                        <button 
+                          onClick={shareOnWhatsApp}
+                          className="p-2 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors"
+                          aria-label="Share on WhatsApp"
+                        >
+                          <FaWhatsapp size={16} />
+                        </button>
+                        <button 
+                          onClick={copyLinkToClipboard}
+                          className="p-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors flex items-center justify-center"
+                          aria-label="Copy link"
+                        >
+                          {linkCopied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
+                        </button>
+                      </div>
+                      {linkCopied && (
+                        <p className="text-xs text-green-600 mt-2">Link copied to clipboard!</p>
+                      )}
+                    </div>
+                  )}
+                </div>
                 {isAuthenticated && isRestricted && (
                   <div className="flex items-center bg-amber-50 text-amber-700 px-3 py-2 rounded-md mb-2 text-sm">
                     <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
