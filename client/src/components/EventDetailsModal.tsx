@@ -35,9 +35,11 @@ interface EventDetailsModalProps {
   event: Event | null;
   isOpen: boolean;
   onClose: () => void;
+  // Optional prop for opening login modal
+  onLoginClick?: () => void;
 }
 
-export default function EventDetailsModal({ event, isOpen, onClose }: EventDetailsModalProps) {
+export default function EventDetailsModal({ event, isOpen, onClose, onLoginClick }: EventDetailsModalProps) {
   const queryClient = useQueryClient();
   const { user, isAuthenticated } = useAuth();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -817,7 +819,10 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                                   Sold Out
                                 </Button>
                               ) : (
-                                <Button disabled className="w-full justify-center bg-gray-400">
+                                <Button
+                                  className="w-full justify-center"
+                                  onClick={onLoginClick}
+                                >
                                   Login to purchase tickets
                                 </Button>
                               )}
@@ -841,7 +846,10 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
                         Ticket Purchase Restricted
                       </Button>
                     ) : (
-                      <Button disabled className="flex items-center bg-gray-400">
+                      <Button
+                        className="flex items-center"
+                        onClick={onLoginClick}
+                      >
                         Login to purchase tickets
                       </Button>
                     )}
