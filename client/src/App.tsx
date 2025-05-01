@@ -1,5 +1,7 @@
 import { Switch, Route, useLocation } from "wouter";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Event } from "@shared/schema";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -24,7 +26,6 @@ import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useState } from "react";
 import CreateEventModal from "@/components/CreateEventModal";
 import LoginModal from "@/components/LoginModal";
 import SignupModal from "@/components/SignupModal";
@@ -62,13 +63,25 @@ function Router() {
 function EventDeepLinkHandler() {
   const [, setLocation] = useLocation();
   
+  // Keep track of event IDs that we've already tried to open
+  const [processedEventIds, setProcessedEventIds] = useState<string[]>([]);
+  
+  // Function to detect if events are loaded by checking API response data
+  const { data: eventsLoaded = [] } = useQuery<Event[]>({
+    queryKey: ["/api/events"],
+    // We just need to know that events are loaded, no specific queryFn needed
+  });
+  
+  // Main effect to handle deep links
   useEffect(() => {
     // Check for eventId in URL query parameters when app loads
     const params = new URLSearchParams(window.location.search);
     const eventId = params.get('eventId');
     
-    if (eventId) {
-      console.log('Found eventId in URL:', eventId);
+    if (eventId && !processedEventIds.includes(eventId) && eventsLoaded.length > 0) {
+      console.log('Found eventId in URL that has not been processed:', eventId);
+      setProcessedEventIds(prev => [...prev, eventId]);
+      
       // Find the event and open its modal
       const openEventModal = () => {
         try {
@@ -78,16 +91,21 @@ function EventDeepLinkHandler() {
             return;
           }
           
-          // Create a custom event to trigger opening the event modal
-          const customEvent = new CustomEvent('openEventById', {
-            detail: { eventId: parsedId }
-          });
-          
-          console.log('Dispatching openEventById event with:', parsedId);
-          window.dispatchEvent(customEvent);
-          
-          // Don't clear the URL parameter immediately to allow time for event to be processed
-          // We'll do this from the events page after the modal opens
+          // Check if we can find this event in the loaded data
+          const matchingEvent = eventsLoaded.find((event: Event) => event.id === parsedId);
+          if (matchingEvent) {
+            console.log('Found matching event:', matchingEvent.title);
+            
+            // Create a custom event to trigger opening the event modal
+            const customEvent = new CustomEvent('openEventById', {
+              detail: { eventId: parsedId }
+            });
+            
+            console.log('Dispatching openEventById event with:', parsedId);
+            window.dispatchEvent(customEvent);
+          } else {
+            console.error('Event not found in loaded events. ID:', parsedId);
+          }
         } catch (error) {
           console.error('Error opening event from deep link:', error);
         }
@@ -95,15 +113,17 @@ function EventDeepLinkHandler() {
       
       // Navigate to the events page if not already there (helps with deep linking)
       if (window.location.pathname !== '/events') {
+        console.log('Navigating to events page first...');
         setLocation('/events', { replace: true });
-        // Add a delay to ensure navigation has completed before dispatching the event
-        setTimeout(openEventModal, 500);
+        // Add a longer delay for navigation and data loading
+        setTimeout(openEventModal, 800);
       } else {
-        // We're already on the events page, open the modal with a shorter delay
-        setTimeout(openEventModal, 300);
+        // We're already on the events page, just open the modal
+        console.log('Already on events page, opening modal...');
+        openEventModal();
       }
     }
-  }, [setLocation]);
+  }, [setLocation, processedEventIds, eventsLoaded]);
   
   return null;
 }
