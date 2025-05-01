@@ -277,8 +277,8 @@ export default function EventDetailsModal({ event, isOpen, onClose }: EventDetai
   // Generate shareable event URL
   const getShareableUrl = (): string => {
     const baseUrl = window.location.origin;
-    // Use a shareable event URL that works with the current routing structure
-    return `${baseUrl}?eventId=${event.id}`;
+    // Use a shareable event URL with /events path for better deep linking
+    return `${baseUrl}/events?eventId=${event.id}`;
   };
 
   // Share functions

@@ -39,18 +39,45 @@ export default function EventsPage() {
   useEffect(() => {
     const handleOpenEventById = (e: CustomEvent<{eventId: number}>) => {
       const { eventId } = e.detail;
+      console.log('Received openEventById event for eventId:', eventId);
       
       // Find the event by ID
       const event = events.find((event) => event.id === eventId);
       if (event) {
+        console.log('Found event, opening details modal:', event.title);
         handleShowDetails(event);
+        
+        // Clear URL parameters after successfully opening the event
+        // This prevents re-opening on page refresh
+        if (window.location.search.includes('eventId')) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } else {
+        console.log('Event not found for ID:', eventId);
       }
     };
     
     window.addEventListener('openEventById', handleOpenEventById as EventListener);
+    console.log('Added openEventById event listener');
+    
+    // Check URL parameters directly (backup for direct navigation)
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventIdParam = urlParams.get('eventId');
+    
+    if (eventIdParam && events.length > 0) {
+      const eventId = parseInt(eventIdParam);
+      const event = events.find((event) => event.id === eventId);
+      if (event) {
+        console.log('Found event from URL params, opening details:', event.title);
+        handleShowDetails(event);
+        // Clear the URL parameter after handling
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
     
     return () => {
       window.removeEventListener('openEventById', handleOpenEventById as EventListener);
+      console.log('Removed openEventById event listener');
     };
   }, [events, handleShowDetails]); // Re-run effect when events array or handler changes
 

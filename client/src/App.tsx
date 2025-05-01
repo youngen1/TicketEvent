@@ -69,12 +69,17 @@ function EventDeepLinkHandler() {
         });
         window.dispatchEvent(event);
         
-        // Clear the URL parameter after handling
-        setLocation('/', { replace: true });
+        // Don't clear the URL parameter immediately to allow time for event to be processed
+        // We'll do this from the events page after the modal opens
       };
       
       // Slight delay to ensure app is fully loaded
-      setTimeout(openEventModal, 100);
+      setTimeout(openEventModal, 300);
+      
+      // Navigate to the events page if not already there (helps with deep linking)
+      if (window.location.pathname !== '/events') {
+        setLocation('/events', { replace: true });
+      }
     }
   }, [setLocation]);
   
