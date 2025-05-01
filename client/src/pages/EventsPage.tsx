@@ -15,8 +15,12 @@ export default function EventsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const eventsPerPage = 12;
 
+  interface EventsResponse {
+    events: Event[];
+  }
+  
   // Get events from API
-  const { data: events = [], isLoading } = useQuery<Event[]>({
+  const { data: eventsData = { events: [] }, isLoading, isSuccess } = useQuery<EventsResponse>({ 
     queryKey: ["/api/events"],
   });
   
@@ -41,24 +45,24 @@ export default function EventsPage() {
       const { eventId } = e.detail;
       console.log('Received openEventById event for eventId:', eventId);
       
-      // Make sure events is an array before using find
-      if (Array.isArray(events)) {
-        // Find the event by ID
-        const event = events.find((event) => event.id === eventId);
-        if (event) {
-          console.log('Found event, opening details modal:', event.title);
-          handleShowDetails(event);
-          
-          // Clear URL parameters after successfully opening the event
-          // This prevents re-opening on page refresh
-          if (window.location.search.includes('eventId')) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }
-        } else {
-          console.log('Event not found for ID:', eventId);
+      // Access the events array from the response data structure
+      const eventsArray = eventsData.events || [];
+      console.log('Looking for event in array:', eventsArray);
+      
+      // Find the event by ID
+      const matchingEvent = eventsArray.find((event: Event) => event.id === eventId);
+      
+      if (matchingEvent) {
+        console.log('Found event, opening details modal:', matchingEvent.title);
+        handleShowDetails(matchingEvent);
+        
+        // Clear URL parameters after successfully opening the event
+        // This prevents re-opening on page refresh
+        if (window.location.search.includes('eventId')) {
+          window.history.replaceState({}, document.title, window.location.pathname);
         }
       } else {
-        console.log('Events data is not an array:', events);
+        console.log('Event not found for ID:', eventId);
       }
     };
     
@@ -69,12 +73,14 @@ export default function EventsPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const eventIdParam = urlParams.get('eventId');
     
-    if (eventIdParam && Array.isArray(events) && events.length > 0) {
+    if (eventIdParam && isSuccess) {
       const eventId = parseInt(eventIdParam);
-      const event = events.find((event) => event.id === eventId);
-      if (event) {
-        console.log('Found event from URL params, opening details:', event.title);
-        handleShowDetails(event);
+      const eventsArray = eventsData.events || [];
+      
+      const matchingEvent = eventsArray.find((event: Event) => event.id === eventId);
+      if (matchingEvent) {
+        console.log('Found event from URL params, opening details:', matchingEvent.title);
+        handleShowDetails(matchingEvent);
         // Clear the URL parameter after handling
         window.history.replaceState({}, document.title, window.location.pathname);
       }
@@ -84,18 +90,19 @@ export default function EventsPage() {
       window.removeEventListener('openEventById', handleOpenEventById as EventListener);
       console.log('Removed openEventById event listener');
     };
-  }, [events, handleShowDetails]); // Re-run effect when events array or handler changes
+  }, [eventsData, handleShowDetails, isSuccess]); // Re-run effect when events array or handler changes
 
-  // Make sure events is an array before filtering
-  const filteredEvents = Array.isArray(events) 
-    ? events.filter((event) => {
-        const titleMatch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
-        const descriptionMatch = event.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
-        const locationMatch = event.location?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
-        
-        return titleMatch || descriptionMatch || locationMatch;
-      })
-    : [];
+  // Extract the events array from the response
+  const eventsArray = eventsData.events || [];
+  
+  // Filter events based on search query
+  const filteredEvents = eventsArray.filter((event: Event) => {
+    const titleMatch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const descriptionMatch = event.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+    const locationMatch = event.location?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+    
+    return titleMatch || descriptionMatch || locationMatch;
+  });
 
   // Calculate pagination
   const indexOfLastEvent = currentPage * eventsPerPage;
