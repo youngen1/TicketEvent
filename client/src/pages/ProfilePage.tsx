@@ -592,7 +592,7 @@ export default function ProfilePage() {
                             )}
                             <Badge variant="outline" className="px-3 py-1 flex items-center gap-1">
                               <CreditCard className="h-3 w-3" />
-                              ${ticket.totalAmount}
+                              R{ticket.totalAmount.toFixed(2)}
                             </Badge>
                             <Badge variant="secondary" className="px-3 py-1">
                               Ref: {ticket.paymentReference.substring(0, 10)}...
