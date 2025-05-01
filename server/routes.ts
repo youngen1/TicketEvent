@@ -532,7 +532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasTicket = await storage.hasUserPurchasedEventTicket(req.session.userId, parseInt(eventId));
       if (hasTicket) {
         return res.status(400).json({ 
-          message: "You already have a ticket for this event. Only one ticket per user is allowed."
+          message: "You cannot buy two tickets for yourself. You already have a ticket for this event."
         });
       }
 
@@ -844,7 +844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if the user already has a ticket for this event
       const hasTicket = await storage.hasUserPurchasedEventTicket(req.session.userId, parseInt(eventId));
       if (hasTicket) {
-        return res.status(400).json({ message: "You already have a ticket for this event. Only one ticket per user is allowed." });
+        return res.status(400).json({ message: "You cannot buy two tickets for yourself. You already have a ticket for this event." });
       }
       
       // If ticket type ID is provided, fetch ticket type details
@@ -923,7 +923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasTicket = await storage.hasUserPurchasedEventTicket(req.session.userId, parseInt(eventId));
       if (hasTicket) {
         return res.status(400).json({ 
-          message: "You already have a ticket for this event. Only one ticket per user is allowed."
+          message: "You cannot buy two tickets for yourself. You already have a ticket for this event."
         });
       }
 
