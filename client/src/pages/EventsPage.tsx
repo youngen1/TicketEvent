@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import EventCard from "@/components/EventCard";
 import EventDetailsModal from "@/components/EventDetailsModal";
@@ -13,6 +13,7 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const eventsPerPage = 12;
 
   interface EventsResponse {

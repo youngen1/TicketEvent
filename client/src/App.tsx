@@ -30,6 +30,7 @@ import CreateEventModal from "@/components/CreateEventModal";
 import LoginModal from "@/components/LoginModal";
 import SignupModal from "@/components/SignupModal";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ModalProvider } from "@/contexts/ModalContext";
 
 function Router() {
   return (
@@ -147,8 +148,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <div className="flex flex-col min-h-screen">
+        <ModalProvider
+          setIsLoginModalOpen={setIsLoginModalOpen}
+          setIsSignupModalOpen={setIsSignupModalOpen}
+          setIsCreateModalOpen={setIsCreateModalOpen}
+        >
+          <TooltipProvider>
+            <div className="flex flex-col min-h-screen">
             <Navbar 
               onNewEventClick={() => setIsCreateModalOpen(true)} 
               onLoginClick={() => setIsLoginModalOpen(true)}
@@ -184,6 +190,7 @@ function App() {
             <EventDeepLinkHandler />
           </div>
         </TooltipProvider>
+        </ModalProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
