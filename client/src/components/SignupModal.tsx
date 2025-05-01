@@ -132,7 +132,7 @@ export default function SignupModal({ isOpen, onClose, onLoginClick, onSuccess }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md dialog-content-scroll">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-center">Create an account</DialogTitle>
           <DialogDescription className="text-center">

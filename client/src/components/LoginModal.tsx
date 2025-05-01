@@ -87,7 +87,7 @@ export default function LoginModal({ isOpen, onClose, onSignupClick, onSuccess }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md dialog-content-scroll">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-center">Log in to your account</DialogTitle>
           <DialogDescription className="text-center">

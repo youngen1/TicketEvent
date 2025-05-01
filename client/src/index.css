@@ -103,3 +103,16 @@
   }
 }
 
+/* Fix for dialog modal scroll issues */
+body[data-state="open"] {
+  overflow: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 0 !important;
+}
+
+/* Improve scrolling in modals */
+.dialog-content-scroll {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
