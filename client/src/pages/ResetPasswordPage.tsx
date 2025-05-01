@@ -1,201 +1,261 @@
-import { useState } from 'react';
-import { useLocation, Link, useParams } from 'wouter';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
+enum ResetState {
+  VALIDATING,
+  VALID,
+  INVALID,
+  SUCCESS
+}
+
+// Form validation schema
 const resetPasswordSchema = z.object({
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  confirmPassword: z.string()
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"]
+  password: z.string()
+    .min(8, { message: 'Password must be at least 8 characters long' })
+    .regex(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
+    .regex(/[a-z]/, { message: 'Password must contain at least one lowercase letter' })
+    .regex(/[0-9]/, { message: 'Password must contain at least one number' }),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
 });
+
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPasswordPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get('token');
-  const userId = params.get('userId');
+  const [resetState, setResetState] = useState<ResetState>(ResetState.VALIDATING);
+  const [token, setToken] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
+  const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [resetComplete, setResetComplete] = useState(false);
   
-  const form = useForm<z.infer<typeof resetPasswordSchema>>({
+  const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
       password: '',
       confirmPassword: '',
     },
   });
-
-  // Verify the token is valid - for a real app, this would check with backend
-  const isValidToken = !!token && !!userId;
-
-  async function onSubmit(data: z.infer<typeof resetPasswordSchema>) {
-    if (!isValidToken) {
+  
+  // Validate token on component mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tokenParam = params.get('token');
+    const userIdParam = params.get('userId');
+    
+    if (!tokenParam || !userIdParam) {
+      setResetState(ResetState.INVALID);
+      setError('Invalid password reset link. Missing token or user ID.');
+      return;
+    }
+    
+    setToken(tokenParam);
+    setUserId(userIdParam);
+    
+    // Validate token with the API
+    async function validateToken() {
+      try {
+        const res = await apiRequest('POST', '/api/auth/validate-reset-token', {
+          token: tokenParam,
+          userId: parseInt(userIdParam),
+        });
+        
+        if (res.ok) {
+          setResetState(ResetState.VALID);
+        } else {
+          const data = await res.json();
+          setResetState(ResetState.INVALID);
+          setError(data.message || 'Invalid or expired password reset link.');
+        }
+      } catch (error) {
+        setResetState(ResetState.INVALID);
+        setError('An error occurred while validating your reset link. Please try again.');
+      }
+    }
+    
+    validateToken();
+  }, []);
+  
+  const onSubmit = async (data: ResetPasswordFormValues) => {
+    if (!token || !userId) {
       toast({
-        title: 'Invalid Reset Link',
-        description: 'The password reset link is invalid or has expired. Please request a new one.',
+        title: 'Error',
+        description: 'Invalid reset link. Please request a new password reset link.',
         variant: 'destructive',
       });
       return;
     }
-
+    
     setIsSubmitting(true);
-
+    
     try {
-      const response = await apiRequest('POST', '/api/auth/reset-password', {
-        userId,
+      const res = await apiRequest('POST', '/api/auth/reset-password', {
         token,
+        userId: parseInt(userId),
         password: data.password,
       });
-
-      if (response.ok) {
-        setResetComplete(true);
+      
+      if (res.ok) {
+        setResetState(ResetState.SUCCESS);
         toast({
-          title: 'Password Reset Successful',
-          description: 'Your password has been reset. You can now log in with your new password.',
+          title: 'Success',
+          description: 'Your password has been reset successfully.',
         });
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to reset password');
+        const error = await res.json();
+        toast({
+          title: 'Error',
+          description: error.message || 'An error occurred. Please try again.',
+          variant: 'destructive',
+        });
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
-        title: 'Reset Failed',
-        description: error.message || 'An unexpected error occurred. Please try again.',
+        title: 'Error',
+        description: 'An error occurred. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  if (resetComplete) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-muted/30">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Password Reset Complete</CardTitle>
-            <CardDescription>
-              Your password has been successfully reset.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            <p className="text-center text-muted-foreground">
-              You can now log in with your new password.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full" onClick={() => setLocation('/')}>
-              Return to Login
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!isValidToken) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-muted/30">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Invalid Reset Link</CardTitle>
-            <CardDescription>
-              The password reset link is invalid or has expired.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            <p className="text-center text-muted-foreground">
-              Please request a new password reset link.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full" onClick={() => setLocation('/forgot-password')}>
-              Request New Link
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/30">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Reset Your Password</CardTitle>
-          <CardDescription>
-            Enter a new password for your account.
-          </CardDescription>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>New Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Enter your new password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Confirm your new password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter>
-              <Button 
-                type="submit" 
-                className="w-full" 
+  };
+  
+  const renderContent = () => {
+    switch (resetState) {
+      case ResetState.VALIDATING:
+        return (
+          <div className="flex flex-col items-center py-8">
+            <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
+            <p className="text-lg font-medium">Validating your reset link...</p>
+          </div>
+        );
+        
+      case ResetState.VALID:
+        return (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Enter new password"
+                          autoComplete="new-password"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Confirm new password"
+                          autoComplete="new-password"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Resetting...
-                  </>
-                ) : (
-                  'Reset Password'
-                )}
+                {isSubmitting ? 'Resetting...' : 'Reset Password'}
               </Button>
-            </CardFooter>
-          </form>
-        </Form>
+            </form>
+          </Form>
+        );
+        
+      case ResetState.INVALID:
+        return (
+          <div className="flex flex-col items-center py-8">
+            <XCircle className="h-16 w-16 text-destructive mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Invalid Reset Link</h3>
+            <p className="text-muted-foreground text-center mb-6">{error}</p>
+            <Button onClick={() => setLocation('/forgot-password')} className="w-full">
+              Request New Reset Link
+            </Button>
+          </div>
+        );
+        
+      case ResetState.SUCCESS:
+        return (
+          <div className="flex flex-col items-center py-8">
+            <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Password Reset Successfully</h3>
+            <p className="text-muted-foreground text-center mb-6">
+              Your password has been reset successfully. You can now log in with your new password.
+            </p>
+            <Button onClick={() => setLocation('/')} className="w-full">
+              Go to Homepage
+            </Button>
+          </div>
+        );
+    }
+  };
+  
+  return (
+    <div className="container max-w-lg py-16 px-4">
+      <Card className="w-full shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl text-center">Reset Password</CardTitle>
+          <CardDescription className="text-center">
+            {resetState === ResetState.VALID
+              ? 'Create a new password for your account'
+              : 'Processing your password reset request'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {renderContent()}
+        </CardContent>
+        <CardFooter className="flex justify-center text-sm text-muted-foreground">
+          Need help? Contact support@eventsapp.com
+        </CardFooter>
       </Card>
     </div>
   );

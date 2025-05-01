@@ -1,107 +1,124 @@
 import { useState } from 'react';
-import { useLocation, Link } from 'wouter';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, CheckCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { CheckCircle } from 'lucide-react';
 
+// Form validation schema
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
 });
+
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   
-  const form = useForm<z.infer<typeof forgotPasswordSchema>>({
+  const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
       email: '',
     },
   });
-
-  async function onSubmit(data: z.infer<typeof forgotPasswordSchema>) {
+  
+  async function onSubmit(data: ForgotPasswordFormValues) {
     setIsSubmitting(true);
-
+    
     try {
-      const response = await apiRequest('POST', '/api/auth/forgot-password', {
-        email: data.email,
-      });
-
-      if (response.ok) {
-        setResetEmailSent(true);
-        toast({
-          title: 'Reset Link Sent',
-          description: 'If an account exists with that email, a password reset link has been sent.',
-        });
+      const res = await apiRequest('POST', '/api/auth/forgot-password', { email: data.email });
+      
+      if (res.ok) {
+        setEmailSent(true);
+        // Note: We don't show success message specific to any email to prevent email enumeration
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to send reset link');
+        const error = await res.json();
+        toast({
+          title: 'Error',
+          description: error.message || 'An error occurred. Please try again.',
+          variant: 'destructive',
+        });
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
-        title: 'Request Failed',
-        description: error.message || 'An unexpected error occurred. Please try again.',
+        title: 'Error',
+        description: 'An error occurred. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
     }
   }
-
-  if (resetEmailSent) {
+  
+  if (emailSent) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-muted/30">
-        <Card className="w-full max-w-md">
+      <div className="container max-w-lg py-16 px-4">
+        <Card className="w-full shadow-lg">
           <CardHeader>
-            <CardTitle>Check Your Email</CardTitle>
-            <CardDescription>
-              We've sent a password reset link to your email address.
+            <CardTitle className="text-2xl text-center">Email Sent</CardTitle>
+            <CardDescription className="text-center">
+              Check your inbox for password reset instructions
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center pt-6 pb-8">
-            <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-            <p className="text-center text-muted-foreground">
-              If an account exists with that email, you will receive instructions to reset your password.
-              Please check your inbox and follow the link in the email.
-            </p>
-            <p className="text-center text-muted-foreground mt-4">
-              The link will expire in 24 hours.
-            </p>
+          <CardContent>
+            <div className="flex flex-col items-center py-8">
+              <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Check Your Email</h3>
+              <p className="text-muted-foreground text-center mb-6">
+                If an account exists for {form.getValues().email}, we've sent password reset instructions to that email address.
+                Please check your inbox and follow the instructions to reset your password.
+              </p>
+              <p className="text-muted-foreground text-center text-sm mb-6">
+                Don't see the email? Check your spam folder or make sure you entered the correct email address.
+              </p>
+              <Button onClick={() => setLocation('/')} className="w-full">
+                Return to Homepage
+              </Button>
+            </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button className="w-full" onClick={() => setLocation('/')}>
-              Return to Login
-            </Button>
-            <Button variant="ghost" className="w-full" onClick={() => setResetEmailSent(false)}>
-              Try Another Email
-            </Button>
+          <CardFooter className="flex justify-center text-sm text-muted-foreground">
+            Need help? Contact support@eventsapp.com
           </CardFooter>
         </Card>
       </div>
     );
   }
-
+  
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/30">
-      <Card className="w-full max-w-md">
+    <div className="container max-w-lg py-16 px-4">
+      <Card className="w-full shadow-lg">
         <CardHeader>
-          <CardTitle>Reset Your Password</CardTitle>
-          <CardDescription>
-            Enter your email address and we'll send you a link to reset your password.
+          <CardTitle className="text-2xl text-center">Forgot Password</CardTitle>
+          <CardDescription className="text-center">
+            Enter your email address to reset your password
           </CardDescription>
         </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <CardContent className="space-y-4">
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="email"
@@ -110,8 +127,9 @@ export default function ForgotPasswordPage() {
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
-                        type="email"
                         placeholder="Enter your email address"
+                        type="email"
+                        autoComplete="email"
                         {...field}
                       />
                     </FormControl>
@@ -119,32 +137,28 @@ export default function ForgotPasswordPage() {
                   </FormItem>
                 )}
               />
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  'Send Reset Link'
-                )}
+                {isSubmitting ? 'Sending...' : 'Reset Password'}
               </Button>
-              <Button 
-                variant="ghost" 
-                className="w-full" 
-                onClick={() => setLocation('/')}
-              >
-                Back to Login
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
+            </form>
+          </Form>
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => setLocation('/')}
+              className="text-sm text-muted-foreground hover:underline"
+            >
+              Return to Homepage
+            </button>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-center text-sm text-muted-foreground">
+          Remember your password? Try logging in again.
+        </CardFooter>
       </Card>
     </div>
   );

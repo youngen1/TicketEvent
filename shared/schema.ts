@@ -64,6 +64,11 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   displayName: text("display_name"),
   email: text("email"),
+  emailVerified: boolean("email_verified").default(false),
+  verificationToken: text("verification_token"),
+  verificationTokenExpiry: timestamp("verification_token_expiry"),
+  resetPasswordToken: text("reset_password_token"),
+  resetPasswordTokenExpiry: timestamp("reset_password_token_expiry"),
   gender: text("gender"), // Store gender as text (male, female, non-binary, other, prefer-not-to-say)
   dateOfBirth: date("date_of_birth"), // Store date of birth for age calculation
   createdAt: timestamp("created_at").defaultNow(),
@@ -87,6 +92,11 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   displayName: true,
   email: true,
+  emailVerified: true,
+  verificationToken: true,
+  verificationTokenExpiry: true,
+  resetPasswordToken: true,
+  resetPasswordTokenExpiry: true,
   gender: true,
   dateOfBirth: true,
   bio: true,

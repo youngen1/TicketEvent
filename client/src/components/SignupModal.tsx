@@ -85,6 +85,7 @@ export default function SignupModal({ isOpen, onClose, onLoginClick, onSuccess }
     resolver: zodResolver(signupSchema),
     defaultValues: {
       username: "",
+      email: "",
       password: "",
       confirmPassword: "",
       gender: "",
@@ -105,7 +106,7 @@ export default function SignupModal({ isOpen, onClose, onLoginClick, onSuccess }
     onSuccess: () => {
       toast({
         title: "Signup successful",
-        description: "Your account has been created. You can now log in.",
+        description: "Your account has been created. Please check your email to verify your account.",
       });
       onSuccess();
     },
@@ -154,6 +155,19 @@ export default function SignupModal({ isOpen, onClose, onLoginClick, onSuccess }
                   <FormLabel>Username</FormLabel>
                   <FormControl>
                     <Input placeholder="Choose a username" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="Enter your email address" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
