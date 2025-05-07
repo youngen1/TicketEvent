@@ -310,6 +310,11 @@ var users = pgTable("users", {
   password: text("password").notNull(),
   displayName: text("display_name"),
   email: text("email"),
+  emailVerified: boolean("email_verified").default(false),
+  verificationToken: text("verification_token"),
+  verificationTokenExpiry: timestamp("verification_token_expiry"),
+  resetPasswordToken: text("reset_password_token"),
+  resetPasswordTokenExpiry: timestamp("reset_password_token_expiry"),
   gender: text("gender"),
   // Store gender as text (male, female, non-binary, other, prefer-not-to-say)
   dateOfBirth: date("date_of_birth"),
@@ -338,6 +343,11 @@ var insertUserSchema = createInsertSchema(users).pick({
   password: true,
   displayName: true,
   email: true,
+  emailVerified: true,
+  verificationToken: true,
+  verificationTokenExpiry: true,
+  resetPasswordToken: true,
+  resetPasswordTokenExpiry: true,
   gender: true,
   dateOfBirth: true,
   bio: true,
@@ -1562,6 +1572,12 @@ var MemStorage = class {
   async getAllTickets() {
     return this.tickets;
   }
+  async hasUserPurchasedEventTicket(userId, eventId) {
+    const existingTicket = this.tickets.find(
+      (ticket) => ticket.userId === userId && ticket.eventId === eventId && (ticket.paymentStatus === "completed" || ticket.paymentStatus === "pending")
+    );
+    return !!existingTicket;
+  }
   // Extra properties to make TypeScript happy
   async seedEvents() {
     return Promise.resolve();
@@ -1614,6 +1630,20 @@ var MemStorage = class {
   }
 };
 var DatabaseStorage = class {
+  // Check if user has purchased a ticket for an event
+  async hasUserPurchasedEventTicket(userId, eventId) {
+    const tickets = await db.select().from(eventTickets).where(
+      and(
+        eq(eventTickets.userId, userId),
+        eq(eventTickets.eventId, eventId),
+        or(
+          eq(eventTickets.paymentStatus, "completed"),
+          eq(eventTickets.paymentStatus, "pending")
+        )
+      )
+    );
+    return tickets.length > 0;
+  }
   // Ticket Type methods
   async createTicketType(ticketType) {
     const [newTicketType] = await db.insert(ticketTypes).values(ticketType).returning();
@@ -2864,6 +2894,12 @@ async function registerRoutes(app2) {
           }
         }
       }
+      const hasTicket = await storage.hasUserPurchasedEventTicket(req.session.userId, parseInt(eventId));
+      if (hasTicket) {
+        return res.status(400).json({
+          message: "You cannot buy two tickets for yourself. You already have a ticket for this event."
+        });
+      }
       const reference = `${eventId}-${Date.now()}-${req.session.userId}`;
       const protocol = req.headers["x-forwarded-proto"] || req.protocol;
       const host = req.headers.host;
@@ -3095,9 +3131,9 @@ async function registerRoutes(app2) {
       if (!event.isFree && parseFloat(event.price || "0") > 0) {
         return res.status(400).json({ message: "This is not a free event" });
       }
-      const existingTicket = await storage.getUserAttendance(req.session.userId, parseInt(eventId));
-      if (existingTicket) {
-        return res.status(400).json({ message: "You already have a ticket for this event" });
+      const hasTicket = await storage.hasUserPurchasedEventTicket(req.session.userId, parseInt(eventId));
+      if (hasTicket) {
+        return res.status(400).json({ message: "You cannot buy two tickets for yourself. You already have a ticket for this event." });
       }
       if (ticketTypeId) {
         const ticketType = await storage.getTicketType(parseInt(ticketTypeId));
@@ -3153,6 +3189,12 @@ async function registerRoutes(app2) {
       const event = await storage.getEvent(parseInt(eventId));
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
+      }
+      const hasTicket = await storage.hasUserPurchasedEventTicket(req.session.userId, parseInt(eventId));
+      if (hasTicket) {
+        return res.status(400).json({
+          message: "You cannot buy two tickets for yourself. You already have a ticket for this event."
+        });
       }
       if (ticketTypeId) {
         const ticketType = await storage.getTicketType(parseInt(ticketTypeId));
