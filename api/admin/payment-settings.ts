@@ -13,9 +13,9 @@ export default async function handler(req: VercelRequest,res: VercelResponse) {
                     liveSecretKey: process.env.PAYSTACK_SECRET_KEY ? '••••••••••••••••••••••••••' : undefined,
                     livePublicKey: process.env.VITE_PAYSTACK_PUBLIC_KEY ?
                         `${process.env.VITE_PAYSTACK_PUBLIC_KEY.substring(0, 8)}...` : undefined,
-                    testSecretKey: process.env.PAYSTACK_TEST_SECRET_KEY ? '••••••••••••••••••••••••••' : undefined,
-                    testPublicKey: process.env.VITE_PAYSTACK_TEST_PUBLIC_KEY ?
-                        `${process.env.VITE_PAYSTACK_TEST_PUBLIC_KEY.substring(0, 8)}...` : undefined
+                    testSecretKey: process.env.PAYSTACK_SECRET_KEY ? '••••••••••••••••••••••••••' : undefined,
+                    testPublicKey: process.env.VITE_PAYSTACK_PUBLIC_KEY ?
+                        `${process.env.VITE_PAYSTACK_PUBLIC_KEY.substring(0, 8)}...` : undefined
                 };
 
                 res.json(settings);
@@ -43,8 +43,8 @@ export default async function handler(req: VercelRequest,res: VercelResponse) {
                     if (liveSecretKey) process.env.PAYSTACK_SECRET_KEY = liveSecretKey;
                     if (livePublicKey) process.env.VITE_PAYSTACK_PUBLIC_KEY = livePublicKey;
                 } else {
-                    if (testSecretKey) process.env.PAYSTACK_TEST_SECRET_KEY = testSecretKey;
-                    if (testPublicKey) process.env.VITE_PAYSTACK_TEST_PUBLIC_KEY = testPublicKey;
+                    if (testSecretKey) process.env.PAYSTACK_SECRET_KEY = testSecretKey;
+                    if (testPublicKey) process.env.VITE_PAYSTACK_PUBLIC_KEY = testPublicKey;
                 }
 
                 // Reinitialize the Paystack service to reflect changes

@@ -1008,7 +1008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (liveSecretKey) process.env.PAYSTACK_SECRET_KEY = liveSecretKey;
         if (livePublicKey) process.env.VITE_PAYSTACK_PUBLIC_KEY = livePublicKey;
       } else {
-        if (testSecretKey) process.env.PAYSTACK_TEST_SECRET_KEY = testSecretKey;
+        if (testSecretKey) process.env.PAYSTACK_SECRET_KEY = testSecretKey;
         if (testPublicKey) process.env.VITE_PAYSTACK_TEST_PUBLIC_KEY = testPublicKey;
       }
       
