@@ -1,6 +1,6 @@
-import { 
+import {
   users, events, comments, eventRatings, eventAttendees, eventTickets, userFollows, ticketTypes,
-  type User, type InsertUser, 
+  type User, type InsertUser,
   type Event, type InsertEvent,
   type Comment, type InsertComment,
   type EventRating, type InsertEventRating,
@@ -8,7 +8,10 @@ import {
   type EventTicket, type InsertEventTicket,
   type UserFollow, type InsertUserFollow,
   type TicketType, type InsertTicketType,
-  ATTENDANCE_STATUS
+  type Event as EventType, // Assuming you have an Event type, aliased to EventType
+  type UserFavorite as UserFavoriteType,
+  ATTENDANCE_STATUS, InsertNotification,
+  userEventFavorites, InsertUserFavorite
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, asc, desc, and, avg, count, sql } from "drizzle-orm";
@@ -20,6 +23,7 @@ export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
   getUserEvents(userId: number): Promise<Event[]>;
@@ -79,7 +83,7 @@ export interface IStorage {
   
   // Notification methods
   getUserNotifications(userId: number): Promise<Notification[]>;
-  createNotification(notification: InsertNotification): Promise<Notification>;
+  createNotification(notification: Notification): Promise<Notification>;
   markNotificationAsRead(notificationId: number): Promise<Notification>;
   markAllNotificationsAsRead(userId: number): Promise<void>;
   deleteNotification(notificationId: number): Promise<void>;
@@ -135,7 +139,12 @@ export class MemStorage implements IStorage {
       gender: "other",
       dateOfBirth: "1990-01-01",
       interests: null,
-      isBanned: false
+      isBanned: false,
+      emailVerified: null,
+      verificationToken: null,
+      verificationTokenExpiry: null,
+      resetPasswordToken: null,
+      resetPasswordTokenExpiry: null
     });
     
     // Create admin account
@@ -160,7 +169,12 @@ export class MemStorage implements IStorage {
       gender: "other",
       dateOfBirth: "1985-01-01",
       interests: null,
-      isBanned: false
+      isBanned: false,
+      emailVerified: null,
+      verificationToken: null,
+      verificationTokenExpiry: null,
+      resetPasswordToken: null,
+      resetPasswordTokenExpiry: null
     });
     
     console.log("Created admin account with username: admin and password: password");
@@ -200,7 +214,12 @@ export class MemStorage implements IStorage {
         gender: "other",
         dateOfBirth: "1990-01-01",
         interests: null,
-        isBanned: false
+        isBanned: false,
+        emailVerified: null,
+        verificationToken: null,
+        verificationTokenExpiry: null,
+        resetPasswordToken: null,
+        resetPasswordTokenExpiry: null
       });
     }
     
@@ -214,7 +233,7 @@ export class MemStorage implements IStorage {
         followerId: 2, // Admin user ID
         followingId: i,
         createdAt: new Date(),
-        updatedAt: null
+
       });
     }
     
@@ -225,7 +244,7 @@ export class MemStorage implements IStorage {
         followerId: i,
         followingId: 2, // Admin user ID
         createdAt: new Date(),
-        updatedAt: null
+
       });
     }
     
@@ -251,7 +270,8 @@ export class MemStorage implements IStorage {
         paymentStatus: "completed",
         purchaseDate: new Date(Date.now() - (i * 24 * 60 * 60 * 1000)), // Different purchase dates
         createdAt: new Date(Date.now() - (i * 24 * 60 * 60 * 1000)),
-        updatedAt: null
+        updatedAt: null,
+        ticketTypeId: null
       });
     }
     
@@ -260,51 +280,7 @@ export class MemStorage implements IStorage {
     console.log(`Seeded ${this.events.length} events in memory storage`);
   }
 
-  private async seedEvents() {
-    console.log("Running seedEvents function...");
-    
-    try {
-      // Import events from our seed data file using dynamic import
-      const { createSeedEvents } = await import('./data/seedEvents');
-      const sampleEvents: Event[] = createSeedEvents(() => this.nextEventId++);
-      
-      // Add events to the in-memory storage
-      this.events = sampleEvents;
-      console.log(`Successfully loaded ${sampleEvents.length} events with videos from seed data`);
-    } catch (error) {
-      console.error("Error loading seed events:", error);
-      
-      // Fallback to creating a single event with video
-      console.log("Using fallback event with video");
-      this.events = [{
-        id: this.nextEventId++,
-        title: "Demo Event with Video",
-        description: "A sample event with an embedded video from Google",
-        date: "2025-08-15",
-        time: "15:00",
-        location: "Virtual Event",
-        category: "Technology",
-        image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80",
-        images: JSON.stringify([
-          "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"
-        ]),
-        userId: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        views: 50,
-        attendees: 20,
-        maxAttendees: 100,
-        featured: true,
-        video: "https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-        tags: "demo,video,technology",
-        price: "0",
-        isFree: true,
-        rating: 4.5,
-        ratingCount: 10
-      }];
-    }
-  }
-  
+
   // Original events definition for reference
   private originalSeedEvents() {
     // Create sample events that match our schema
@@ -334,34 +310,48 @@ export class MemStorage implements IStorage {
         price: 299.99,
         isFree: false,
         rating: 4.8,
-        ratingCount: 45
+        ratingCount: 45,
+        latitude: null,
+        longitude: null,
+        hasMultipleTicketTypes: null,
+        ticketsSold: null,
+        totalTickets: null,
+        genderRestriction: null,
+        ageRestriction: null
       },
       {
-        id: this.nextEventId++,
-        title: "Summer Music Festival",
-        description: "A weekend of music and fun under the sun with live performances from top artists",
-        date: "2025-06-22",
-        time: "12:00",
-        location: "Austin, TX",
+        attendees: 1250,
         category: "Music",
+        createdAt: new Date(),
+        date: "2025-06-22",
+        description: "A weekend of music and fun under the sun with live performances from top artists",
+        featured: true,
+        id: this.nextEventId++,
         image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80",
         images: JSON.stringify([
           "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80",
           "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=800&q=80"
         ]),
-        userId: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        views: 950,
-        attendees: 1250,
-        maxAttendees: 5000,
-        featured: true,
-        video: null,
-        tags: "music,festival,summer",
-        price: 149.99,
         isFree: false,
+        location: "Austin, TX",
+        maxAttendees: 5000,
+        price: 149.99,
         rating: 4.9,
-        ratingCount: 320
+        ratingCount: 320,
+        tags: "music,festival,summer",
+        time: "12:00",
+        title: "Summer Music Festival",
+        updatedAt: new Date(),
+        userId: 1,
+        video: null,
+        views: 950,
+        latitude: null,
+        longitude: null,
+        hasMultipleTicketTypes: null,
+        ticketsSold: null,
+        totalTickets: null,
+        genderRestriction: null,
+        ageRestriction: null
       },
       {
         id: this.nextEventId++,
@@ -388,7 +378,14 @@ export class MemStorage implements IStorage {
         price: 25,
         isFree: false,
         rating: 4.2,
-        ratingCount: 18
+        ratingCount: 18,
+        latitude: null,
+        longitude: null,
+        hasMultipleTicketTypes: null,
+        ticketsSold: null,
+        totalTickets: null,
+        genderRestriction: null,
+        ageRestriction: null
       },
       {
         id: this.nextEventId++,
@@ -414,7 +411,14 @@ export class MemStorage implements IStorage {
         price: 0,
         isFree: true,
         rating: 4.5,
-        ratingCount: 12
+        ratingCount: 12,
+        latitude: null,
+        longitude: null,
+        hasMultipleTicketTypes: null,
+        ticketsSold: null,
+        totalTickets: null,
+        genderRestriction: null,
+        ageRestriction: null
       },
       {
         id: this.nextEventId++,
@@ -535,6 +539,9 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return this.users.find(user => user.username === username);
+  }
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return this.users.find(user => user.email === email);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -1333,7 +1340,116 @@ export class DatabaseStorage implements IStorage {
   async getUsersToFollow(): Promise<User[]> {
     return db.select().from(users).limit(20);
   }
-  
+  async addUserFavorite(data: InsertUserFavorite): Promise<UserFavoriteType | null> {
+    try {
+      // The unique constraint on (userId, eventId) will prevent duplicates.
+      // Drizzle's .onConflictDoNothing() is a good way to handle this gracefully.
+      const result = await db.insert(userEventFavorites)
+          .values({
+            userId: data.userId,
+            eventId: data.eventId,
+            // createdAt is defaultNow()
+          })
+          .onConflictDoNothing() // If the (userId, eventId) pair already exists due to the unique constraint, do nothing
+          .returning();        // Get the inserted row (or empty array if conflict)
+
+      if (result.length > 0) {
+        console.log(`User ${data.userId} favorited event ${data.eventId}`);
+        return result[0] as UserFavoriteType; // Cast to your defined type
+      } else {
+        // This means there was a conflict (already favorited)
+        console.log(`User ${data.userId} already favorited event ${data.eventId}. No action taken.`);
+        // You might want to fetch the existing record if needed, or just return null/undefined
+        const existing = await db.query.userEventFavorites.findFirst({
+          where: and(eq(userEventFavorites.userId, data.userId), eq(userEventFavorites.eventId, data.eventId))
+        });
+        return existing || null;
+      }
+    } catch (error) {
+      console.error(`Error adding favorite for user ${data.userId}, event ${data.eventId}:`, error);
+      throw new Error('Could not add event to favorites.');
+    }
+  }
+
+  async removeUserFavorite(userId: number, eventId: number): Promise<boolean> {
+    try {
+      const result = await db.delete(userEventFavorites).where(
+          and(
+              eq(userEventFavorites.userId, userId),
+              eq(userEventFavorites.eventId, eventId)
+          )
+      ).returning(); // Drizzle returns the deleted rows (or an empty array if none matched)
+
+      if (result.length > 0) {
+        console.log(`User ${userId} unfavorited event ${eventId}`);
+        return true; // Successfully deleted
+      }
+      return false; // No record found to delete
+    } catch (error) {
+      console.error(`Error removing favorite for user ${userId}, event ${eventId}:`, error);
+      throw new Error('Could not remove event from favorites.');
+    }
+  }
+
+  async isEventFavoritedByUser(userId: number, eventId: number): Promise<boolean> {
+    try {
+      const favoriteRecord = await db.query.userEventFavorites.findFirst({
+        where: and(
+            eq(userEventFavorites.userId, userId),
+            eq(userEventFavorites.eventId, eventId)
+        )
+      });
+      return !!favoriteRecord; // Convert to boolean (true if record exists, false otherwise)
+    } catch (error) {
+      console.error(`Error checking favorite status for user ${userId}, event ${eventId}:`, error);
+      throw new Error('Could not check favorite status.');
+    }
+  }
+
+async toggleUserFavorite(userId: number, eventId: number): Promise<{ isFavorited: boolean; favoriteEntry: UserFavoriteType | null }> {
+  const isCurrentlyFavorited = await this.isEventFavoritedByUser(userId, eventId);
+
+  if (isCurrentlyFavorited) {
+    await this.removeUserFavorite(userId, eventId);
+    return { isFavorited: false, favoriteEntry: null };
+  } else {
+    const newFavoriteEntry = await this.addUserFavorite({ userId, eventId });
+    return { isFavorited: true, favoriteEntry: newFavoriteEntry };
+  }
+}
+
+async getUserFavoriteRecords(userId: number): Promise<UserFavoriteType[]> {
+  try {
+    const favoriteEntries = await db.query.userEventFavorites.findMany({
+      where: eq(userEventFavorites.userId, userId),
+      orderBy: [desc(userEventFavorites.createdAt)],
+      with: {
+        // event: true, // If you want the full event object
+      }
+    });
+    return favoriteEntries as UserFavoriteType[];
+  } catch (error) {
+    console.error(`Error fetching favorite entries for user ${userId}:`, error);
+    throw new Error('Could not fetch favorite entries.');
+  }
+}
+
+async getUserFavoriteEvents(userId: number): Promise<EventType[]> { // Returns EventType
+  try {
+    const favoriteEntries = await db
+        .select({ event: events })
+        .from(userEventFavorites)
+        .innerJoin(events, eq(userEventFavorites.eventId, events.id))
+        .where(eq(userEventFavorites.userId, userId))
+        .orderBy(desc(userEventFavorites.createdAt));
+
+    return favoriteEntries.map(entry => entry.event as EventType);
+  } catch (error) {
+    console.error(`Error fetching favorite events for user ${userId}:`, error);
+    throw new Error('Could not fetch favorite events.');
+  }
+}
+
   async searchUsers(query: string, locationQuery?: string, maxDistance?: number): Promise<User[]> {
     let queryBuilder = db
       .select()
@@ -1860,4 +1976,5 @@ export class DatabaseStorage implements IStorage {
 }
 
 // Use MemStorage for now until we resolve the database schema issues
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
+export const memStorage = new MemStorage();

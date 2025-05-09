@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, boolean, pgEnum, date } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, boolean, pgEnum, date, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -78,8 +78,8 @@ export const users = pgTable("users", {
   interests: text("interests"), // Store user interests as comma-separated text
   preferences: text("preferences"),
   location: text("location"), // Store location as a string (city, country)
-  latitude: text("latitude"), // Store latitude for location-based features
-  longitude: text("longitude"), // Store longitude for location-based features
+  latitude: integer("latitude"), // Store latitude for location-based features
+  longitude: integer("longitude"), // Store longitude for location-based features
   followersCount: integer("followers_count").default(0),
   followingCount: integer("following_count").default(0),
   isAdmin: boolean("is_admin").default(false),
@@ -131,8 +131,10 @@ export const events = pgTable("events", {
   attendees: integer("attendees").default(0),
   maxAttendees: integer("max_attendees"),
   isFree: boolean("is_free").default(true),
-  price: text("price"),
+  price: integer("price"),
   tags: text("tags"),
+  rating: float("rating").default(0),
+  ratingCount: integer("rating_count").default(0),
   // Ticket information
   hasMultipleTicketTypes: boolean("has_multiple_ticket_types").default(false),
   ticketsSold: integer("tickets_sold").default(0),
@@ -229,14 +231,24 @@ export type UserFavorite = {
   id: number;
   userId: number;
   eventId: number;
-  createdAt: Date | null;
+  createdAt: Date;
 };
 
 export type InsertUserFavorite = {
   userId: number;
   eventId: number;
 };
-
+export const userEventFavorites = pgTable("user_event_favorites", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  eventId: integer("event_id").notNull().references(() => events.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Unique constraint to ensure a user can only favorite an event once
+    userEventUnique: uniqueIndex("user_event_unique_idx").on(table.userId, table.eventId),
+  };
+});
 // Notification types enum
 export const NOTIFICATION_TYPE = {
   EVENT_REMINDER: "event_reminder",        // Reminder for upcoming events
@@ -335,7 +347,7 @@ export const ticketTypes = pgTable("ticket_types", {
   eventId: integer("event_id").notNull().references(() => events.id),
   name: text("name").notNull(), // e.g., "General Admission", "VIP", "Early Bird"
   description: text("description"),
-  price: text("price").notNull(),
+  price: integer("price").notNull(),
   quantity: integer("quantity").notNull(), // Total number of this ticket type available
   soldCount: integer("sold_count").default(0), // Number of tickets sold of this type
   isActive: boolean("is_active").default(true),

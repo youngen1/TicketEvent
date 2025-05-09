@@ -1,0 +1,62 @@
+.
+├── api/                      <-- NEW: For Vercel Serverless Functions
+│   ├── auth/
+│   │   ├── login.ts
+│   │   ├── logout.ts
+│   │   ├── me.ts
+│   │   └── signup.ts
+│   ├── events/
+│   │   ├── index.ts          <-- Handles GET /api/events, POST /api/events
+│   │   ├── [id]/
+│   │   │   ├── index.ts      <-- Handles GET /api/events/[id], PUT /api/events/[id]
+│   │   │   ├── favorite.ts
+│   │   │   └── ticket-types.ts
+│   ├── payments/
+│   │   ├── initialize.ts
+│   │   └── verify/
+│   │       └── [reference].ts
+│   ├── users/
+│   │   ├── index.ts          <-- Handles GET /api/users (for "users to follow")
+│   │   ├── all.ts            <-- Handles GET /api/users/all
+│   │   ├── search.ts
+│   │   ├── [id]/
+│   │   │   ├── index.ts      <-- Handles GET /api/users/[id]
+│   │   │   ├── events.ts
+│   │   │   ├── follow.ts     <-- Handles POST & DELETE /api/users/[id]/follow
+│   │   │   ├── followers.ts
+│   │   │   └── following.ts
+│   ├── admin/                <-- Admin specific routes
+│   │   ├── users/
+│   │   │   ├── index.ts
+│   │   │   └── [userId]/
+│   │   │       └── toggle-ban.ts
+│   │   ├── events/
+│   │   │   ├── sample.ts
+│   │   │   └── all.ts
+│   │   └── stats.ts
+│   ├── notifications/
+│   │   ├── index.ts
+│   │   ├── [id]/
+│   │   │   ├── index.ts      <-- For DELETE
+│   │   │   └── read.ts       <-- For PATCH
+│   │   └── read-all.ts
+│   └── upload/                 <-- File uploads need careful serverless handling
+│       ├── image.ts
+│       └── images.ts
+├── client/
+│   └── ... (your React frontend)
+├── server/
+│   ├── db.ts                 <-- (Likely no changes)
+│   ├── storage.ts            <-- (Likely no changes, or minor adjustments if db connection needs context)
+│   ├── services/
+│   │   └── paystackService.ts  <-- (No changes)
+│   ├── utils/
+│   │   ├── authUtils.ts      <-- NEW: For JWT and auth helper functions
+│   │   └── videoProcessor.ts <-- (May need adjustment if used in serverless upload)
+│   └── create-notifications.ts <-- (Logic can be called from an admin serverless function)
+│   └── test-routes.ts        <-- (Becomes serverless functions if needed for testing on Vercel)
+├── shared/
+│   └── schema.ts             <-- (No changes)
+├── vercel.json               <-- (You'll likely need this for builds and rewrites)
+├── package.json
+└── tsconfig.json

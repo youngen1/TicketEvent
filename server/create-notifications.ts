@@ -1,4 +1,4 @@
-import { storage } from './storage';
+import {memStorage, storage} from './storage';
 import { NOTIFICATION_TYPE } from '../shared/schema';
 
 /**
@@ -9,13 +9,13 @@ export async function createNotifications() {
   const userId = 2;
   
   // Clear any existing notifications first
-  const currentNotifications = await storage.getUserNotifications(userId);
+  const currentNotifications = await memStorage.getUserNotifications(userId);
   for (const notification of currentNotifications) {
-    await storage.deleteNotification(notification.id);
+    await memStorage.deleteNotification(notification.id);
   }
 
   // Create notifications for different scenarios
-  await storage.createNotification({
+  await memStorage.createNotification({
     userId,
     type: NOTIFICATION_TYPE.NEW_FOLLOWER,
     title: "New Follower",
@@ -23,7 +23,7 @@ export async function createNotifications() {
     relatedUserId: 1, // Demo user
   });
 
-  await storage.createNotification({
+  await memStorage.createNotification({
     userId,
     type: NOTIFICATION_TYPE.EVENT_STARTING_TODAY,
     title: "Event Starting Today",
@@ -31,7 +31,7 @@ export async function createNotifications() {
     eventId: 4, // Digital Skills Workshop
   });
 
-  await storage.createNotification({
+  await memStorage.createNotification({
     userId,
     type: NOTIFICATION_TYPE.NEW_COMMENT,
     title: "New Comment",
@@ -40,7 +40,7 @@ export async function createNotifications() {
     relatedUserId: 1, // Demo user
   });
 
-  await storage.createNotification({
+  await memStorage.createNotification({
     userId,
     type: NOTIFICATION_TYPE.ATTENDANCE_UPDATE,
     title: "New Attendee",
@@ -49,7 +49,7 @@ export async function createNotifications() {
     relatedUserId: 1, // Demo user
   });
 
-  await storage.createNotification({
+  await memStorage.createNotification({
     userId,
     type: NOTIFICATION_TYPE.ADMIN_MESSAGE,
     title: "Platform Update",
